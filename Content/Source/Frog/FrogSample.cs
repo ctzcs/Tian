@@ -1,6 +1,8 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Core;
+using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 
@@ -27,10 +29,12 @@ public class FrogSample:IContent
     
     public Target Target { get; }
     public EntityStore World { get; set; }
+    public Vector2Int LogicResolution { get; } = new (1280, 720);
+
     public FrogSample(App ctx)
     {
         this.ctx = ctx;
-        Target = new Target(ctx.GraphicsDevice,1280,720);
+        Target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         World = new EntityStore();
         _batcher = new Batcher(ctx.GraphicsDevice);
         texture = new Texture(ctx.GraphicsDevice, new Image(Path.Join("Assets", "Sprites/frog_knight.png")));
@@ -239,4 +243,24 @@ public class FrogSample:IContent
     }
 
     
+}
+
+
+public class FrameCounter
+{
+    public int FPS;
+    public int Frames;
+    public Stopwatch sw = Stopwatch.StartNew();
+
+    public void Update()
+    {
+        Frames++;
+        var elapsed = sw.Elapsed.TotalSeconds;
+        if (elapsed > 1)
+        {
+            sw.Restart();
+            FPS = Frames;
+            Frames = 0;
+        }
+    }
 }

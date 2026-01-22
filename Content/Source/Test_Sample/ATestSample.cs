@@ -3,6 +3,7 @@ using System.Reflection;
 using Engine.Asset;
 using Engine.Core;
 using Engine.Core.Graphics;
+using Engine.Core.Structure;
 using Engine.Performance;
 using Engine.Systems;
 using Engine.Systems.Editor;
@@ -23,8 +24,7 @@ public class ATestSample:IContent
     private Resources res;
     private float deltaTime = 0;
     private Target target;
-    private int width = Const._720P.X;
-    private int height = Const._720P.Y;
+    public Vector2Int LogicResolution { get; } = Const._720P;
     public Target Target => target;
     
     public EntityStore World
@@ -32,6 +32,7 @@ public class ATestSample:IContent
         get;
         set;
     }
+
 
     private Material customMaterial;
     private Target tempTarget;
@@ -53,17 +54,17 @@ public class ATestSample:IContent
         //GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Dissolve",0,1,1,1);
         GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Slime",0,1,1,1);
         batcher = new Batcher(ctx.GraphicsDevice);
-        target = new Target(ctx.GraphicsDevice,width,height);
+        target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         res = new Resources(
             target,
             font,
             Assets.Atlas,
             batcher,
-            new Vector2(width,height),
+            new Vector2(LogicResolution.X,LogicResolution.Y),
             customMaterial);
         
         
-        tempTarget = new Target(ctx.GraphicsDevice,width,height);
+        tempTarget = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         RebuildSystem();
     }
 

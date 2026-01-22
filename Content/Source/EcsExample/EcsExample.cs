@@ -1,38 +1,33 @@
-using Engine.Asset.v1;
+﻿namespace Content.Source.EcsExample;
+
 using Engine.Core;
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 
-namespace Content.Audio;
-
-public class ZAudioContent : IContent
+/// <summary>
+/// 世界入口的模板
+/// </summary>
+public class EcsExample : IContent
 {
-
     private readonly App app;
     public Target Target { get; }
     public EntityStore World { get; set; }
     public Vector2Int LogicResolution { get; } = Const._720P;
     private readonly Batcher batcher;
-    public ZAudioContent(App app)
+    public EcsExample(App app)
     {
         this.app = app;
-        int width = 1280;
-        int height = 720;
         Target = new Target(app.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
     }
     public void Start()
     {
-        Foster.Audio.Audio.Startup();
-        Engine.MiniAudio.Audio.AudioTest();
     }
 
     public void Destroy()
     {
-        Foster.Audio.Audio.Shutdown();
-        AssetsV1.DisposeCache();
         batcher.Dispose();
         Target.Dispose();
         World = null;
@@ -40,7 +35,6 @@ public class ZAudioContent : IContent
 
     public void Update()
     {
-        Foster.Audio.Audio.Update();
     }
 
     public void Render()
@@ -49,5 +43,4 @@ public class ZAudioContent : IContent
         batcher.Render(Target);
         batcher.Clear();
     }
-    
 }

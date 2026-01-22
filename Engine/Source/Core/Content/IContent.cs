@@ -1,3 +1,4 @@
+using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 
@@ -10,4 +11,6 @@ public interface IContent:ILifetime
     /// </summary>
     Target Target { get; } // 感觉这个应该作为Window渲染？随着window大小改变
     public EntityStore World { get; set; }
+    
+    public Vector2Int LogicResolution { get; }
 }
