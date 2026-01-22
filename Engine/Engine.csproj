@@ -9,8 +9,6 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <PackageReference Include="Friflo.Engine.ECS" Version="3.4.2" />
-        <PackageReference Include="Friflo.Engine.ECS.Boost" Version="3.4.2" />
         <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
         <PackageReference Include="Tracy-CSharp" Version="0.11.1" />
         <!--<PackageReference Include="FosterFramework" Version="0.2.1"/>-->
@@ -19,6 +17,8 @@
     <ItemGroup>
         <ProjectReference Include="..\Lib\Foster.Audio\Foster.Audio\Foster.Audio.csproj" />
         <ProjectReference Include="..\Lib\Foster\Framework\Foster.Framework.csproj" />
+        <ProjectReference Include="..\Lib\Friflo.Engine.ECS\src\ECS.Boost\Friflo.Engine.ECS.Boost.csproj" />
+        <ProjectReference Include="..\Lib\Friflo.Engine.ECS\src\ECS\Friflo.Engine.ECS.csproj" />
     </ItemGroup>
 
     <ItemGroup>

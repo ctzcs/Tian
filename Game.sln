@@ -12,6 +12,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Foster.Framework", "Lib\Fos
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Foster.Audio", "Lib\Foster.Audio\Foster.Audio\Foster.Audio.csproj", "{2235BE2F-5327-430F-AB6D-DFADAA8945A5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Friflo.Engine.ECS", "Lib\Friflo.Engine.ECS\src\ECS\Friflo.Engine.ECS.csproj", "{FFFB6BFC-51B4-4B02-B01F-3B74F6C6F34C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Friflo.Engine.ECS.Boost", "Lib\Friflo.Engine.ECS\src\ECS.Boost\Friflo.Engine.ECS.Boost.csproj", "{BD95CE9E-DC7D-4319-91E3-4629B1CA76E7}"
+EndProject
 
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +55,14 @@ Global
 		{2235BE2F-5327-430F-AB6D-DFADAA8945A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2235BE2F-5327-430F-AB6D-DFADAA8945A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2235BE2F-5327-430F-AB6D-DFADAA8945A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFFB6BFC-51B4-4B02-B01F-3B74F6C6F34C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFFB6BFC-51B4-4B02-B01F-3B74F6C6F34C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFFB6BFC-51B4-4B02-B01F-3B74F6C6F34C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFFB6BFC-51B4-4B02-B01F-3B74F6C6F34C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD95CE9E-DC7D-4319-91E3-4629B1CA76E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD95CE9E-DC7D-4319-91E3-4629B1CA76E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD95CE9E-DC7D-4319-91E3-4629B1CA76E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD95CE9E-DC7D-4319-91E3-4629B1CA76E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection

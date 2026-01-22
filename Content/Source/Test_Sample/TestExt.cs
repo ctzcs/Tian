@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using Content.Source.Test_Sample.Components;
 using Content.Test.Test;
 using Engine.Asset;
 using Engine.Components;
@@ -65,7 +66,8 @@ public static class TestExt
             {
                 layerMask = ELayer.Building.GetId(),
                 depth = depth
-            });
+            },
+            new Component257());
         
         return ent;
     }
