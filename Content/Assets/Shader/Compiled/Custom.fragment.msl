@@ -1,0 +1,32 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_FragmentUniformBlock
+{
+    float Time;
+    float Strength;
+    float2 Padding;
+};
+
+struct fragment_main_out
+{
+    float4 out_var_SV_Target0 [[color(0)]];
+};
+
+struct fragment_main_in
+{
+    float2 in_var_TEXCOORD0 [[user(locn0)]];
+    float4 in_var_TEXCOORD1 [[user(locn1)]];
+};
+
+fragment fragment_main_out fragment_main(fragment_main_in in [[stage_in]], constant type_FragmentUniformBlock& FragmentUniformBlock [[buffer(0)]], texture2d<float> Texture [[texture(0)]], sampler Sampler [[sampler(0)]], float4 gl_FragCoord [[position]])
+{
+    fragment_main_out out = {};
+    float2 _49 = in.in_var_TEXCOORD0 - float2(0.5);
+    float _65 = sin((gl_FragCoord.y * 0.07999999821186065673828125) + (FragmentUniformBlock.Time * 2.0)) + cos((gl_FragCoord.x * 0.0599999986588954925537109375) - (FragmentUniformBlock.Time * 1.7000000476837158203125));
+    out.out_var_SV_Target0 = Texture.sample(Sampler, fast::clamp((in.in_var_TEXCOORD0 + (_49 * (dot(_49, _49) * (0.180000007152557373046875 * FragmentUniformBlock.Strength)))) + (float2(_65, -_65) * (0.00200000009499490261077880859375 * FragmentUniformBlock.Strength)), float2(0.0), float2(1.0))) * in.in_var_TEXCOORD1;
+    return out;
+}
+

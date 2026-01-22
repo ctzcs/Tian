@@ -1,0 +1,7 @@
+
+**/bin
+**/obj
+**.csproj.DotSettings
+Game.sln.DotSettings.user
+.idea
+/Runner/publish

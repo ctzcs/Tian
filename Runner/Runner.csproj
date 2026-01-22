@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <HotReloadEnabled>true</HotReloadEnabled>
+        <HotReloadPartialTypes>true</HotReloadPartialTypes>
+        <RootNamespace>Runner</RootNamespace>
+        <LangVersion>14</LangVersion>
+        <PublishSingleFile>true</PublishSingleFile> <!-- 启用单文件发布 -->
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <!--<PublishAot>false</PublishAot>--> <!-- 启用AOT编译 -->
+        <SelfContained>true</SelfContained> <!-- 强制包含所有依赖 -->
+    </PropertyGroup>
+    
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <AssemblyName>Game</AssemblyName>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\Content\Content.csproj"/>
+    </ItemGroup>
+    
+    <Target Name="CopySpritesAfterPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <SpriteFiles Include="..\Content\Assets\Sprites\**\*.*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(SpriteFiles)"
+              DestinationFiles="@(SpriteFiles->'$(PublishDir)Assets\Sprites\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true" />
+    </Target>
+</Project>
