@@ -10,10 +10,11 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace Content.Test;
 
-public partial class BuildingCatchSystem:QuerySystem<CTransform>
+public class BuildingCatchSystem : QuerySystem<CTransform,Unit>
 {
     private EntityStore world;
     private Resources resources;
+    private EntityList _triggerEntity = new();
     public BuildingCatchSystem(EntityStore world,Resources res)
     {
         Filter.AllComponents(ComponentTypes.Get<Worker>());
@@ -41,34 +42,38 @@ public partial class BuildingCatchSystem:QuerySystem<CTransform>
 
     protected override void OnUpdate()
     {
-        Query.ForEachEntity((ref transform, entity) =>
+        _triggerEntity.Clear();
+        
+        Query.Entities.ToEntityList(_triggerEntity);
+        //当遍历的过程种有东西改变了那个Store的情况
+        foreach (var entity in _triggerEntity)
         {
+            ref var transform = ref entity.GetComponent<CTransform>();
             if (transform.HasParent)
             {
                 return;
             }
-            if (Vector2.DistanceSquared(transform.position,Vector2.Zero) < 64)
+
+            if (Vector2.DistanceSquared(transform.position, Vector2.Zero) < 64)
             {
-                if (!transform.HasChildren)
-                {
-                    var child = TestExt.CreateFrogCarrier(
-                        world,
-                        new Vector2(0,-1),
-                        0,
-                        Vector2.One,
-                        "frog/0",
-                        Color.Blue,
-                        4,
-                        4); 
-                    child.SetParent(entity);
-                }
+                if (transform.HasChildren) return;
+                var child = TestExt.CreateFrogCarrier(
+                    world,
+                    new Vector2(0, -1),
+                    0,
+                    Vector2.One,
+                    "frog/0",
+                    Color.Blue,
+                    4,
+                    4);
+                child.SetParent(entity);
             }
-        
-        
-            else if (Vector2.DistanceSquared(transform.position,new Vector2(0,resources.logicSize.Y/2)) < 64)
+
+
+            else if (Vector2.DistanceSquared(transform.position, new Vector2(0, resources.logicSize.Y / 2)) < 64)
             {
                 checkEntities.Clear();
-                GetAllChild(checkEntities,entity);
+                GetAllChild(checkEntities, entity);
                 for (int i = 0; i < checkEntities.Count; i++)
                 {
                     if (!checkEntities[i].IsNull)
@@ -76,11 +81,11 @@ public partial class BuildingCatchSystem:QuerySystem<CTransform>
                         // 调试输出
                         ref var childTransform = ref checkEntities[i].GetComponent<CTransform>();
                         if (childTransform.Parent != default) checkEntities[i].SetParent(default);
-                        if(!checkEntities[i].HasComponent<NoActive>()) checkEntities[i].Add(new NoActive());
+                        if (!checkEntities[i].HasComponent<NoActive>()) checkEntities[i].Add(new NoActive());
                     }
-                    
+
                 }
             }
-        });
+        }
     }
 }

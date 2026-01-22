@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using Content.Source.Test_Sample.Components;
+
 using Content.Test.Test;
 using Engine.Asset;
 using Engine.Components;
@@ -42,6 +42,42 @@ public static class TestExt
         return ent;
     }
     
+    
+    
+    public static int CreateSimpleFrog(CommandBuffer world,
+        Vector2 position,float rotation ,Vector2 size,string subTextureName, Color color,int depth = 0)
+    {
+        var tex = Assets.GetSubtexture(subTextureName);
+        var ent = world.CreateEntity();
+        world.AddComponent(ent, new Unit()
+            {
+                group = GroupType.Enemy,
+                type = UnitType.Frog
+            });
+        world.AddComponent(ent, new CTransform(default, position, rotation, size));
+        world.AddComponent(ent, new Worker());
+        world.AddComponent(ent, new Unit()
+            {
+                group = GroupType.Enemy,
+                type = UnitType.Frog
+            });
+        world.AddComponent(ent, new CheckBox() { rect = new Rect(position, 1, 1f) });
+        world.AddComponent(ent, new SpriteRenderer()
+        {
+            subTextureName = subTextureName,
+            subtexture = tex,
+            color = color,
+            originInPixels = new (20,28), // 这个是Ase里设置的锚点，0，0在左上角
+        });
+        world.AddComponent(ent, new SortingOrder()
+        {
+            layerMask = ELayer.Frog.GetId(),
+            depth = depth
+        });
+        world.AddTag<Prefab>(ent);
+        return ent;
+    }
+    
     public static Entity CreateBuilding(EntityStore world, 
         Vector2 position, Material material,float rotation, Vector2 size, Subtexture tex,
         Color color, int depth = 0)
@@ -67,7 +103,7 @@ public static class TestExt
                 layerMask = ELayer.Building.GetId(),
                 depth = depth
             },
-            new Component257());
+            new Source.Test_Sample.Components.Component257());
         
         return ent;
     }
@@ -111,6 +147,10 @@ public static class TestExt
         }
         return root;
     }
+    
+    
+    
+    
 
     public static void CreateRenderSortingTestCase(EntityStore world, Vector2 origin)
     {

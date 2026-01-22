@@ -1,7 +1,6 @@
-﻿using Friflo.Engine.ECS;
-
-﻿namespace Content.Source.Test_Sample.Components;
-public struct Component1:IComponent{}
+﻿using Friflo.Engine.ECS; 
+namespace Content.Source.Test_Sample.Components;
+/*public struct Component1:IComponent{}
 public struct Component2:IComponent{}
 public struct Component3:IComponent{}
 public struct Component4:IComponent{}
@@ -257,5 +256,5 @@ public struct Component252:IComponent{}
 public struct Component253:IComponent{}
 public struct Component254:IComponent{}
 public struct Component255:IComponent{}
-public struct Component256:IComponent{}
+public struct Component256:IComponent{}*/
 public struct Component257:IComponent{}

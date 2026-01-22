@@ -23,9 +23,7 @@ public class GameApp : App
         UpdateMode = UpdateMode.FixedStep(30,false);
         //lifetime = new FrogSample(this);
         batcher = new Batcher(GraphicsDevice);
-        //content = new RadianceCascades.RadianceCascades(this) ; 
-        //content = new TestSample(this);
-        content = new TestBatcher(this);
+        content = new ATestSample(this);
     }
 
     protected override void Startup()

@@ -6,7 +6,7 @@ using Friflo.Engine.ECS;
 namespace Engine.Components;
 
 
-public struct CTransform:IComponent
+public struct CTransform : IComponent
 {
     #region Relationship
     
@@ -160,6 +160,19 @@ public struct CTransform:IComponent
         target.children = new List<Entity>(source.children.Count);
     }
 
+}
+
+
+public struct HierarchyChange : IComponent
+{
+    public ChangeType ChangeType;
+    public Entity Self;
+    public Entity Other;
+}
+
+public enum ChangeType
+{
+    SetParent
 }
 
 

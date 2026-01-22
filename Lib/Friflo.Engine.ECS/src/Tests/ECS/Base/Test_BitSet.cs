@@ -78,7 +78,7 @@ public static class Test_BitSet
     public static void Test_BitSet_SetAllBits()
     {
         var bitSet = new BitSet();
-        for (int n = 0; n < 256; n++) {
+        for (int n = 0; n < 512; n++) {
             if (bitSet.Has(n)) {
                 Fail($"Expect bit == false: index: {n}");
             }
@@ -88,12 +88,12 @@ public static class Test_BitSet
                 Fail($"Expect bit == true: index: {n}");
             }
         }
-        AreEqual("ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff", bitSet.ToString());
+        AreEqual("ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff", bitSet.ToString());
         var allBits = bitSet;
         IsTrue(allBits.HasAll(allBits));
         IsTrue(allBits.HasAny(allBits));
         
-        for (int n = 0; n < 256; n++) {
+        for (int n = 0; n < 512; n++) {
             var singleBit = new BitSet();
             singleBit.SetBit(n);
             IsTrue(allBits.HasAll(singleBit));
@@ -108,13 +108,13 @@ public static class Test_BitSet
     public static void Test_BitSet_ClearBit()
     {
         var allBits = new BitSet();
-        for (int n = 0; n < 256; n++) {
+        for (int n = 0; n < 512; n++) {
             allBits.SetBit(n);
         }
-        AreEqual("ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff", allBits.ToString());
+        AreEqual("ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff ffffffffffffffff", allBits.ToString());
         
         var bits = allBits;
-        for (int n = 0; n < 256; n++) {
+        for (int n = 0; n < 512; n++) {
             IsTrue(bits.Has(n));
             bits.ClearBit(n);
             IsFalse(bits.Has(n));
@@ -146,7 +146,7 @@ public static class Test_BitSet
         } {
             var start = Mem.GetAllocatedBytes();
             var bitSet = new BitSet();
-            for (int n = 0; n < 256; n++) {
+            for (int n = 0; n < 512; n++) {
                 bitSet.SetBit(n);
             }
             int count = 0;
@@ -157,7 +157,7 @@ public static class Test_BitSet
                 count++;
             }
             Mem.AssertNoAlloc(start);
-            AreEqual(256, count);
+            AreEqual(512, count);
         }
     }
     
