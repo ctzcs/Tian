@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System.Numerics;
+using Engine.Asset;
 using Engine.Components;
 using Foster.Framework;
 using Cursor = Engine.Core.Input.Cursor;
@@ -9,7 +9,6 @@ namespace Engine.UI;
 public class UIRoot
 {
 	private float time = 0f;
-	private Window window;
     private Input input;
     private Vector2 logicScreen;
     private UIElement root;
@@ -42,7 +41,6 @@ public class UIRoot
     public UIRoot(Input input,Window window,Vector2 logicScreen)
     {
 	    this.input = input;
-	    this.window = window;
 	    this.logicScreen = logicScreen;
 	    root = new UIElement(true,false,true,new Rect(0,0,0,0));
 	    lastFrame = new UiFrame();
@@ -278,6 +276,3 @@ public class UIRoot
 	
 	
 }
-
-
-//TODO UI Root 渲染文字的问题，可以通过Tree给一个 Render 深度，将相同深度的合批

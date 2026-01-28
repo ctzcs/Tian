@@ -1,11 +1,10 @@
 ﻿# Tian
 
 
-## 介绍
+## Introduce
 
-1. 本项目意在制作一个供自己使用的简易2D游戏引擎
-2. 借助netcore原生的高性能，制作工作细胞
-
+1. A simple ecs game engine
+2. Tools
 
 
 ## TODO
@@ -66,13 +65,13 @@
 
 
 ## Archtecture
+
 ```powershell
 |--Lib
 |--Engine
 |--Content
 |--Runner
 |--Editor
-
 ```
 
 
@@ -204,6 +203,33 @@ else
 - 创建一个给编辑器创建一整个预制体 Prefab,然后将所有的编辑器实体都序列化进去。
 - 创建一个注册系统，创建世界的时候将所有的Prefab对应的string Name 和 Entity ID写入一个表
 - Runtime的时候通过查询这个Name,找到EntityID
+
+## Practice
+
+### AddCharacter To Fonts
+```csharp
+
+// 初始化字体（可以用现有 res.font，或新建）
+ // 已经注入到系统的字体
+ for (int i = 0; i < 3; i++)
+ {
+     var icon = Assets.GetSubtexture($"special_num/{i}"); // 取你的图集子纹理
+     // 选择一个私用区码点 U+E000（不与正常字符冲突）
+     int codepoint = 0xE000 + i;
+     // 以像素为单位设置水平进位宽度（基础字号 Size 下）
+     float advance = icon.Source.Width;
+     // 让图片高度约等于行高，顶边对齐到基线之上：offset.Y 取 -font.Height
+     // 如需微调，可再加减几个像素
+     var offset = new Vector2(0, -font.Height);
+     font.AddCharacter(codepoint, advance, offset, icon);
+ }
+ 
+ var s = $"捉蛙 {(char)0xE000}  {(char)0xE001}  {(char)0xE002}    x3";
+ batcher.Text(Assets.Font, s, new Vector2(200, 200), Color.White);
+
+```
+
+
 ## Publish
 - win-x64 `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true`
 

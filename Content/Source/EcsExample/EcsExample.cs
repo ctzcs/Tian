@@ -1,4 +1,6 @@
-﻿namespace Content.Source.EcsExample;
+﻿using Friflo.Engine.ECS.Systems;
+
+namespace Content.Source.EcsExample;
 
 using Engine.Core;
 using Engine.Core.Structure;
@@ -14,6 +16,7 @@ public class EcsExample : IContent
     public Target Target { get; }
     public EntityStore World { get; set; }
     public Vector2Int LogicResolution { get; } = Const._720P;
+    public List<SystemGroup> SystemGroups { get; }
     private readonly Batcher batcher;
     public EcsExample(App app)
     {

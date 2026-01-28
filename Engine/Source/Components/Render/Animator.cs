@@ -12,7 +12,7 @@ public struct Animator:IComponent
     public string animSpriteName;
     public string animName;
     public bool isLoop;
-    public float time;
+    public float millisecond; // 毫秒
     [Ignore]
     public Sprite? sprite;
     [Ignore]
@@ -23,7 +23,7 @@ public struct Animator:IComponent
         dest.animSpriteName = src.animSpriteName;
         dest.animName = src.animName;
         dest.isLoop = src.isLoop;
-        dest.time = src.time;
+        dest.millisecond = src.millisecond;
     }
 }
 
@@ -38,7 +38,7 @@ public static class AnimatorExtensions
             animator.animation = sprite.GetAnimation(animator.animName);
         }
         Debug.Assert(animator.animation.HasValue);
-        var frame = sprite.GetFrameAt(animator.animation.Value, animator.time, animator.isLoop);
+        var frame = sprite.GetFrameAt(animator.animation.Value, animator.millisecond, animator.isLoop);
         return frame.Subtexture;
     }
 }

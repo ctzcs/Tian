@@ -5,6 +5,7 @@ using Engine.Asset.v1;
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
 
 namespace Content.RadianceCascades;
 
@@ -15,6 +16,8 @@ public class RadianceCascades:IContent
     public EntityStore World { get; set; }
     private readonly Batcher batcher;
     public Vector2Int LogicResolution { get; }
+    public List<SystemGroup> SystemGroups { get; }
+
     public RadianceCascades(App app)
     {
         this.app = app;

@@ -16,7 +16,7 @@ public class Audio
 
     public static void AudioTest()
     {
-        AssetBuilder.Pack(Assets.GetContentAssetsPath(),"pack.zip");
+        AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
         Asset.v1.AssetsV1.LazyInitializeCache("pack.zip");
         if (!AssetsV1.TryOpenCachedEntry("Audio/shortcuts.ogg", out var stream))
             return;

@@ -128,12 +128,12 @@ public class RenderSystem:QuerySystem
             if (!box.IsEnable) return;
             batcher.QuadLine(box.rect.TopLeft,box.rect.TopRight,box.rect.BottomRight,box.rect.BottomLeft,0.1f,Color.Red);
         });
+#endif
         if (World.HasUniqueEntity(BuildInEntityId.Performance))
         {
             ref var batchStats = ref World.GetUniqueEntity(BuildInEntityId.Performance).GetComponent<RenderBatchStats>();
             batchStats.BatchCount = batcher.BatchCount;
         }
-#endif
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -84,7 +84,7 @@ public partial class StateSystem : QuerySystem
                         TestExt.CreateRenderSortingTestCase(world, pos);
                     }
 
-                    int countAnim = 20;
+                    int countAnim = 1;
                     for (int i = 0; i < countAnim; i++)
                     {
                         TestExt.CreateAnimFrog(world, pos - Vector2.One * i * 4, 0, new Vector2(1,1), "frog", "idle",

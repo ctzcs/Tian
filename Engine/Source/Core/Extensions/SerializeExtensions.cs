@@ -51,8 +51,8 @@ public static class SerializeExtensions
         /// <summary>
         /// Zip压缩版本
         /// </summary>
-        /// <param name="path"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <param name="path">savePath</param>
+        /// <typeparam name="T">Tag标签</typeparam>
         public void SaveEntityGz<T>(string path) where T : struct, ITag
         {
             var serializer = new EntitySerializer();
@@ -71,11 +71,11 @@ public static class SerializeExtensions
         /// <summary>
         /// 直接加载GZip压缩版本
         /// </summary>
-        /// <param name="path">Gz文件目录</param>
-        public void LoadEntityGz(string path)
+        /// <param name="zipPath">Gz文件目录</param>
+        public void LoadEntityGz(string zipPath)
         {
             var serializer = new EntitySerializer();
-            using var fs = File.OpenRead(path);
+            using var fs = File.OpenRead(zipPath);
             using var gZipStream = new GZipStream(fs,CompressionMode.Decompress, true);
             serializer.ReadIntoStore(store,gZipStream);
         }
@@ -97,7 +97,7 @@ public static class SerializeExtensions
 
 
         /// <summary>
-        /// 从压缩包中加载Gz文件
+        /// 从资源压缩包中加载实体Gz文件到Store中
         /// </summary>
         /// <param name="zipPath">zip路径</param>
         /// <param name="fileName">相对名称包含拓展名，忽略大小写</param>
@@ -121,7 +121,7 @@ public static class SerializeExtensions
         
     }
     
-
+    [Obsolete("Not using now")]
     public static void SaveFile<T>(string path,T value, bool indented = false)
     {
         var options = new JsonSerializerOptions
@@ -148,6 +148,7 @@ public static class SerializeExtensions
         File.WriteAllText(path, text);
     }
 
+    [Obsolete("Not using now")]
     public static T? LoadFile<T>(string path)
     {
         var options = new JsonSerializerOptions();

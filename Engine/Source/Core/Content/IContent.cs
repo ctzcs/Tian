@@ -1,6 +1,7 @@
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
 
 namespace Engine.Core;
 
@@ -13,4 +14,6 @@ public interface IContent:ILifetime
     public EntityStore World { get; set; }
     
     public Vector2Int LogicResolution { get; }
+    
+    public List<SystemGroup>? SystemGroups { get; }
 }

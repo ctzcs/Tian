@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Components;
+using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
@@ -26,11 +27,11 @@ public class AnimationSystem:QuerySystem
         var camera = cameraEntity.GetComponent<Camera2D>();
 
         var viewMinMax = CameraUtils.GetViewMinAndMax(camTransform, camera);*/
+        
         spriteSettingQuery.ForEachEntity((ref transform, ref animator,ref sr,entity) =>
         {
             /*if (!CameraUtils.IsVisible(transform,sr,viewMinMax.Item1,viewMinMax.Item2)) return;*/
-            animator.time = Tick.time / 1000;
-            
+            animator.millisecond = Tick.time;
             SetAnimToSpriteRenderer(ref animator,ref sr);
         });
     }

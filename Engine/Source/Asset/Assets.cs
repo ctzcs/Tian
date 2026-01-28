@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using Engine.Core.Structure;
+using Engine.Asset.v1;
 using Foster.Framework;
 
 namespace Engine.Asset;
@@ -28,46 +28,73 @@ public static partial class Assets
 	public static void Load(GraphicsDevice gfx)
 	{
         DeleteCache();
-		var spritesPath = Path.Join(AssetsPath, "Sprites");
-		var spriteFiles = new Dictionary<string, Aseprite>();
-        
+		var spritesPath = Path.Join(EditorAssetsPath, "Sprites");
+		var aseFiles = new Dictionary<string, Aseprite>();
+        var imageFiles = new Dictionary<string, Image>();
 		// 获取所有的ase/asesprite结尾的sprites文件
 		//TODO 这里可以从Zip包中加载，给Aseprite加上一个Load(stream)的拓展方法就好
 		foreach (var file in Directory.EnumerateFiles(spritesPath, "*.*", SearchOption.AllDirectories))
 		{
             var ext = Path.GetExtension(file);
-            if (!string.Equals(ext, ".ase", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(ext, ".asesprite", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(ext, ".ase", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ext, ".asesprite", StringComparison.OrdinalIgnoreCase))
+            {
+                var name = Path.ChangeExtension(Path.GetRelativePath(spritesPath, file), null);
+                Log.Info(name);
+                try
+                {
+                    var ase = new Aseprite(file);
+                    if (ase.Frames.Length > 0)
+                        aseFiles.Add(name, ase);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+            else if(string.Equals(ext,".png", StringComparison.OrdinalIgnoreCase))
+            {
+                var name = Path.ChangeExtension(Path.GetRelativePath(spritesPath, file), null);
+                Log.Info(name);
+                try
+                {
+                    var png = new Image(file);
+                    imageFiles.Add(name, png);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+            else
+            {
                 continue;
-			var name = Path.ChangeExtension(Path.GetRelativePath(spritesPath, file), null);
-			Log.Info(name);
-			try
-			{
-				var ase = new Aseprite(file);
+            }
 			
-				if (ase.Frames.Length > 0)
-					spriteFiles.Add(name, ase);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
-				throw;
-			}
 			
 		}
-		
+        
 		// 打包所有的sprites
 		Packer.Output output;
 		{
 			var packer = new Packer();
             packer.Padding = 4;
-			foreach (var (name, ase) in spriteFiles)
+			foreach (var (name, ase) in aseFiles)
 			{
 				var frames = ase.RenderAllFrames();
 				for (int i = 0; i < frames.Length; i ++)
 					packer.Add($"{name}/{i}", frames[i]);
 			}
 
+            foreach (var (name,image) in imageFiles)
+            {
+                packer.Add(name,image);
+            }
+            
+            
+            
 			/*foreach (var (name, ase) in tilesetFiles)
 			{
 				var image = ase.RenderFrame(0);
@@ -90,7 +117,7 @@ public static partial class Assets
 			Subtextures.Add(it.Name, new Subtexture(Atlas, it.Source, it.Frame));
 
 		// create sprite assets
-		foreach (var (name, ase) in spriteFiles)
+		foreach (var (name, ase) in aseFiles)
 		{
 			// find origin
 			Vector2 origin = Vector2.Zero;
@@ -112,8 +139,134 @@ public static partial class Assets
 
 			Sprites.Add(name, sprite);
 		}
-	}
+        
+        //png图集？
+    }
 
+    public static void LoadSpritesFromGz(GraphicsDevice gfx)
+    {
+        DeleteCache();
+        var zipArchive= AssetsV1.Zip;
+        //var spritesPath = Path.Join(AssetsPath, "Sprites");
+        var aseFiles = new Dictionary<string, Aseprite>();
+        var imageFiles = new Dictionary<string, Image>();
+        
+        foreach (var entry in zipArchive.Entries)
+        {
+            var ext = Path.GetExtension(entry.FullName);
+            if (string.Equals(ext, ".ase", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ext, ".asesprite", StringComparison.OrdinalIgnoreCase))
+            {
+                var name = Path.ChangeExtension(entry.Name, null);
+                Log.Info($"packing:" + name);
+                try
+                {
+                    using var stream = entry.Open();
+                    using var ms = new MemoryStream();
+                    stream.CopyTo(ms);
+                    ms.Position = 0;
+                    var ase = new Aseprite(ms);
+                    if (ase.Frames.Length > 0)
+                        aseFiles.Add(name, ase);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            } 
+            else if(string.Equals(ext,".png", StringComparison.OrdinalIgnoreCase))
+            {
+                var name = Path.ChangeExtension(entry.Name, null);
+                Log.Info($"packing:" + name);
+                try
+                {
+                    using var stream = entry.Open();
+                    using var ms = new MemoryStream();
+                    stream.CopyTo(ms);
+                    ms.Position = 0;
+                    var png = new Image(ms);
+                    imageFiles.Add(name, png);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+            else
+            {
+                continue;
+            }
+
+        }
+        
+		// 打包所有的sprites
+		Packer.Output output;
+		{
+			var packer = new Packer();
+            packer.Padding = 4;
+			foreach (var (name, ase) in aseFiles)
+			{
+				var frames = ase.RenderAllFrames();
+				for (int i = 0; i < frames.Length; i ++)
+					packer.Add($"{name}/{i}", frames[i]);
+			}
+
+            foreach (var (name,image) in imageFiles)
+            {
+                packer.Add(name,image);
+            }
+            
+            
+            
+			/*foreach (var (name, ase) in tilesetFiles)
+			{
+				var image = ase.RenderFrame(0);
+				var columns = image.Width / Game.TileSize;
+				var rows = image.Height / Game.TileSize;
+
+				for (int x = 0; x < columns; x ++)
+					for (int y = 0; y < rows; y ++)
+						packer.Add($"tilesets/{name}{x}x{y}", image, new RectInt(x, y, 1, 1) * Game.TileSize);
+			}*/
+
+			output = packer.Pack();
+		}
+
+		// create texture file
+		Atlas = new Texture(gfx, output.Pages[0], name: "Atlas");
+
+		// create subtextures
+		foreach (var it in output.Entries)
+			Subtextures.Add(it.Name, new Subtexture(Atlas, it.Source, it.Frame));
+
+		// create sprite assets
+		foreach (var (name, ase) in aseFiles)
+		{
+			// find origin
+			Vector2 origin = Vector2.Zero;
+			if (ase.Slices.Count > 0 && ase.Slices[0].Keys.Length > 0 && ase.Slices[0].Keys[0].Pivot.HasValue)
+				origin = ase.Slices[0].Keys[0].Pivot!.Value;
+
+			var sprite = new Sprite(name, origin);
+
+			// add frames
+			for (int i = 0; i < ase.Frames.Length; i ++)
+				sprite.Frames.Add(new(GetSubtexture($"{name}/{i}"), ase.Frames[i].Duration / 1000.0f));
+
+			// add animations
+			foreach (var tag in ase.Tags)
+			{
+				if (!string.IsNullOrEmpty(tag.Name))
+					sprite.AddAnimation(tag.Name, tag.From, tag.To - tag.From + 1);
+			}
+
+			Sprites.Add(name, sprite);
+		}
+    }
+    
+    
 	/// <summary>
 	/// 卸载资源
 	/// </summary>
@@ -147,10 +300,8 @@ public static partial class Assets
 	/// <param name="name"></param>
 	/// <returns></returns>
 	public static Subtexture GetSubtexture(string name)
-	{
-		if (Subtextures.TryGetValue(name, out var value))
-			return value;
-		return new();
-	}
+    {
+        return Subtextures.TryGetValue(name, out var value) ? value : new();
+    }
 
 }

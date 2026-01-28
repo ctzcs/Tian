@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using System.Reflection;
 using Engine.Asset;
+using Engine.Asset.v1;
 using Engine.Core;
 using Engine.Core.Graphics;
 using Engine.Core.Structure;
@@ -25,6 +26,7 @@ public class ATestSample:IContent
     private float deltaTime = 0;
     private Target target;
     public Vector2Int LogicResolution { get; } = Const._720P;
+    public List<SystemGroup> SystemGroups { get; } = new();
     public Target Target => target;
     
     public EntityStore World
@@ -41,18 +43,24 @@ public class ATestSample:IContent
     public ATestSample(App ctx)
     {
         this.ctx = ctx;
-        World = new EntityStore();
+        World = new EntityStore()
+        {
+            JobRunner = new ParallelJobRunner(Environment.ProcessorCount)
+        };
+        //资源出适合
+        /*AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
+        AssetsV1.LazyInitializeCache("pack.zip");
+        Assets.LoadSpritesFromGz(ctx.GraphicsDevice);*/
         Assets.Load(ctx.GraphicsDevice);
         var font = new SpriteFont(ctx.GraphicsDevice, 
-            Path.Join(Assets.AssetsPath, "Fonts", "SmileySans-Oblique.ttf"), 
+            Path.Join(Assets.ContentAssetsPath, "Fonts", "SmileySans-Oblique.ttf"), 
             32);
         Assets.SetFont(font);
         var asm = Assembly.GetExecutingAssembly();
-        
         customMaterial = 
             //GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm, "Custom", 0, 1, 1, 1);
-        //GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Dissolve",0,1,1,1);
-        GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Slime",0,1,1,1);
+        GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Dissolve",0,1,1,1);
+        //GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Slime",0,1,1,1);
         batcher = new Batcher(ctx.GraphicsDevice);
         target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         res = new Resources(
@@ -62,9 +70,9 @@ public class ATestSample:IContent
             batcher,
             new Vector2(LogicResolution.X,LogicResolution.Y),
             customMaterial);
-        
-        
         tempTarget = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
+        
+        //构建系统
         RebuildSystem();
     }
 
@@ -77,30 +85,29 @@ public class ATestSample:IContent
         updateRoot.Add(new StateSystem(World,ctx,res));
         updateRoot.Add(new BuildingCatchSystem(World,res));
         updateRoot.Add(new FindLineSystem(World,rng));
+        updateRoot.Add(new BehaviorSystem());
         updateRoot.Add(new CameraSystem(World,ctx,target));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
-        
+        updateRoot.Add(new AnimationSystem());
         renderGroup = new SystemRoot(World,"render");
-        renderGroup.Add(new PerformanceSystem());
+        
         renderGroup.Add(new InfoSystem(res));
-        renderGroup.Add(new AnimationSystem());
         renderGroup.Add(new BeforeRenderWorldSystem(batcher));
         renderGroup.Add(new HierarchyOrderSystem());
         
         
 #if DEBUG
+        renderGroup.Add(new PerformanceSystem());
         renderGroup.Add(new CoordinateSystem(ctx,batcher));
         renderGroup.Add(new SelectableSystem(ctx));
         renderGroup.Add(new CameraCullingDebugSystem(batcher));
 #endif
         renderGroup.Add(new RenderSystem(ctx,res.batcher,target));
         renderGroup.Add(new UiRenderSystem(batcher,uiRoot,new UIDebugOverlay()));
-#if DEBUG
-        updateRoot.SetMonitorPerf(true);
-        renderGroup.SetMonitorPerf(true);
-#endif
-
+        SystemGroups.Clear();
+        SystemGroups.Add(updateRoot);
+        SystemGroups.Add(renderGroup);
     }
     
     UIRoot BuildUI()
@@ -173,7 +180,7 @@ public class ATestSample:IContent
         tempTarget.Dispose();
 
         Engine.Asset.Assets.DeleteCache();
-
+        World.JobRunner.Dispose();
         World = null;
         updateRoot = null;
         renderGroup = null;
@@ -189,20 +196,18 @@ public class ATestSample:IContent
         var lifeTime = Math.Clamp(time * 2, 0, Single.Pi / 2);
         var strength = 0.5f + 0.5f * MathF.Cos(lifeTime);
         customMaterial.Fragment.SetUniformBuffer(new Vector4(time, strength, 0, 0), slot: 0);
-
-        updateRoot.Update(new UpdateTick(ctx.Time.Delta,ctx.Time.Elapsed.Seconds));
-        Log.Info(updateRoot.GetPerfLog());
-        Log.Info(renderGroup.GetPerfLog());
+        updateRoot.Update(new UpdateTick(ctx.Time.Delta,(float)ctx.Time.Seconds));
     }
     
     public void Render()
     {
         //GameRender
-        tempTarget.Clear(new Color(0x3A3A3A));
+        tempTarget.Clear(Const.DefaultColor);
         target.Clear(Color.Transparent);
         var zone = Profiler.BeginZone("renderGroup");
-        renderGroup.Update(new UpdateTick(ctx.Time.Delta,ctx.Time.Elapsed.Milliseconds));
+        renderGroup.Update(new UpdateTick(ctx.Time.Delta,(float)ctx.Time.Seconds));
         zone.Dispose();
+        // 使用：将该码点嵌入字符串（C# 中转成 char）
         batcher.Render(tempTarget);
         batcher.Clear();
         PostProcess(tempTarget,target,customMaterial);//TODO 这个也应该放到系统中
@@ -229,6 +234,7 @@ public class ATestSample:IContent
             
             // 绘制全屏后处理
             var outputSize = new Vector2(output.Width, output.Height);
+            
             batcher.Image(sourceTexture, outputSize / 2, outputSize / 2, Vector2.One, 0, Color.White);
             
             //batcher.PopMaterial();

@@ -17,7 +17,7 @@ public partial class Assets
     {
         _allAssets.Clear();
         _assetTypeGroup.Clear();
-        string assetsPath = AssetsPath;
+        string assetsPath = EditorAssetsPath;
         var directories = Directory.GetDirectories(assetsPath, "*", SearchOption.AllDirectories);
         foreach (var directory in directories)
         {

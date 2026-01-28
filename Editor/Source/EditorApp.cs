@@ -30,7 +30,7 @@ public class EditorApp : App
 		Width = Const._1080P.X,
 		Height = Const._1080P.Y,
 		Resizable = true,
-        UpdateMode = Foster.Framework.UpdateMode.FixedStep(60,false)
+        UpdateMode = UpdateMode.FixedStep(60,false)
 	})
 	{
 		image = new Texture(GraphicsDevice, new Image("button.png"));
@@ -89,7 +89,7 @@ public class EditorApp : App
 		if (!_themeApplied)
 		{
 			imRenderer.BeginLayout();
-			EditorStyle.ApplyImGuiTheme(Assets.AssetsPath +"/Fonts/SmileySans-Oblique.ttf",5f,1f );
+			EditorStyle.ApplyImGuiTheme(Assets.EditorAssetsPath +"/Fonts/SmileySans-Oblique.ttf",5f,1f );
 			imRenderer.EndLayout();
 			_themeApplied = true;
 		}
@@ -97,7 +97,6 @@ public class EditorApp : App
 		
 		// Content Update
 		_data.currentContent?.Update();
-		
 		//Inspector Update
 		imRenderer.BeginLayout();
 		UpdateEditorSetting();
@@ -235,10 +234,10 @@ public class EditorApp : App
 
             if (ImGui.BeginMenu("Assets"))
             {
-                if (ImGui.MenuItem("BuildAsset"))
+                if (ImGui.MenuItem("BuildAssets(GameMode)"))
                 {
                     //TODO 这里打包的会是Editor中不改变的Assets,而真实的应该是Content里面的Assets,只有重新编译后再打包才生效，所以应该直接从Content读取
-                    AssetBuilder.Pack(Assets.GetContentAssetsPath(),"pack.zip");
+                    AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
                 }
             
                 if (ImGui.MenuItem("Save"))
@@ -249,7 +248,7 @@ public class EditorApp : App
                         {
                             _data.currentContent.World.SaveEntityGz<Prefab>(path);
                         }
-                    },[],Assets.AssetsPath);
+                    },[],Assets.EditorAssetsPath);
                     //_data.currentContent.World.SaveEntity<EditorTag>("entity-store.json");
                 
                 }
@@ -273,7 +272,7 @@ public class EditorApp : App
                             entityStore.LoadEntityGzCache("pack.zip", $"{directoryName}/{fileName}",false);
                             _data.currentContent.World.InstantiateRoots(entityStore.Entities);
                         }
-                    }, [],Assets.AssetsPath);
+                    }, [],Assets.EditorAssetsPath);
                
                 }
                 ImGui.EndMenu();

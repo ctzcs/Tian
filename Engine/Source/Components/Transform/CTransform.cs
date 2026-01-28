@@ -162,20 +162,6 @@ public struct CTransform : IComponent
 
 }
 
-
-public struct HierarchyChange : IComponent
-{
-    public ChangeType ChangeType;
-    public Entity Self;
-    public Entity Other;
-}
-
-public enum ChangeType
-{
-    SetParent
-}
-
-
 public static class TransformExt
 {
     /// <param name="transform"></param>
@@ -259,6 +245,11 @@ public static class TransformExt
             transform.SetDirty(CTransform.EDirtyType.ScaleDirty);
             return ref transform;
         }
+        
+        
+        //世界转本地
+        public Vector2 WorldToLocal(Vector2 worldPosition) => throw new NotImplementedException();
+        public Vector2 LocalToWorld(Vector2 localPosition) => throw new NotImplementedException();
     }
 
     

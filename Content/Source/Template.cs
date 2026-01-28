@@ -2,6 +2,7 @@
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
 
 namespace Content.Source;
 
@@ -14,6 +15,7 @@ public class Template : IContent
     public Target Target { get; }
     public EntityStore World { get; set; }
     public Vector2Int LogicResolution { get; } = Const._720P;
+    public List<SystemGroup> SystemGroups { get; }
     private readonly Batcher batcher;
     public Template(App app)
     {

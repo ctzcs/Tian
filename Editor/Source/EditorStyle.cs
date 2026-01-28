@@ -11,8 +11,8 @@ public static class EditorStyle
 		var fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
 		var candidates = new[]
 		{
-            Path.Combine(Assets.AssetsPath,"Fonts", "JetBrainsMono-Regular.ttf"),
-            Path.Combine(Assets.AssetsPath,"Fonts","monogram.ttf"),
+            Path.Combine(Assets.EditorAssetsPath,"Fonts", "JetBrainsMono-Regular.ttf"),
+            Path.Combine(Assets.EditorAssetsPath,"Fonts","monogram.ttf"),
 			Path.Combine(fontsDir, "arial.ttf"),
 			Path.Combine(fontsDir, "segoeui.ttf"),
 		};

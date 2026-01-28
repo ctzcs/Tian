@@ -4,37 +4,57 @@ using Engine.Core.Extensions;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
+using Transform = Foster.Framework.Transform;
 
 namespace Engine.Systems;
 
 public struct InsiderView:ITag{}
 
 //After Camera
-public class CameraCullingSystem:QuerySystem<CTransform,SpriteRenderer>
+public class CameraCullingSystem:QuerySystem
 {
     private EntityStore World;
+    private ArchetypeQuery<CTransform,SpriteRenderer> query;
+    private QueryJob queryJob;
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
         World = store;
+        query = store.Query<CTransform,SpriteRenderer>();
+        
     }
 
     protected override void OnUpdate()
     {
-        if (!World.HasUniqueEntity("MainCamera")) return;
-        var cameraEntity = World.GetUniqueEntity("MainCamera");
+        if (!World.HasUniqueEntity(BuildInEntityId.MainCamera)) return;
+        var cameraEntity = World.GetUniqueEntity(BuildInEntityId.MainCamera);
         var camTransform = cameraEntity.GetComponent<CTransform>();
         var camera = cameraEntity.GetComponent<Camera2D>();
 
         var viewMinMax = CameraUtils.GetViewMinAndMaxInWorld(camTransform, camera);
         
-        Query.EachEntity(new CullingSpriteRendererEach()
+        /*queryJob = query.ForEach((transform, sr, entities) =>
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (CameraUtils.IsVisible(transform[i], sr[i], viewMinMax.Item1, viewMinMax.Item2,camera))
+                {
+                    CommandBuffer.Synced.AddTag<InsiderView>(entities[i]);
+                }
+                else
+                {
+                    CommandBuffer.Synced.RemoveTag<InsiderView>(entities[i]);
+                }
+            }
+        });
+        queryJob.RunParallel();*/
+        
+        query.EachEntity(new CullingSpriteRendererEach()
         {
             CommandBuffer = CommandBuffer,
             viewMinMax = viewMinMax,
             camera2D = camera,
         });
-        CommandBuffer.Playback();
     }
     
     
@@ -74,12 +94,11 @@ public class CameraCullingDebugSystem : QuerySystem
     }
     protected override void OnUpdate()
     {
-        if (!World.HasUniqueEntity("MainCamera")) return;
-        var cameraEntity = World.GetUniqueEntity("MainCamera");
-        var camTransform = cameraEntity.GetComponent<CTransform>();
+        if (!World.HasUniqueEntity(BuildInEntityId.MainCamera)) return;
+        var cameraEntity = World.GetUniqueEntity(BuildInEntityId.MainCamera);
         var camera = cameraEntity.GetComponent<Camera2D>();
         ref var checkBox = ref cameraEntity.GetComponent<CheckBox>();
-        var (width,height) = CameraUtils.GetViewWidthHeightInWorld(camTransform, camera);
+        var (width,height) = CameraUtils.GetViewWidthHeightInWorld(camera);
         checkBox.rect.Width = (width) - 1;
         checkBox.rect.Height = (height) - 1;
     }

@@ -228,7 +228,7 @@ public sealed partial class EntityStore : EntityStoreBase
     /// <summary>
     /// If referenced entity is not alive it will use same revision used in <see cref="CreateEntityNode"/>.
     /// </summary>
-    internal Entity CreateEntityReference(long key)
+    public Entity CreateEntityReference(long key)
     {
         int id;
         if (extension.pid2Id == null) {

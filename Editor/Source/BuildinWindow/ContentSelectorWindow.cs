@@ -6,7 +6,6 @@ namespace Editor;
 
 public class ContentSelectorWindow:EditorWindow
 {
-	
 	private ContentManager contentManager;
     private int curIndex = -1;
     

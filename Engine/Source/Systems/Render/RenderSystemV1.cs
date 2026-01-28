@@ -1,4 +1,4 @@
-using System.Numerics;
+/*using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Components;
 using Engine.Core.Extensions;
@@ -14,7 +14,7 @@ namespace Engine.Systems;
 //TODO 尝试优化版本，但使用场景最好是全sprite
 public class RenderSystemV1:QuerySystem
 {
-    /*private const int BatchRenderCount = 32768;*/
+    /*private const int BatchRenderCount = 32768;#1#
     private Batcher batcher;
     private Target renderTarget;
     private int renderCount = 0;
@@ -172,4 +172,4 @@ public class RenderSystemV1:QuerySystem
         
         
     }
-}
+}*/

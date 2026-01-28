@@ -7,7 +7,7 @@ public partial class Assets
     private static string? engineAssetsPath;
 
     //Editor中往往是相对Bin
-    public static string AssetsPath
+    public static string EditorAssetsPath
     {
         get
         {
@@ -24,7 +24,24 @@ public partial class Assets
             return path ?? throw new Exception("Unable to find Assets path");
         }
     }
-    
+
+
+    public static string ContentAssetsPath
+    {
+        get
+        {
+            var up = "";
+            for (int i = 0; i < 12; i++)
+            {
+                var candidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, up, "Content", "Assets"));
+                if (Directory.Exists(candidate))
+                    return candidate;
+
+                up = Path.Combine(up, "..");
+            }
+            throw new DirectoryNotFoundException("Cannot find Content\\Assets from AppContext.BaseDirectory");
+        }
+    }
     
     
     public static string GetContentAssetsPath()

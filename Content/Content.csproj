@@ -29,6 +29,7 @@
         
         <!-- 移除编译后的着色器文件，避免重复包含 -->
         <None Remove="Assets\Shader\Compiled\*" />
+        <None Remove="Assets\Level\imgui.ini" />
     </ItemGroup>
 
     <ItemGroup>

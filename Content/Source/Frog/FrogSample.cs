@@ -5,6 +5,7 @@ using Engine.Core;
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
 
 namespace Content.Frog;
 
@@ -30,6 +31,7 @@ public class FrogSample:IContent
     public Target Target { get; }
     public EntityStore World { get; set; }
     public Vector2Int LogicResolution { get; } = new (1280, 720);
+    public List<SystemGroup> SystemGroups { get; }
 
     public FrogSample(App ctx)
     {

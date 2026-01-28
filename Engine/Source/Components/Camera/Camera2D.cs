@@ -5,14 +5,15 @@ using Cursor = Engine.Core.Input.Cursor;
 
 
 namespace Engine.Components;
+//首先让这个相机中直接有所需的数据，而不需要读取Transform
 public struct Camera2D:IComponent
 {
     
     //TODO 相机的视口，这里应该可能跟Target相关
     /// <summary>
-    /// 相机视口，x,y为左上角，w,h为参考的Pixels宽高
+    /// 相机视口，x,y原点为左上角，w,h为参考的Pixels宽高
     /// </summary>
-    public Rect viewRect;
+    public RectInt viewRect;
     /// <summary>
     /// 缩放比例
     /// </summary>
@@ -46,6 +47,36 @@ public struct Camera2D:IComponent
 
 public static class CameraUtils
 {
+    
+    /// <summary>
+    /// Create Cameraz
+    /// </summary>
+    /// <param name="cameraId"></param>
+    /// <param name="target"></param>
+    /// <param name="world"></param>
+    /// <param name="rotation"></param>
+    /// <param name="size"></param>
+    /// <param name="pixelsPerUnit"></param>
+    /// <returns></returns>
+    public static Entity CreateCamera(string cameraId,IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float zoom,int pixelsPerUnit)
+    {
+        var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
+            new CTransform(default,Vector2.Zero, rotation,size),
+            new Camera2D()
+            {
+                viewRect = new RectInt(0,0, target.WidthInPixels, target.HeightInPixels),
+                offset = Vector2.Zero,
+                zoom = zoom,
+                pixelsPerUnit = pixelsPerUnit
+            },
+            new CheckBox()
+            {
+                Pivot = RectPivot.Center
+            });
+        
+        return ent;
+    }
+    
     /// <summary>
     /// 放缩
     /// </summary>
@@ -64,34 +95,7 @@ public static class CameraUtils
         //Log.Info($"World: {preWorld}:{postWorld}");
     }
     
-    /// <summary>
-    /// Create Cameraz
-    /// </summary>
-    /// <param name="cameraId"></param>
-    /// <param name="target"></param>
-    /// <param name="world"></param>
-    /// <param name="rotation"></param>
-    /// <param name="size"></param>
-    /// <param name="pixelsPerUnit"></param>
-    /// <returns></returns>
-    public static Entity CreateCamera(string cameraId,IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float zoom,int pixelsPerUnit)
-    {
-        var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
-            new CTransform(default,Vector2.Zero, rotation,size),
-            new Camera2D()
-            {
-                viewRect = new Rect(0,0, target.WidthInPixels, target.HeightInPixels),
-                offset = Vector2.Zero,
-                zoom = zoom,
-                pixelsPerUnit = pixelsPerUnit
-            },
-            new CheckBox()
-            {
-                Pivot = RectPivot.Center
-            });
-        
-        return ent;
-    }
+    
     
     /// <summary>
     /// 如果是target不在视口中心，得让mouse跟target一样移动到原点，然后放缩
@@ -159,13 +163,13 @@ public static class CameraUtils
         //   2. Rotate and Scale
         //   3. Move by -target
         
-        Matrix3x2 result = Matrix3x2.Identity;
+        /*Matrix3x2 result = Matrix3x2.Identity;
         
         Matrix3x2 matOrigin = Matrix3x2.CreateTranslation(-transform.position); //将相机带着整个世界平移到原点
         
         //也就是说，移动1 其实移动16像素
         Matrix3x2 matUnitScale = Matrix3x2.CreateScale(camera.pixelsPerUnit);       // 单位 → 像素
-        Matrix3x2 matScale = Matrix3x2.CreateScale(camera.zoom); 
+        Matrix3x2 matScale = Matrix3x2.CreateScale(camera.zoom,camera.zoom); 
         Matrix3x2 matRotate = Matrix3x2.CreateRotation(transform.rad);
         Matrix3x2 matTranslation = Matrix3x2.CreateTranslation(camera.viewRect.Center); //把世界原点摆到屏幕中希望的位置
         result *= matOrigin;
@@ -173,18 +177,31 @@ public static class CameraUtils
         result *= matScale;
         result *= matRotate;
         result *= matTranslation;
-        return result;
+        return result;*/
+        return GetViewMatrix(transform, camera) * GetProjectionMatrix(camera);
     }
     
-    /* TODO 现在编辑器模式下的鼠标位置不能映射到游戏中
-     * 1. Game模式下/Editor模式下，输入鼠标的坐标为窗口的屏幕坐标
-     * 2. 窗口屏幕坐标转换成逻辑屏幕坐标
-     * 3. 逻辑屏幕坐标转换成视口坐标 
-     * 4. 视口坐标转换成世界坐标
-     * 锚定鼠标位置放缩：
-     * 在改变缩放前后，分别求鼠标屏幕坐标对应的世界坐标，计算两者差值，将相机位置平移这个差值，从而“锚定”该世界点。
-     */
+    //世界到相机矩阵
+    public static Matrix3x2 GetViewMatrix(in CTransform cameraTransform, in Camera2D camera)
+    {
+        Matrix3x2 result = Matrix3x2.Identity;
+        result *= Matrix3x2.CreateTranslation(-cameraTransform.position); //将相机带着整个世界平移到原点
+        result *= Matrix3x2.CreateRotation(-cameraTransform.rad);
+        return result;
+    }
 
+    //相机->屏幕像素矩阵
+    public static Matrix3x2 GetProjectionMatrix(in Camera2D camera)
+    {
+        Matrix3x2 result = Matrix3x2.Identity;
+        float scale = camera.zoom * camera.pixelsPerUnit;
+        result *= Matrix3x2.CreateScale(scale,scale);
+        result *= Matrix3x2.CreateTranslation(camera.viewRect.Width*0.5f, camera.viewRect.Height*0.5f);
+        return result;
+    }
+
+
+    #region Culling Func
     /// <summary>
     /// 剔除SpriteRenderer
     /// </summary>
@@ -239,12 +256,95 @@ public static class CameraUtils
         return (viewMin, viewMax);
     }
     
-    public static (float, float) GetViewWidthHeightInWorld(in CTransform camTransform, in Camera2D camera)
+    public static (float, float) GetViewWidthHeightInWorld(in Camera2D camera)
     {
         var viewSizeWorld = new Vector2(camera.viewRect.Width, camera.viewRect.Height)
             / (camera.zoom * camera.pixelsPerUnit);
         return (viewSizeWorld.X, viewSizeWorld.Y);
     }
+    #endregion
     
-    
+}
+
+
+public struct NewCamera2D : IComponent
+{
+    public Vector2 Center; // 相机世界中心
+    public float Rad; // 旋转
+    public float Zoom; // zoom
+    public int Width; //宽度
+    public int Height; //高度
+    public int PixelPerUnit; // 单元像素
+}
+
+
+public static class CameraExtensions
+{
+    // 世界 → 相机（View），世界单位下的相机空间
+    public static Matrix3x2 GetViewMatrix(this in NewCamera2D cam)
+    {
+        Matrix3x2 result = Matrix3x2.Identity;
+        result *= Matrix3x2.CreateTranslation(-cam.Center);
+        result *= Matrix3x2.CreateRotation(-cam.Rad);
+        return result;
+    }
+
+    // 相机 → 屏幕像素（Projection + Viewport）
+    public static Matrix3x2 GetProjectionMatrix(this in NewCamera2D cam)
+    {
+        Matrix3x2 result = Matrix3x2.Identity;
+        float scale = cam.Zoom * cam.PixelPerUnit;
+        // Y 轴翻转：世界/相机空间 Y 向上，映射到屏幕像素 Y 向下
+        result *= Matrix3x2.CreateScale(scale, -scale);
+        result *= Matrix3x2.CreateTranslation(new Vector2(cam.Width * 0.5f, cam.Height * 0.5f));
+        return result;
+    }
+
+    // 世界 → 屏幕像素：World → View → Screen
+    public static Matrix3x2 GetWorldToScreenMatrix(this in NewCamera2D cam)
+    {
+        var view = cam.GetViewMatrix();
+        var proj = cam.GetProjectionMatrix();
+        return view * proj;
+    }
+
+    // 屏幕像素 → 世界：逆矩阵
+    public static Matrix3x2 GetScreenToWorldMatrix(this in NewCamera2D cam)
+    {
+        var worldToScreen = cam.GetWorldToScreenMatrix();
+        Matrix3x2.Invert(worldToScreen, out var inv);
+        return inv;
+    }
+
+    // 世界空间下的可见范围（AABB，忽略旋转，适合做剔除）
+    public static (Vector2 min, Vector2 max) GetWorldViewBounds(this in NewCamera2D cam)
+    {
+        var size = cam.GetWorldViewSize();
+        var half = new Vector2(size.width * 0.5f, size.height * 0.5f);
+        var min = cam.Center - half;
+        var max = cam.Center + half;
+        return (min, max);
+    }
+
+    // 世界空间下的视口宽高（世界单位）
+    public static (float width, float height) GetWorldViewSize(this in NewCamera2D cam)
+    {
+        float widthWorld = cam.Width / (cam.Zoom * cam.PixelPerUnit);
+        float heightWorld = cam.Height / (cam.Zoom * cam.PixelPerUnit);
+        return (widthWorld, heightWorld);
+    }
+
+    // 屏幕像素空间下的可见范围（当前实现相机占满整个屏幕）
+    public static (Vector2 min, Vector2 max) GetScreenViewBounds(this in NewCamera2D cam)
+    {
+        var min = Vector2.Zero;
+        var max = new Vector2(cam.Width, cam.Height);
+        return (min, max);
+    }
+
+    // 屏幕像素空间下的视口宽高（像素）
+    public static (float width, float height) GetScreenViewSize(this in NewCamera2D cam)
+    {
+        return (cam.Width, cam.Height);
+    }
 }

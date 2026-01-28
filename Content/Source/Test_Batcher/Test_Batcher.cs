@@ -4,6 +4,7 @@ using Engine.Core;
 using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
 
 namespace Content.Test_Batcher;
 
@@ -16,6 +17,7 @@ public class TestBatcher:IContent
     public Batcher batcher { get; }
     
     public Vector2Int LogicResolution { get; }
+    public List<SystemGroup> SystemGroups { get; }
 
     public TestBatcher(App app)
     {

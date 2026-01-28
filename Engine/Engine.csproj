@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Lib\Box2D.NET\Box2D.NET.csproj" />
         <ProjectReference Include="..\Lib\Foster.Audio\Foster.Audio\Foster.Audio.csproj" />
         <ProjectReference Include="..\Lib\Foster\Framework\Foster.Framework.csproj" />
         <ProjectReference Include="..\Lib\Friflo.Engine.ECS\src\ECS.Boost\Friflo.Engine.ECS.Boost.csproj" />
