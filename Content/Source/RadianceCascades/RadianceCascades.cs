@@ -2,7 +2,6 @@ using System.Numerics;
 using Engine.Core;
 using Engine.MiniAudio;
 using Engine.Asset.v1;
-using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;

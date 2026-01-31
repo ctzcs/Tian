@@ -3,7 +3,6 @@
 namespace Content.Source.EcsExample;
 
 using Engine.Core;
-using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 

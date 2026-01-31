@@ -11,7 +11,7 @@ public class UiFrame
     public InputState inputState;
     public Vector2 targetPosition;
     
-    public MouseState Mouse=>inputState.Mouse;
+    public MouseState Mouse => inputState.Mouse;
 
 
     public void CopyFrom(UiFrame frame)

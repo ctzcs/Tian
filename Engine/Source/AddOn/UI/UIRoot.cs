@@ -19,7 +19,8 @@ public class UIRoot
     private UiFrame currentFrame;
     
     
-    List<UIElement> _inputFocusListeners = new();
+    List<UIElement> _primaryInputFocusListeners = new();
+    List<UIElement> _secondaryInputFocusListeners = new();
     private readonly List<UIDrawCommand> _drawCommands = new();
 
     public UIElement Root => root;
@@ -42,7 +43,7 @@ public class UIRoot
     {
 	    this.input = input;
 	    this.logicScreen = logicScreen;
-	    root = new UIElement(true,false,true,new Rect(0,0,0,0));
+	    root = new UIElement(new Rect(0, 0, 0, 0));
 	    lastFrame = new UiFrame();
 	    currentFrame = new UiFrame();
     }
@@ -60,6 +61,7 @@ public class UIRoot
 
     public void Render(Batcher batcher)
     {
+        if (!IsOpen) return;
         _drawCommands.Clear();
         root.CollectDrawCommandsAsRoot(_drawCommands);
         UIDrawCommandRenderer.Render(_drawCommands, batcher);
@@ -139,6 +141,7 @@ public class UIRoot
 	    var inputMoved = curState.targetPosition != lastState.targetPosition;
 	    var secondaryInputPress = curState.Mouse.RightPressed;
 	    var secondaryInputRelease = curState.Mouse.RightReleased;
+		var overChanged = over != lastOver;
 	    //鼠标进入
 	    //鼠标离开
 	    //鼠标点击
@@ -146,11 +149,11 @@ public class UIRoot
 	    //鼠标移动
 	    //鼠标滚轮
 	    //鼠标悬停
-	    
 	    if (over != null) HandleMouseWheel(over,curState);
 	    if (inputPress) UpdatePrimaryInputDown(curState, over);
 	    if (secondaryInputPress) UpdateSecondaryInputDown(curState, over);
-	    if (inputMoved) UpdateInputMoved(curState, over,ref lastOver);
+		// 除了指针移动，如果当前指向的元素变化原应该能触发Pointer事件
+	    if (inputMoved || overChanged) UpdateInputMoved(curState, over, ref lastOver, inputMoved); 
 	    if (inputRelease) UpdatePrimaryInputReleased(curState);
 	    if (secondaryInputRelease) UpdateSecondaryInputReleased(curState);
 	    lastOver = over;
@@ -168,15 +171,13 @@ public class UIRoot
 			SetKeyboardFocus(null);*/
 
 		// if we are over an element and the left button was pressed we notify our listener
-		if (over is IInputListener)
+		if (over is IInputListener listener)
 		{
 			//var elementLocal = over.StageToLocalCoordinates(inputPos);
-			var listener = over as IInputListener;
-
+		
 			// add the listener to be notified for all onMouseDown and onMouseUp events
-			listener.OnPointerDown(state);
-			_inputFocusListeners.Add(over);
-			
+			if (listener.OnPointerDown(state) && !_primaryInputFocusListeners.Contains(over))
+				_primaryInputFocusListeners.Add(over);
 		}
 	}
 
@@ -193,15 +194,10 @@ public class UIRoot
 			SetKeyboardFocus(null);*/
 
 		// if we are over an element and the left button was pressed we notify our listener
-		if (over is IInputListener)
+		if (over is IInputListener listener)
 		{
-			//var elementLocal = over.StageToLocalCoordinates(inputPos);
-			var listener = over as IInputListener;
-
-			// add the listener to be notified for all onMouseDown and onMouseUp events
-			listener.OnRightPointerDown(state);
-			_inputFocusListeners.Add(over);
-			
+			if (listener.OnRightPointerDown(state) && !_secondaryInputFocusListeners.Contains(over))
+				_secondaryInputFocusListeners.Add(over);
 		}
 	}
 
@@ -212,10 +208,15 @@ public class UIRoot
 	/// <param name="inputPos">location of cursor</param>
 	/// <param name="over">element under cursor</param>
 	/// <param name="lastOver">element that was previously under the cursor</param>
-	void UpdateInputMoved(UiFrame state,UIElement over,ref UIElement lastOver)
+	void UpdateInputMoved(UiFrame state,UIElement over,ref UIElement lastOver, bool inputMoved)
 	{
-		for (var i = _inputFocusListeners.Count - 1; i >= 0; i--)
-			((IInputListener)_inputFocusListeners[i]).OnPointerMoved(state);
+		if (inputMoved)
+		{
+			for (var i = _primaryInputFocusListeners.Count - 1; i >= 0; i--)
+				((IInputListener)_primaryInputFocusListeners[i]).OnPointerMoved(state);
+			for (var i = _secondaryInputFocusListeners.Count - 1; i >= 0; i--)
+				((IInputListener)_secondaryInputFocusListeners[i]).OnPointerMoved(state);
+		}
 
 		if (over != lastOver)
 		{
@@ -231,9 +232,9 @@ public class UIRoot
 	/// <param name="state"></param>
 	void UpdatePrimaryInputReleased(UiFrame state)
 	{
-		for (var i = _inputFocusListeners.Count - 1; i >= 0; i--)
-			((IInputListener)_inputFocusListeners[i]).OnPointerUp(state);
-		_inputFocusListeners.Clear();
+		for (var i = _primaryInputFocusListeners.Count - 1; i >= 0; i--)
+			((IInputListener)_primaryInputFocusListeners[i]).OnPointerUp(state);
+		_primaryInputFocusListeners.Clear();
 	}
 
 	/// <summary>
@@ -242,9 +243,9 @@ public class UIRoot
 	/// <param name="inputPos">location under cursor</param>
 	void UpdateSecondaryInputReleased(UiFrame state)
 	{
-		for (var i = _inputFocusListeners.Count - 1; i >= 0; i--)
-			((IInputListener)_inputFocusListeners[i]).OnRightPointerUp(state);
-		_inputFocusListeners.Clear();
+		for (var i = _secondaryInputFocusListeners.Count - 1; i >= 0; i--)
+			((IInputListener)_secondaryInputFocusListeners[i]).OnRightPointerUp(state);
+		_secondaryInputFocusListeners.Clear();
 	}
 
 

@@ -1,7 +1,8 @@
+using Engine.Core;
 using Engine.Core.Extensions;
-using Engine.Core.Structure;
 using Engine.Tilemap;
 using Foster.Framework;
+using Rect = Foster.Framework.Rect;
 
 namespace Engine.Asset;
 

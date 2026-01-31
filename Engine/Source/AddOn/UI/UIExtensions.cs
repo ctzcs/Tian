@@ -1,7 +1,8 @@
 using System;
 using System.Numerics;
-using Engine.Core.Structure;
+using Engine.Core;
 using Foster.Framework;
+using Rect = Foster.Framework.Rect;
 
 namespace Engine.UI;
 
@@ -57,6 +58,67 @@ public static class UIFluentExtensions
         cfg = configure(cfg);
         group.Layout = cfg;
         return group;
+    }
+
+    public static T WithPadding<T>(this T group, float left, float top, float right, float bottom)
+        where T : UILayoutGroup
+    {
+        var cfg = group.Layout;
+        cfg.PaddingLeft = left;
+        cfg.PaddingTop = top;
+        cfg.PaddingRight = right;
+        cfg.PaddingBottom = bottom;
+        group.Layout = cfg;
+        return group;
+    }
+
+    public static T WithPadding<T>(this T group, float all)
+        where T : UILayoutGroup
+        => group.WithPadding(all, all, all, all);
+
+    public static T WithChildGap<T>(this T group, float gap)
+        where T : UILayoutGroup
+    {
+        var cfg = group.Layout;
+        cfg.ChildGap = gap;
+        group.Layout = cfg;
+        return group;
+    }
+
+    public static T WithAlign<T>(this T group, HorizontalAlignment x, VerticalAlignment y)
+        where T : UILayoutGroup
+    {
+        var cfg = group.Layout;
+        cfg.AlignX = x;
+        cfg.AlignY = y;
+        group.Layout = cfg;
+        return group;
+    }
+
+    public static T WithAutoSize<T>(this T group, bool autoWidth = false, bool autoHeight = true)
+        where T : UILayoutGroup
+    {
+        var cfg = group.Layout;
+        cfg.AutoWidth = autoWidth;
+        cfg.AutoHeight = autoHeight;
+        group.Layout = cfg;
+        return group;
+    }
+
+    public static T WithViewportRatio<T>(this T element, Rect normalizedRect)
+        where T : UIElement
+    {
+        element.SizeMode = UISizeMode.ViewportRatio;
+        element.NormalizedRect = normalizedRect;
+        return element;
+    }
+
+    public static TParent WithChildren<TParent>(this TParent parent, params UIElement[] children)
+        where TParent : UIElement
+    {
+        for (int i = 0; i < children.Length; i++)
+            parent.AddChild(children[i]);
+        return parent;
     }
 
     /// <summary>

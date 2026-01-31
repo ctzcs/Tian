@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Engine.Core.Structure;
 using Foster.Framework;
 
 namespace Engine.UI;
@@ -10,7 +9,8 @@ namespace Engine.UI;
 public enum LayoutDirection
 {
     Row,
-    Column
+    Column,
+    Grid
 }
 
 public enum HorizontalAlignment
@@ -39,6 +39,11 @@ public struct LayoutConfig
     public HorizontalAlignment AlignX;
     public VerticalAlignment AlignY;
 
+    // Grid
+    public int GridColumns;
+    public float GridCellWidth;
+    public float GridCellHeight;
+
     // 是否让自身宽/高跟随子元素内容（类似 Clay 的 FIT/HUG）
     public bool AutoWidth;
     public bool AutoHeight;
@@ -58,6 +63,9 @@ public class UILayoutGroup : UIElement
             ChildGap = 0,
             AlignX = HorizontalAlignment.Left,
             AlignY = VerticalAlignment.Middle,
+            GridColumns = 0,
+            GridCellWidth = 0,
+            GridCellHeight = 0,
             AutoWidth = false,
             AutoHeight = false
         };
@@ -68,10 +76,20 @@ public class UILayoutGroup : UIElement
         return new UILayoutGroup();
     }
 
-    //先让子节点 Apply，再自己 UpdateLayout ，是「自下而上」的顺序。
-    //父 group 的 AutoWidth / AutoHeight 要靠 子元素的 TargetRect 来算
     public override void Apply()
     {
+        var cfg = Layout;
+
+        // 大多数情况下，Group 应该自上而下布局：先算出自己的可用空间，再让子元素在此基础上布局。
+        // 否则（自下而上）子元素会在父容器尺寸还是旧值/0 的情况下先布局，出现“不撑满”的现象。
+        if (!cfg.AutoWidth && !cfg.AutoHeight)
+        {
+            base.Apply();
+            return;
+        }
+
+        // AutoWidth/AutoHeight 需要先让子元素准备好 TargetRect（测量/自适应），父容器才能据此算自身尺寸。
+        // 但父容器尺寸变化后，子元素还需要再跑一遍布局，避免最终结果仍然基于旧的父尺寸。
         foreach (var child in children)
             child.Apply();
 
@@ -80,6 +98,9 @@ public class UILayoutGroup : UIElement
             UpdateLayout();
             layoutDirty = false;
         }
+
+        foreach (var child in children)
+            child.Apply();
     }
 
     /// <summary>
@@ -126,7 +147,7 @@ public class UILayoutGroup : UIElement
                 h = maxChildHeight + cfg.PaddingTop + cfg.PaddingBottom;
             }
         }
-        else // Column
+        else if (cfg.Direction == LayoutDirection.Column)
         {
             if (autoWidth)
             {
@@ -154,6 +175,47 @@ public class UILayoutGroup : UIElement
                     updateLayoutNow: false);
             }
         }
+        else // Grid
+        {
+            var visibleCount = GetVisibleChildrenCount();
+            if (visibleCount > 0)
+            {
+                var cols = cfg.GridColumns;
+                var cellW = cfg.GridCellWidth;
+                var cellH = cfg.GridCellHeight;
+
+                if (cols <= 0)
+                {
+                    if (cellW <= 0f)
+                        cellW = GetGridFallbackCellWidth();
+
+                    var usable = TargetRect.Width - cfg.PaddingLeft - cfg.PaddingRight;
+                    cols = usable > 0f && cellW > 0f
+                        ? (int)((usable + cfg.ChildGap) / (cellW + cfg.ChildGap))
+                        : 1;
+                }
+
+                if (cols < 1)
+                    cols = 1;
+
+                if (cellW <= 0f)
+                    cellW = GetGridFallbackCellWidth();
+                if (cellH <= 0f)
+                    cellH = GetGridFallbackCellHeight();
+
+                var rows = (visibleCount + cols - 1) / cols;
+
+                if (autoWidth)
+                {
+                    w = cols * cellW + (cols - 1) * cfg.ChildGap + cfg.PaddingLeft + cfg.PaddingRight;
+                }
+
+                if (autoHeight)
+                {
+                    h = rows * cellH + (rows - 1) * cfg.ChildGap + cfg.PaddingTop + cfg.PaddingBottom;
+                }
+            }
+        }
 
         SetTargetRect(new Rect(x, y, w, h));
     }
@@ -178,8 +240,10 @@ public class UILayoutGroup : UIElement
 
         if (cfg.Direction == LayoutDirection.Row)
             LayoutRow(cfg, innerX, innerY, innerW, innerH);
-        else
+        else if (cfg.Direction == LayoutDirection.Column)
             LayoutColumn(cfg, innerX, innerY, innerW, innerH);
+        else
+            LayoutGrid(cfg, innerX, innerY, innerW, innerH);
     }
     
 
@@ -457,6 +521,129 @@ public class UILayoutGroup : UIElement
             y += height + cfg.ChildGap;
         }
     }
+
+    void LayoutGrid(LayoutConfig cfg, float innerX, float innerY, float innerW, float innerH)
+    {
+        var cols = cfg.GridColumns;
+        var cellW = cfg.GridCellWidth;
+        var cellH = cfg.GridCellHeight;
+
+        if (cellW <= 0f)
+            cellW = GetGridFallbackCellWidth();
+        if (cellH <= 0f)
+            cellH = GetGridFallbackCellHeight();
+
+        if (cols <= 0)
+        {
+            cols = innerW > 0f && cellW > 0f
+                ? (int)((innerW + cfg.ChildGap) / (cellW + cfg.ChildGap))
+                : 1;
+        }
+
+        if (cols < 1)
+            cols = 1;
+
+        var visibleIndex = 0;
+        foreach (var child in children)
+        {
+            if (!child.Visible)
+                continue;
+
+            var col = visibleIndex % cols;
+            var row = visibleIndex / cols;
+            visibleIndex++;
+
+            var cellX = innerX + col * (cellW + cfg.ChildGap);
+            var cellY = innerY + row * (cellH + cfg.ChildGap);
+
+            var tr = child.TargetRect;
+            float width = tr.Width;
+            float height = tr.Height;
+
+            if (width <= 0f)
+                width = cellW;
+            if (height <= 0f)
+                height = cellH;
+
+            if (child.MinWidth > 0f && width < child.MinWidth)
+                width = child.MinWidth;
+            if (child.MaxWidth > 0f && width > child.MaxWidth)
+                width = child.MaxWidth;
+            if (child.MinHeight > 0f && height < child.MinHeight)
+                height = child.MinHeight;
+            if (child.MaxHeight > 0f && height > child.MaxHeight)
+                height = child.MaxHeight;
+
+            if (width > cellW)
+                width = cellW;
+            if (height > cellH)
+                height = cellH;
+
+            float x;
+            switch (cfg.AlignX)
+            {
+                case HorizontalAlignment.Left:
+                    x = cellX;
+                    break;
+                case HorizontalAlignment.Right:
+                    x = cellX + (cellW - width);
+                    break;
+                case HorizontalAlignment.Center:
+                default:
+                    x = cellX + (cellW - width) * 0.5f;
+                    break;
+            }
+
+            float y;
+            switch (cfg.AlignY)
+            {
+                case VerticalAlignment.Top:
+                    y = cellY;
+                    break;
+                case VerticalAlignment.Bottom:
+                    y = cellY + (cellH - height);
+                    break;
+                case VerticalAlignment.Middle:
+                default:
+                    y = cellY + (cellH - height) * 0.5f;
+                    break;
+            }
+
+            child.SetTargetRect(new Rect(x, y, width, height));
+        }
+    }
+
+    float GetGridFallbackCellWidth()
+    {
+        float max = 0f;
+        foreach (var child in children)
+        {
+            if (!child.Visible)
+                continue;
+
+            var w = child.TargetRect.Width;
+            if (w > max)
+                max = w;
+        }
+
+        return max > 0f ? max : 42f;
+    }
+
+    float GetGridFallbackCellHeight()
+    {
+        float max = 0f;
+        foreach (var child in children)
+        {
+            if (!child.Visible)
+                continue;
+
+            var h = child.TargetRect.Height;
+            if (h > max)
+                max = h;
+        }
+
+        return max > 0f ? max : 42f;
+    }
 }
 
 public class HorizontalGroup : UILayoutGroup
@@ -486,5 +673,20 @@ public class VerticalGroup : UILayoutGroup
     protected override UIElement CreateCloneInstance()
     {
         return new VerticalGroup();
+    }
+}
+
+public class GridGroup : UILayoutGroup
+{
+    public GridGroup()
+    {
+        var cfg = Layout;
+        cfg.Direction = LayoutDirection.Grid;
+        Layout = cfg;
+    }
+
+    protected override UIElement CreateCloneInstance()
+    {
+        return new GridGroup();
     }
 }

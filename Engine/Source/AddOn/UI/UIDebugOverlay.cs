@@ -1,6 +1,5 @@
 using System.Numerics;
 using Engine.Asset;
-using Engine.Core.Structure;
 using Foster.Framework;
 
 namespace Engine.UI;

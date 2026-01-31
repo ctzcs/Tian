@@ -2,7 +2,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Core;
-using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;

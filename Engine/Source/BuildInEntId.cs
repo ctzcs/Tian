@@ -3,7 +3,7 @@ using Engine.UI;
 
 namespace Engine;
 
-public static class BuildInEntityId
+public static class BuildInEntId
 {
     public static string MainCamera => nameof(MainCamera);
     public static string Performance => nameof(Performance);

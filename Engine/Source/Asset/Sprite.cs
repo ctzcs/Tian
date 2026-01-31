@@ -22,16 +22,16 @@ public class Sprite
         Origin = origin;
     }
 	
-    public Frame GetFrameAt(in Animation animation, float millisecond, bool loop)
+    public Frame GetFrameAt(in Animation animation, float second, bool loop)
     {
-        if (millisecond >= animation.Duration && !loop)
+        if (second >= animation.Duration && !loop)
             return Frames[animation.FrameStart + animation.FrameCount - 1];
 
-        millisecond %= animation.Duration;
+        second %= animation.Duration;
         for (int i = animation.FrameStart; i < animation.FrameStart + animation.FrameCount; i ++)
         {
-            millisecond -= Frames[i].Duration;
-            if (millisecond <= 0)
+            second -= Frames[i].Duration;
+            if (second <= 0)
                 return Frames[i];
         }
         return Frames[animation.FrameStart];

@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Engine.Asset;
-using Engine.Core.Structure;
+using Engine.Core;
 using Foster.Framework;
+using Rect = Foster.Framework.Rect;
 
 namespace Engine.UI;
 
@@ -131,6 +132,31 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     }
     
     public List<UIElement> Children => children;
+
+    public UIElement() : this(new Rect(0, 0, 0, 0))
+    {
+    }
+
+    public UIElement(Rect rect, UIElement? parent = null)
+        : this(maskable: true, selectable: false, visible: true, rect: rect, parent: parent)
+    {
+    }
+
+    public bool Maskable
+    {
+        get => maskable;
+        set => maskable = value;
+    }
+
+    public UIElement ClearChildren()
+    {
+        for (int i = 0; i < children.Count; i++)
+            children[i].Parent = null;
+
+        children.Clear();
+        InvalidateLayout();
+        return this;
+    }
 
     public Rect Rect
     {
