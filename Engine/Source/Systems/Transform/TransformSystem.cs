@@ -39,20 +39,5 @@ public partial class TransformSystem : QuerySystem
                 transform.UpdateTransform();
             }
         });
-        
-        checkBoxQuery.ForEachEntity((ref transform, ref checkBox, entity) =>
-        {
-            switch (checkBox.Pivot)
-            {
-                case RectPivot.BottomCenter:
-                    //一般都是底部中心是Transform.position
-                    checkBox.rect.BottomCenter = transform.position;
-                    break;
-                default:
-                    checkBox.rect.Center = transform.position;
-                    break;
-            }
-            
-        });
     }
 }

@@ -4,7 +4,6 @@ using Engine.Asset;
 using Engine.Asset.v1;
 using Engine.Core;
 using Engine.Core.Graphics;
-using Engine.Core.Structure;
 using Engine.Performance;
 using Engine.Systems;
 using Engine.Systems.Editor;
@@ -81,7 +80,7 @@ public class ATestSample:IContent
         var uiRoot = BuildUI();
         //系统模块构建
         updateRoot = new SystemRoot(World, "TestGroup");
-        updateRoot.Add(new UiSystem(uiRoot));
+        updateRoot.Add(new UiSystem(uiRoot,new UIDebugOverlay()));
         updateRoot.Add(new StateSystem(World,ctx,res));
         updateRoot.Add(new BuildingCatchSystem(World,res));
         updateRoot.Add(new FindLineSystem(World,rng));
@@ -96,15 +95,14 @@ public class ATestSample:IContent
         renderGroup.Add(new BeforeRenderWorldSystem(batcher));
         renderGroup.Add(new HierarchyOrderSystem());
         
-        
-#if DEBUG
         renderGroup.Add(new PerformanceSystem());
         renderGroup.Add(new CoordinateSystem(ctx,batcher));
         renderGroup.Add(new SelectableSystem(ctx));
         renderGroup.Add(new CameraCullingDebugSystem(batcher));
-#endif
+        
         renderGroup.Add(new RenderSystem(ctx,res.batcher,target));
-        renderGroup.Add(new UiRenderSystem(batcher,uiRoot,new UIDebugOverlay()));
+        renderGroup.Add(new AfterRenderWorldSystem(batcher));
+        renderGroup.Add(new UiRenderSystem(batcher));
         SystemGroups.Clear();
         SystemGroups.Add(updateRoot);
         SystemGroups.Add(renderGroup);
@@ -150,7 +148,7 @@ public class ATestSample:IContent
         panel1.BackgroundColor = Color.Yellow;
         var btn1 = new Button(true, true, true, new Rect(0, 0, 360, 50));
         btn1.BackgroundColor = Color.Blue;
-        btn1.Text = "MEMEMEM";
+        btn1.Text = "MEMEMEM你好o";
         panel1.AddChild(btn1);
         
         uiRoot.Root.AddChild(panel1);

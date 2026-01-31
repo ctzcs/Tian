@@ -17,6 +17,11 @@ public class PerformanceSystem:QuerySystem
         world = store;
         singleton = store.CreateEntity(
             new UniqueEntity(Performance),
+            new MetaGroup()
+            {
+                GroupName = "Unique",
+                SubGroupName = "BuildIn"
+            },
             new FrameCounter()
             {
                 sw = Stopwatch.StartNew()

@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using Box2D.NET;
 using Engine.Core;
-using Engine.Core.Structure;
 using Engine.Systems;
 using Engine.Systems.Editor;
 using Engine.UI;
@@ -39,11 +38,11 @@ public class Box2D : IContent
     public void Start()
     {
         var defaultConfig = B2Types.b2DefaultWorldDef();
-        defaultConfig.gravity = new B2Vec2(0,10f);
+        defaultConfig.gravity = new B2Vec2(0,-10f);
         physicsWorld = B2Worlds.b2CreateWorld(defaultConfig);
         debug = new DebugContext(batcher, lineWeight: 2f, circleSteps: 32);
         var bodyDef = B2Types.b2DefaultBodyDef();
-        bodyDef.position = new B2Vec2(0f,10f);
+        bodyDef.position = new B2Vec2(0f,-10f);
         var staticBody = B2Bodies.b2CreateBody(physicsWorld,bodyDef);
         B2Shapes.b2CreatePolygonShape(staticBody, B2Types.b2DefaultShapeDef(),B2Geometries.b2MakeBox(100,1f));
         B2Shapes.b2CreatePolygonShape(staticBody, B2Types.b2DefaultShapeDef(),B2Geometries.b2MakeOffsetBox(1,100f,new B2Vec2(-50.0f,0.0f),B2MathFunction.b2Rot_identity));
@@ -51,9 +50,9 @@ public class Box2D : IContent
         
         bodyDef.type = B2BodyType.b2_dynamicBody;
         var rng = Rng.Randomized();
-        for (int i = 0; i < 5000; i++)
+        for (int i = 0; i < 500; i++)
         {
-            var point = rng.PointInside(new Rect(0,-10,20, 20));
+            var point = rng.PointInside(new Rect(0,10,20, 20));
             bodyDef.position = new B2Vec2(point.X,point.Y); // 稍微堆成一条柱子
             var body = B2Bodies.b2CreateBody(physicsWorld, bodyDef);
             B2Shapes.b2CreateCircleShape(body,

@@ -837,6 +837,9 @@ public static class Mathf
 
 
     #region Sorting
+    
+    //单调递增对应原来的数值大小
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint IntToSortable(int v) => unchecked((uint)v) ^ 0x8000_0000u;
 

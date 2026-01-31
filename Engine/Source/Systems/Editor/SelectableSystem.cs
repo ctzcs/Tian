@@ -30,7 +30,13 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
     {
         base.OnAddStore(store);
         _world = store;
-        store.CreateEntity(new UniqueEntity("Selector"),new Selector());
+        store.CreateEntity(new UniqueEntity("Selector"),
+            new MetaGroup()
+            {
+                GroupName = "Unique",
+                SubGroupName = "BuildIn"
+            },
+            new Selector());
         Filter.AllTags(Tags.Get<InsiderView>());
     }
 
@@ -64,7 +70,7 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
                 }
             }*/
             if(!selectTarget.IsNull) return;
-            if (!checkBox.rect.Contains(pos)) return;
+            if (!checkBox.Contains(transform,pos)) return;
             selectTarget = entity;
         });
         selector.SelectTarget = selectTarget;

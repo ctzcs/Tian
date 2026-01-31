@@ -79,7 +79,7 @@ public class BuildingCatchSystem : QuerySystem<CTransform,Unit>
         {
             var child = TestExt.CreateFrogCarrier(
                 world,
-                new Vector2(0, -1),
+                new Vector2(0, 1),
                 0,
                 Vector2.One,
                 "frog/0",

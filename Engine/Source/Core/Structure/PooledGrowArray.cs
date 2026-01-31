@@ -1,7 +1,6 @@
-namespace Engine.Core.Structure;
-
-using System;
 using System.Buffers;
+
+namespace Engine.Core;
 
 public sealed class PooledGrowArray<T> : IDisposable
 {

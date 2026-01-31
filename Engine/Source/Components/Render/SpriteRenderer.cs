@@ -52,16 +52,20 @@ public static class SpriteRendererExtensions
             /*batcher.Image(spriteRenderer.subtexture, transform.position, 
                 spriteRenderer.originInPixels, transform.scale * 1f / pixelsPerUnit, transform.rad, spriteRenderer.color);*/
             if (spriteRenderer.material != null) batcher.PushMaterial(spriteRenderer.material);
-            batcher.Image(spriteRenderer.subtexture, transform.position, 
-                spriteRenderer.originInPixels, transform.scale * 1f / pixelsPerUnit, transform.rad, spriteRenderer.color);
+            spriteRenderer.DrawGeometry(batcher, transform, pixelsPerUnit);
             if(spriteRenderer.material != null) batcher.PopMaterial();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DrawGeometry(Batcher batcher, in CTransform transform, int pixelsPerUnit)
         {
+            // 控制本张图的上下，这里期望的是在世界坐标中绘制，于是期望Y向上，所以这里要flip Y
+            //由于Image是用来绘制屏幕坐标系的，所以这里需要包一层
+            //NOTE 新写模块要注意，所有的世界空间中的东西，都需要翻转y
+            var scale = transform.scale * 1f / pixelsPerUnit;
+            scale.Y = -scale.Y; 
             batcher.Image(spriteRenderer.subtexture, transform.position, 
-                spriteRenderer.originInPixels, transform.scale * 1f / pixelsPerUnit, transform.rad, spriteRenderer.color);
+                spriteRenderer.originInPixels, scale, transform.rad, spriteRenderer.color);
         }
 
         

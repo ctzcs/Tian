@@ -1,6 +1,4 @@
-namespace Engine.Core.Structure;
-
-using System;
+namespace Engine.Core;
 
 public sealed class GrowArray<T>
 {

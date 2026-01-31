@@ -16,9 +16,9 @@ public struct SortingOrder : IComponent
 /// </summary>
 public struct HierarchyOrder : IComponent
 {
-    public uint group;
-    public int depth;
-    public uint index;
+    public uint group; //按照根实体赋值
+    public int depth; //按照Layer中的Depth赋予顺序
+    public uint index; // 按照Y值赋予顺序
 }
 
 public static class SortingOrderExtensions

@@ -72,6 +72,11 @@ public static class CameraUtils
             new CheckBox()
             {
                 Pivot = RectPivot.Center
+            },
+            new MetaGroup()
+            {
+                GroupName = "Unique",
+                SubGroupName = "BuildIn"
             });
         
         return ent;
@@ -193,9 +198,11 @@ public static class CameraUtils
     //相机->屏幕像素矩阵
     public static Matrix3x2 GetProjectionMatrix(in Camera2D camera)
     {
+        // 将世界空间的Y向上翻转成Y向下，再把原点挪到视口中心。
         Matrix3x2 result = Matrix3x2.Identity;
+        //世界坐标里 1 个单位，在屏幕上要画 scale 个像素 。
         float scale = camera.zoom * camera.pixelsPerUnit;
-        result *= Matrix3x2.CreateScale(scale,scale);
+        result *= Matrix3x2.CreateScale(scale,-scale);
         result *= Matrix3x2.CreateTranslation(camera.viewRect.Width*0.5f, camera.viewRect.Height*0.5f);
         return result;
     }

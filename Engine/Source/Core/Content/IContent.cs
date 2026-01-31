@@ -1,4 +1,3 @@
-using Engine.Core.Structure;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;

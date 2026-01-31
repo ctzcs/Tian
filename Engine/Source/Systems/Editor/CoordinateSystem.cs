@@ -1,7 +1,7 @@
 using System.Numerics;
 using Engine.Components;
+using Engine.Core;
 using Engine.Core.Extensions;
-using Engine.Core.Structure;
 using Engine.Utility;
 using Foster.Framework;
 using Friflo.Engine.ECS;
@@ -38,6 +38,10 @@ public class CoordinateSystem : QuerySystem<Coordinate>
             LineColor = new Color(0x454545),
             CoordinateColor = new Color(0x5A5A5A),
             SelectedColor = new Color(0x707070),
+        },new MetaGroup()
+        {
+            GroupName = "Unique",
+            SubGroupName = "BuildIn"
         });
 
     }

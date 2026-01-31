@@ -45,7 +45,13 @@ public partial class StateSystem : QuerySystem
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
-        world.CreateEntity(new UniqueEntity("InfoState"),
+        world.CreateEntity(
+            new UniqueEntity("InfoState"),
+            new MetaGroup()
+            {
+                GroupName = "Unique",
+                SubGroupName = "InGame"
+            },
             new InfoState()
         {
             State = EState.Frog,
@@ -56,8 +62,8 @@ public partial class StateSystem : QuerySystem
     {
         if (!world.HasUniqueEntity("InfoState")) return;
         ref var state = ref world.GetUniqueEntity("InfoState").GetComponent<InfoState>();
-        if (!world.HasUniqueEntity(BuildInEntityId.MainCamera)) return;
-        var cameraEntity = world.GetUniqueEntity(BuildInEntityId.MainCamera);
+        if (!world.HasUniqueEntity(BuildInEntId.MainCamera)) return;
+        var cameraEntity = world.GetUniqueEntity(BuildInEntId.MainCamera);
         ref var camera = ref cameraEntity.GetComponent<Camera2D>();
         ref var cameraTransform = ref cameraEntity.GetComponent<CTransform>();
         if (!Cursor.CanGameUse())
@@ -70,7 +76,7 @@ public partial class StateSystem : QuerySystem
                     state.State = EState.Line;
                 }
                 
-                if (ctx.Input.Mouse.Down(MouseButtons.Right))
+                if (ctx.Input.Mouse.Pressed(MouseButtons.Right))
                 {
                     var screenPosition = CameraUtils.ViewportToLogicScreen(Cursor.ViewportPosition,res.target.SizeInPixels() );//ctx.Input.Mouse.Position;
                     var pos = CameraUtils.ScreenToWorld(screenPosition, cameraTransform, camera);
@@ -80,18 +86,28 @@ public partial class StateSystem : QuerySystem
                     for (int i = 0; i < count; i++)
                     {
                         //TestExt.CreateArrayUnit(world, pos);
-                        //TestExt.CreateSimpleFrogWithMaterial(world, pos + Vector2.One * i * 4,0,Vector2.One,"frog/0" , Color.Black,res.customMaterial,1);
-                        TestExt.CreateRenderSortingTestCase(world, pos);
+                        TestExt.CreateSimpleFrogWithMaterial(world, pos + Vector2.One * i * 4,0,Vector2.One,"frog/0" , Color.Black,res.customMaterial,1);
+                        //TestExt.CreateRenderSortingTestCase(world, pos);
                     }
 
-                    int countAnim = 1;
+                    int countAnim = 0;
                     for (int i = 0; i < countAnim; i++)
                     {
                         TestExt.CreateAnimFrog(world, pos - Vector2.One * i * 4, 0, new Vector2(1,1), "frog", "idle",
                             Color.White, 0);
                     }
+
+                    int rowLineCount = 100;
+                    for (int i = 0; i < rowLineCount; i++)
+                    {
+                        for (int j = 0; j < rowLineCount; j++)
+                        {
+                            TestExt.CreateAnimFrog(world, pos + new Vector2(i,j), 0, new Vector2(1,1), "frog", "idle",
+                                Color.White, 0);
+                        }
+                    }
                     
-                    state.count = state.count + count + countAnim;
+                    state.count = state.count + count + countAnim + rowLineCount * rowLineCount;
                 }
                 
                 break;

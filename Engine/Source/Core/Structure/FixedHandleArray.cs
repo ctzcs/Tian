@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Engine.Core.Structure;
+namespace Engine.Core;
 
 public struct Handle:IEquatable<Handle>
 {

@@ -1,7 +1,8 @@
 using System.Numerics;
 using Engine.Asset;
-using Engine.Core.Structure;
+using Engine.Core;
 using Foster.Framework;
+using Rect = Foster.Framework.Rect;
 
 namespace Engine.Tilemap;
 

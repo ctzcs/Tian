@@ -1,4 +1,6 @@
-namespace Engine.Core.Structure;
+using Engine.Core;
+
+namespace Engine.Core;
 
 /// <summary>
 /// 一种将Key映射到index的容器，主要用于稳定资源的访问，查询一次key，存储index

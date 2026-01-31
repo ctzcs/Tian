@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Engine.Utility;
 
-namespace Engine.Core.Structure;
+namespace Engine.Core;
 
 [JsonConverter(typeof(JsonConverter))]
 public struct Vector2Int : IEquatable<Vector2Int>, IFormattable

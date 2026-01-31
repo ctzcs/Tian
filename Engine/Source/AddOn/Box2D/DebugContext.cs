@@ -43,7 +43,8 @@ public class DebugContext
     }
 
     private static Color ToColor(B2HexColor c) => new Color((int)c);
-    private static Vector2 ToPixels(DebugContext ext, in B2Vec2 v) => Vector2.Transform(new Vector2(v.X, v.Y), ext._worldToPixel);
+    private static Vector2 ToPixels(DebugContext ext, in B2Vec2 v)
+        => Vector2.Transform(new Vector2(v.X, v.Y), ext._worldToPixel);
 
     private static void DrawPolygon(ReadOnlySpan<B2Vec2> vertices, int vertexCount, B2HexColor color, object context)
     {

@@ -31,7 +31,7 @@ public class AnimationSystem:QuerySystem
         spriteSettingQuery.ForEachEntity((ref transform, ref animator,ref sr,entity) =>
         {
             /*if (!CameraUtils.IsVisible(transform,sr,viewMinMax.Item1,viewMinMax.Item2)) return;*/
-            animator.millisecond = Tick.time;
+            animator.second = Tick.time;
             SetAnimToSpriteRenderer(ref animator,ref sr);
         });
     }

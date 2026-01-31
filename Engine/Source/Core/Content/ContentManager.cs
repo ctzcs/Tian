@@ -78,6 +78,20 @@ public sealed class ContentManager
 		return inst;
 	}
 
+	/// <summary>
+	/// 创建并切换到指定 Content。
+	/// 关键点：先 Destroy 旧 Content，再 Create 新 Content，最后 Start。
+	/// 这样可避免旧 Content.Destroy() 清空全局资源（例如 Assets.Font）覆盖新 Content 构造期的初始化。
+	/// </summary>
+	public IContent CreateAndSetCurrent(string assemblyName, string typeName, App app)
+	{
+		_current?.Destroy();
+		var content = Create(assemblyName, typeName, app);
+		_current = content;
+		_current.Start();
+		return content;
+	}
+
 	// 切换当前 Content（自动调用 Destroy/Start）
 	public void SetCurrent(IContent content)
 	{

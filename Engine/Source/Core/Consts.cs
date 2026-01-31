@@ -1,5 +1,3 @@
-
-using Engine.Core.Structure;
 using Foster.Framework;
 
 namespace Engine.Core;

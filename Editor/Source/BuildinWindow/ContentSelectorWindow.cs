@@ -73,7 +73,6 @@ public class ContentSelectorWindow:EditorWindow
 			contentManager.LoadContentAssembly("Content", contentDll);
 
 			// 优先尝试 TestSample（简单名），否则取第一个可用类型
-			IContent content;
 			var types = contentManager.GetAvailableContentTypes("Content").ToArray();
 			if (types.Length == 0)
 			{
@@ -83,8 +82,7 @@ public class ContentSelectorWindow:EditorWindow
 			}
             //默认加载0
 			var defaultName = types[0];
-			content = contentManager.Create("Content", defaultName, Data.app);
-			contentManager.SetCurrent(content);
+			var content = contentManager.CreateAndSetCurrent("Content", defaultName, Data.app);
 			Data.currentContent = content;
 		}
 		catch
@@ -98,8 +96,7 @@ public class ContentSelectorWindow:EditorWindow
 	{
 		try
 		{
-			var content = contentManager.Create("Content", typeName, Data.app);
-			contentManager.SetCurrent(content);
+			var content = contentManager.CreateAndSetCurrent("Content", typeName, Data.app);
 			Data.currentContent = content;
             GC.Collect();
         }

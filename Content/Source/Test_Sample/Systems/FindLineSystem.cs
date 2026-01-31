@@ -55,7 +55,7 @@ public partial class FindLineSystem:QuerySystem
                         var pos = lineRenderer.line[followLine.nextIndex];
                         var dir = (pos - transform.localPosition).Normalized();
                         //可能出现由于速度太快，导致超出线的位置的情况
-                        if (!box.rect.Contains(pos) /*Vector2.DistanceSquared(pos,transform.localPosition) > 1*/ ) 
+                        if (!box.Contains(transform,pos) /*Vector2.DistanceSquared(pos,transform.localPosition) > 1*/ ) 
                         {
                             transform.SetLocalPosition(transform.localPosition + deltaTime*dir*speed);
                         }

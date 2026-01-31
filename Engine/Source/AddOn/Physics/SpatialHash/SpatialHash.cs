@@ -1,4 +1,4 @@
-﻿using Engine.Core.Structure;
+﻿using Engine.Core;
 using Friflo.Engine.ECS;
 
 namespace Engine.Physics;

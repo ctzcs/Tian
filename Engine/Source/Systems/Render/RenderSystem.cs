@@ -42,6 +42,7 @@ public class RenderSystem:QuerySystem
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(OrderRecord b)
         {
+            //升序排序
             ulong a0 = key0;
             ulong b0 = b.key0;
             if (a0 < b0) return -1;
@@ -60,8 +61,6 @@ public class RenderSystem:QuerySystem
         }
     }
     
-
-    
     public RenderSystem(App app,Batcher batcher,Target renderTarget)
     {
         ctx = app;
@@ -72,7 +71,7 @@ public class RenderSystem:QuerySystem
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
-        this.World = store;
+        World = store;
         lineQuery = World.Query<CTransform, LineRenderer, SortingOrder>();
         spriteQuery = World.Query<CTransform,SpriteRenderer,SortingOrder,HierarchyOrder>().AllTags(Tags.Get<InsiderView>());
     }
@@ -80,7 +79,7 @@ public class RenderSystem:QuerySystem
     
     protected override void OnUpdate()
     {
-        ref var camera = ref World.GetUniqueEntity(BuildInEntityId.MainCamera).GetComponent<Camera2D>();
+        ref var camera = ref World.GetUniqueEntity(BuildInEntId.MainCamera).GetComponent<Camera2D>();
         int ppu = camera.pixelsPerUnit;
         //画线
         //batcher.PushSampler(new TextureSampler(TextureFilter.Nearest, TextureWrap.Clamp, TextureWrap.Clamp));
@@ -101,37 +100,45 @@ public class RenderSystem:QuerySystem
         //batcher.PopSampler();
         //画Sprite
         entityCount = 0;
-        
-        spriteQuery.ForEachEntity((ref transform,ref sr,ref sortingOrder, ref hierarchyOrder,entity) =>
+        int spriteCount = spriteQuery.Count;
+        if (spriteCount > 30000)
         {
-            if (entity.IsNull) return;
-            sr.InitTexture();
-
-            ushort layer16 = SortingOrderExtensions.NormalizeLayer16(sortingOrder.layerMask);
-            ushort depth16 = SortingOrderExtensions.NormalizeDepth16(sortingOrder.depth);
-
-            entities[entityCount++] = new OrderRecord()
+            RenderSpriteDirectly(ref camera);
+        }
+        else
+        {
+            spriteQuery.ForEachEntity((ref transform,ref sr,ref sortingOrder, ref hierarchyOrder,entity) =>
             {
-                entity = entity,
-                key0 = ((ulong)layer16 << 48) | ((ulong)depth16 << 32) | hierarchyOrder.group,
-                key1 = ((ulong)(uint)hierarchyOrder.depth << 32) | hierarchyOrder.index,
-                key2 = unchecked((uint)entity.Id),
-            };
-        } );
+                if (entity.IsNull) return;
+                sr.InitTexture();
+
+                ushort layer16 = SortingOrderExtensions.NormalizeLayer16(sortingOrder.layerMask);
+                ushort depth16 = SortingOrderExtensions.NormalizeDepth16(sortingOrder.depth);
+
+                entities[entityCount++] = new OrderRecord()
+                {
+                    entity = entity,
+                    key0 = ((ulong)layer16 << 48) | ((ulong)depth16 << 32) | hierarchyOrder.group,
+                    key1 = ((ulong)(uint)hierarchyOrder.depth << 32) | hierarchyOrder.index,
+                    key2 = unchecked((uint)entity.Id),
+                };
+            } );
         
-        HandleSpriteRenderList(ref camera);
+            HandleSpriteRenderList(ref camera);
+        }
+        
         
 #if DEBUG
         //BugBox
         World.Query<CTransform,CheckBox>().ForEachEntity((ref transform, ref box, entity) =>
         {
             if (!box.IsEnable) return;
-            batcher.QuadLine(box.rect.TopLeft,box.rect.TopRight,box.rect.BottomRight,box.rect.BottomLeft,0.1f,Color.Red);
+            box.Draw(transform,batcher);
         });
 #endif
-        if (World.HasUniqueEntity(BuildInEntityId.Performance))
+        if (World.HasUniqueEntity(BuildInEntId.Performance))
         {
-            ref var batchStats = ref World.GetUniqueEntity(BuildInEntityId.Performance).GetComponent<RenderBatchStats>();
+            ref var batchStats = ref World.GetUniqueEntity(BuildInEntId.Performance).GetComponent<RenderBatchStats>();
             batchStats.BatchCount = batcher.BatchCount;
         }
     }
@@ -163,5 +170,29 @@ public class RenderSystem:QuerySystem
             renderCount++;
         }
         if (currentMaterial != null) batcher.PopMaterial();
+    }
+
+
+    void RenderSpriteDirectly(ref Camera2D camera)
+    {
+        Material? currentMaterial = null;
+        renderCount = 0;
+        int ppu = camera.pixelsPerUnit;
+        spriteQuery.ForEachEntity((ref transform, ref sr, ref sortingOrder, ref hierarchyOrder, entity) =>
+        {
+            if (entity.IsNull) return;
+            sr.InitTexture();
+            var nextMat = sr.material;
+            if (nextMat != currentMaterial)
+            {
+                if (currentMaterial != null) batcher.PopMaterial();
+                if (nextMat != null) batcher.PushMaterial(nextMat);
+                currentMaterial = nextMat;
+            }
+            sr.DrawGeometry(batcher, in transform, ppu);
+            renderCount++;
+            if (currentMaterial != null) batcher.PopMaterial();
+        });
+        
     }
 }

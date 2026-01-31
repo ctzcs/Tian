@@ -1,6 +1,4 @@
-using System;
-
-namespace Engine.Core.Structure;
+namespace Engine.Core;
 /// <summary>
 /// 插值方法
 /// </summary>

@@ -38,14 +38,15 @@ public class HierarchyOrderSystem : QuerySystem
                     root = current;
                     break;
                 }
-
+                
                 current = parent;
                 depth++;
             }
 
             ref var rootTransform = ref root.GetComponent<CTransform>();
-            uint group = Mathf.FloatToSortable(rootTransform.position.Y);
-            uint index = Mathf.FloatToSortable(transform.localPosition.Y);
+            //最终是升序编码所以Y越小越靠前，这里翻转是因为y
+            uint group = Mathf.FloatToSortable(- rootTransform.position.Y);
+            uint index = Mathf.FloatToSortable(- transform.localPosition.Y);
 
             if (entity.HasComponent<HierarchyOrder>())
             {

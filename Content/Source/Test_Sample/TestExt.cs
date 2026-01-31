@@ -25,7 +25,7 @@ public static class TestExt
             },
             new Worker(),
             new CTransform(default, position, rotation, size),
-            new CheckBox() { rect = new Rect(position, 1, 1f) },
+            new CheckBox() { Size = new Vector2(1)},
         new SpriteRenderer()
           {
               subTextureName = subTextureName,
@@ -41,6 +41,11 @@ public static class TestExt
         new Behavior()
         {
             behavior = new BehaviorA(),
+        }, 
+        new MetaGroup()
+        {
+            GroupName = "Unit",
+            SubGroupName = "Frog",
         }
         ,Tags.Get<Prefab>());
         return ent;
@@ -58,7 +63,7 @@ public static class TestExt
             },
             new Building(),
             new CTransform(default, position, rotation, size),
-            new CheckBox() { rect = new Rect(position, 2, 2) },
+            new CheckBox() { Size = new Vector2(2)},
             new SpriteRenderer()
             {
                 subtexture = tex,
@@ -70,6 +75,11 @@ public static class TestExt
             {
                 layerMask = ELayer.Building.GetId(),
                 depth = depth
+            },
+            new MetaGroup()
+            {
+                GroupName = "Unit",
+                SubGroupName = "Building",
             });
         
         return ent;
@@ -108,7 +118,7 @@ public static class TestExt
         var last = root;
         for (int i = 0; i < wholeCount - 1; i++)
         {
-            var e = CreateSimpleFrog(world, new Vector2(0, -1), 0, Vector2.One, textureName, Color.Green, baseDepth + (i + 1) * step);
+            var e = CreateSimpleFrog(world, new Vector2(0, 1), 0, Vector2.One, textureName, Color.Green, baseDepth);
             e.SetParent(last);
             last = e;
         }
@@ -155,13 +165,13 @@ public static class TestExt
             },
             new Worker(),
             new CTransform(default, position, rotation, size),
-            new CheckBox() { rect = new Rect(position, 1, 1) },
+            new CheckBox() { Size = new Vector2(1) },
             new Animator()
             {
               animSpriteName  = spriteName,
               animName =  animName,
               isLoop = true,
-              millisecond = 0,
+              second = 0,
             },
             new SpriteRenderer()
             {
@@ -178,6 +188,11 @@ public static class TestExt
             new Behavior()
             {
                 behavior = new BehaviorB(),
+            },
+            new MetaGroup()
+            {
+                GroupName = "Unit",
+                SubGroupName = "Frog",
             },
             Tags.Get<EditorTag>());
         
@@ -202,7 +217,7 @@ public static class TestExt
                 animSpriteName = spriteName,
                 animName = animName,
                 isLoop = true,
-                millisecond = 0,
+                second = 0,
             },
             new SpriteRenderer()
             {
@@ -265,7 +280,7 @@ public static class TestExt
             },
             new Worker(),
             new CTransform(default, position, rotation, size),
-            new CheckBox() { rect = new Rect(position, 1, 1f) },
+            new CheckBox() { Size = new Vector2(1) },
             new SpriteRenderer()
             {
                 subTextureName = subTextureName,
