@@ -142,6 +142,20 @@ public static class UIFluentExtensions
         return element;
     }
 
+    public static T WithRotation<T>(this T element, float rotation)
+        where T : UIElement
+    {
+        element.Rotation = rotation;
+        return element;
+    }
+
+    public static T WithRotationPivot<T>(this T element, Vector2 pivot)
+        where T : UIElement
+    {
+        element.RotationPivot = pivot;
+        return element;
+    }
+
     public static T WithTextColor<T>(this T element, Color color)
         where T : UIElement
     {
@@ -167,6 +181,15 @@ public static class UIFluentExtensions
         where T : UIElement
     {
         element.TextOverflow = mode;
+        return element;
+    }
+
+    public static T WithTextStyle<T>(
+        this T element,
+        Func<ElementTextStyle, ElementTextStyle> configure)
+        where T : UIElement
+    {
+        element.ConfigureTextStyle(configure);
         return element;
     }
 

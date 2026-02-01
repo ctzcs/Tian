@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Numerics;
 using Foster.Framework;
 
 namespace Engine.UI
@@ -15,13 +16,15 @@ namespace Engine.UI
         public readonly UIElement Element;
         public readonly int Depth;
         public readonly int Group; // 用于分组渲染，如不同的 UI覆盖
+        public readonly Matrix3x2 Matrix;
 
-        public UIDrawCommand(UIDrawCommandType type, UIElement element, int depth, int group)
+        public UIDrawCommand(UIDrawCommandType type, UIElement element, int depth, int group, Matrix3x2 matrix)
         {
             Type = type;
             Element = element;
             Depth = depth;
             Group = group;
+            Matrix = matrix;
         }
     }
 
@@ -68,7 +71,14 @@ namespace Engine.UI
                         if (cmd.Group != group || cmd.Depth != depth || cmd.Type != UIDrawCommandType.Background)
                             continue;
 
+                        var pushed = cmd.Matrix != Matrix3x2.Identity;
+                        if (pushed)
+                            batcher.PushMatrix(cmd.Matrix, true);
+
                         cmd.Element.DrawBackground(batcher);
+
+                        if (pushed)
+                            batcher.PopMatrix();
                     }
 
                     // 再画该 depth 的所有文字
@@ -78,7 +88,14 @@ namespace Engine.UI
                         if (cmd.Group != group || cmd.Depth != depth || cmd.Type != UIDrawCommandType.Text)
                             continue;
 
+                        var pushed = cmd.Matrix != Matrix3x2.Identity;
+                        if (pushed)
+                            batcher.PushMatrix(cmd.Matrix, true);
+
                         cmd.Element.DrawText(batcher);
+
+                        if (pushed)
+                            batcher.PopMatrix();
                     }
                 }
             }

@@ -9,14 +9,14 @@
         <HotReloadPartialTypes>true</HotReloadPartialTypes>
         <RootNamespace>Runner</RootNamespace>
         <LangVersion>14</LangVersion>
-        <PublishSingleFile>true</PublishSingleFile> <!-- 启用单文件发布 -->
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
         <!--<PublishAot>false</PublishAot>--> <!-- 启用AOT编译 -->
-        <SelfContained>true</SelfContained> <!-- 强制包含所有依赖 -->
     </PropertyGroup>
     
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
         <AssemblyName>Game</AssemblyName>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <SelfContained>true</SelfContained>
     </PropertyGroup>
     
     <ItemGroup>

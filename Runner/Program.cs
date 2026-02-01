@@ -1,6 +1,5 @@
 ﻿using Content;
 using Engine.Core;
-using Engine.MiniAudio;
 using Foster.Framework;
 
 internal static class Program

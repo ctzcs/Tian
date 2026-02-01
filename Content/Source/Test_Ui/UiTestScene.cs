@@ -26,6 +26,7 @@ public sealed class UiTestScene : IContent
     private SpriteFont? font;
 
     private UiTestLeftPanel? leftPanel;
+    private UiTestRotationPanel? rotationPanel;
     private UiTestRightPanel? rightPanel;
 
     public Target Target { get; }
@@ -69,6 +70,7 @@ public sealed class UiTestScene : IContent
         uiRoot = null!;
         debugOverlay = null!;
         leftPanel = null;
+        rotationPanel = null;
         rightPanel = null;
     }
 
@@ -93,6 +95,7 @@ public sealed class UiTestScene : IContent
             leftPanel?.RemoveLastItem();
 
         updateRoot.Update(new UpdateTick(app.Time.Delta, (float)app.Time.Seconds));
+        rotationPanel?.Update((float)app.Time.Seconds);
     }
 
     public void Render()
@@ -142,6 +145,7 @@ public sealed class UiTestScene : IContent
     {
         leftPanel?.CancelDrag();
         leftPanel = null;
+        rotationPanel = null;
         rightPanel = null;
 
         uiRoot.Root.ClearChildren();
@@ -155,9 +159,11 @@ public sealed class UiTestScene : IContent
 
         var leftPanelRoot = BuildLeftPanel();
 
+        var rotationPanelRoot = BuildRotationPanel();
+
         var rightPanelRoot = BuildRightPanel();
 
-        dock.WithChildren(leftPanelRoot, rightPanelRoot);
+        dock.WithChildren(leftPanelRoot, rotationPanelRoot, rightPanelRoot);
         uiRoot.Root.WithChild(dock);
 
         leftPanel?.SeedItems(5);
@@ -171,6 +177,12 @@ public sealed class UiTestScene : IContent
             SetUiOpen(true);
         });
         return leftPanel.Root;
+    }
+
+    private VerticalGroup BuildRotationPanel()
+    {
+        rotationPanel = new UiTestRotationPanel(uiRoot);
+        return rotationPanel.Root;
     }
 
     private VerticalGroup BuildRightPanel()

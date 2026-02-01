@@ -229,6 +229,8 @@ else
 
 ```
 
+## 加速编译
+--no-restore 不要进行NuGet检查
 
 ## Publish
 - win-x64 `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true`

@@ -77,6 +77,10 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
 
     protected ElementBackgroundStyle background;
     protected ElementTextStyle textStyle;
+
+    float rotation;
+    Vector2 rotationPivot = new(0.5f, 0.5f);
+
     /// <summary>
     /// 可遮罩的，用于剪裁和Hit
     /// </summary>
@@ -117,6 +121,8 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         get => layout;
         set
         {
+            if (layout.Equals(value))
+                return;
             layout = value;
             InvalidateLayout();
         }
@@ -166,8 +172,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
             rect = value;
             targetRect = value;
             targetDirty = false;
-            posTween = new Interpolated<Vector2>(rect.Position, rect.Position, 0f, Transition.None, Vector2Lerp);
-            sizeTween = new Interpolated<Vector2>(rect.Size, rect.Size, 0f, Transition.None, Vector2Lerp);
+            ResetLayoutTweens();
             InvalidateLayout();
         }
     }
@@ -179,121 +184,61 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     public float WidthRatioToParent
     {
         get => widthRatioToParent;
-        set
-        {
-            if (widthRatioToParent == value)
-                return;
-            widthRatioToParent = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref widthRatioToParent, value);
     }
 
     public float HeightRatioToParent
     {
         get => heightRatioToParent;
-        set
-        {
-            if (heightRatioToParent == value)
-                return;
-            heightRatioToParent = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref heightRatioToParent, value);
     }
 
     public float XRatioToParent
     {
         get => xRatioToParent;
-        set
-        {
-            if (xRatioToParent == value)
-                return;
-            xRatioToParent = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref xRatioToParent, value);
     }
 
     public float YRatioToParent
     {
         get => yRatioToParent;
-        set
-        {
-            if (yRatioToParent == value)
-                return;
-            yRatioToParent = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref yRatioToParent, value);
     }
 
     public float GrowX
     {
         get => growX;
-        set
-        {
-            if (growX == value)
-                return;
-            growX = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref growX, value);
     }
 
     public float GrowY
     {
         get => growY;
-        set
-        {
-            if (growY == value)
-                return;
-            growY = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref growY, value);
     }
 
     public float MinWidth
     {
         get => minWidth;
-        set
-        {
-            if (minWidth == value)
-                return;
-            minWidth = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref minWidth, value);
     }
 
     public float MaxWidth
     {
         get => maxWidth;
-        set
-        {
-            if (maxWidth == value)
-                return;
-            maxWidth = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref maxWidth, value);
     }
 
     public float MinHeight
     {
         get => minHeight;
-        set
-        {
-            if (minHeight == value)
-                return;
-            minHeight = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref minHeight, value);
     }
 
     public float MaxHeight
     {
         get => maxHeight;
-        set
-        {
-            if (maxHeight == value)
-                return;
-            maxHeight = value;
-            InvalidateLayout();
-        }
+        set => SetLayoutFloat(ref maxHeight, value);
     }
 
     /// <summary>
@@ -335,6 +280,8 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         target.animateLayout = animateLayout;
         target.layoutTweenDuration = layoutTweenDuration;
         target.layoutTransition = layoutTransition;
+        target.rotation = rotation;
+        target.rotationPivot = rotationPivot;
 
         if (cloneChildren)
         {
@@ -426,28 +373,34 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         }
     }
 
+    
+
+    public float Rotation
+    {
+        get => rotation;
+        set => rotation = value;
+    }
+
+    public Vector2 RotationPivot
+    {
+        get => rotationPivot;
+        set => rotationPivot = value;
+    }
+
+    public UIElement ConfigureTextStyle(Func<ElementTextStyle, ElementTextStyle> configure)
+    {
+        textStyle = configure(textStyle);
+        return this;
+    }
+
     public void SetBackgroundImage(Subtexture subtex, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
     {
-        background.Enabled = true;
-        background.Mode = ElementBackgroundMode.Image;
-        background.Subtex = subtex;
-        background.Texture = null;
-        background.ImageFillMode = fillMode;
-        background.NineSliceBorder = nineSliceBorder;
-        if (background.Color.A == 0)
-            background.Color = Color.White;
+        SetBackgroundImageInternal(subtex, null, fillMode, nineSliceBorder);
     }
 
     public void SetBackgroundImage(Texture texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
     {
-        background.Enabled = true;
-        background.Mode = ElementBackgroundMode.Image;
-        background.Texture = texture;
-        background.Subtex = null;
-        background.ImageFillMode = fillMode;
-        background.NineSliceBorder = nineSliceBorder;
-        if (background.Color.A == 0)
-            background.Color = Color.White;
+        SetBackgroundImageInternal(null, texture, fillMode, nineSliceBorder);
     }
 
     /// <summary>
@@ -563,11 +516,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     /// <param name="recursive"></param>
     public void UpdateLayoutNow(bool recursive = true)
     {
-        if (layoutDirty)
-        {
-            UpdateLayout();
-            layoutDirty = false;
-        }
+        EnsureLayoutUpToDate();
 
         if (recursive)
         {
@@ -575,30 +524,22 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
                 child.UpdateLayoutNow(true);
         }
     }
-    
+
     //先自己 UpdateLayout，再让子节点 Apply ，是一个「自上而下」的顺序。
     public virtual void Apply()
     {
-        if (layoutDirty)
-        {
-            UpdateLayout();
-            layoutDirty = false;
-        }
+        EnsureLayoutUpToDate();
 
         foreach (var child in children)
             child.Apply();
     }
-    
+
     public void Update(float time)
     {
         if (!visible)
             return;
 
-        if (layoutDirty)
-        {
-            UpdateLayout();
-            layoutDirty = false;
-        }
+        EnsureLayoutUpToDate();
 
         if (targetDirty)
         {
@@ -620,28 +561,44 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth = 0)
     {
-        CollectDrawCommands(commands, depth, 0);
+        CollectDrawCommands(commands, depth, 0, Matrix3x2.Identity);
     }
 
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group)
+    {
+        CollectDrawCommands(commands, depth, group, Matrix3x2.Identity);
+    }
+
+    void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
     {
         if (!visible)
             return;
 
         worldRect = GetWorldRect();
 
+        var matrix = parentMatrix;
+        if (rotation != 0f)
+        {
+            var basePivot = worldRect.Position + rotationPivot * worldRect.Size;
+            var pivot = Vector2.Transform(basePivot, parentMatrix);
+            var local = Matrix3x2.CreateTranslation(-pivot) *
+                        Matrix3x2.CreateRotation(rotation) *
+                        Matrix3x2.CreateTranslation(pivot);
+            matrix = parentMatrix * local;
+        }
+
         bool hasBackground = background.Enabled && background.Mode != ElementBackgroundMode.None;
         bool hasText = textStyle.Enabled && !string.IsNullOrEmpty(textStyle.Content) && Assets.Font != null;
 
         if (hasBackground)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, this, depth, group));
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, this, depth, group, matrix));
 
         if (hasText)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, this, depth, group));
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, this, depth, group, matrix));
 
         int nextDepth = (hasBackground || hasText) ? depth + 1 : depth;
         foreach (var child in children)
-            child.CollectDrawCommands(commands, nextDepth, group);
+            child.CollectDrawCommands(commands, nextDepth, group, matrix);
     }
 
     public void CollectDrawCommandsAsRoot(List<UIDrawCommand> commands)
@@ -734,6 +691,41 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         }
     }
 
+    void SetBackgroundImageInternal(Subtexture? subtex, Texture? texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder)
+    {
+        background.Enabled = true;
+        background.Mode = ElementBackgroundMode.Image;
+        background.Subtex = subtex;
+        background.Texture = texture;
+        background.ImageFillMode = fillMode;
+        background.NineSliceBorder = nineSliceBorder;
+        if (background.Color.A == 0)
+            background.Color = Color.White;
+    }
+
+    bool SetLayoutFloat(ref float field, float value)
+    {
+        if (field == value)
+            return false;
+        field = value;
+        InvalidateLayout();
+        return true;
+    }
+
+    void EnsureLayoutUpToDate()
+    {
+        if (!layoutDirty)
+            return;
+        UpdateLayout();
+        layoutDirty = false;
+    }
+
+    void ResetLayoutTweens()
+    {
+        posTween = new Interpolated<Vector2>(rect.Position, rect.Position, 0f, Transition.None, Vector2Lerp);
+        sizeTween = new Interpolated<Vector2>(rect.Size, rect.Size, 0f, Transition.None, Vector2Lerp);
+    }
+
     protected internal virtual void DrawBackground(Batcher batcher)
     {
         if (!background.Enabled)
@@ -761,16 +753,27 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         var anchor = new Vector2(boxPos.X + worldRect.Width * align.X,
                                  boxPos.Y + worldRect.Height * align.Y);
 
+        if (textStyle.OverflowMode == ElementTextOverflowMode.WrapAutoHeight)
+        {
+            var boxW = worldRect.Width;
+            if (boxW > 0)
+            {
+                var size = textStyle.Size > 0f ? textStyle.Size : Assets.Font.Size;
+                var sizeScale = size / Assets.Font.Size;
+                ApplyTextWrapAutoHeight(boxW, sizeScale, align, ref anchor);
+            }
+        }
+
         switch (textStyle.OverflowMode)
         {
             case ElementTextOverflowMode.ShrinkToFit:
                 DrawElementTextShrinkToFit(batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.Wrap:
-                DrawElementTextWrap(batcher, anchor, align, false);
+                DrawElementTextWrap(batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.WrapAutoHeight:
-                DrawElementTextWrap(batcher, anchor, align, true);
+                DrawElementTextWrap(batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.ShrinkAndWrap:
                 DrawElementTextShrinkAndWrap(batcher, anchor, align);
@@ -784,6 +787,24 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
                     batcher.Text(Assets.Font, text, anchor, align, textStyle.Color);
                 break;
         }
+    }
+
+    void ApplyTextWrapAutoHeight(float boxW, float sizeScale, Vector2 justify, ref Vector2 anchor)
+    {
+        var content = textStyle.Content ?? string.Empty;
+        var lines = Assets.Font.WrapText(content.AsSpan(), boxW);
+        var lineCount = lines.Count;
+
+        float height = 0;
+        if (lineCount > 0)
+            height = Assets.Font.Height * lineCount + Assets.Font.LineGap * (lineCount - 1);
+
+        height *= sizeScale;
+
+        rect.Height = height;
+        targetRect.Height = height;
+        worldRect = GetWorldRect();
+        anchor.Y = worldRect.Y + worldRect.Height * justify.Y;
     }
 
     void DrawBackgroundImage(Batcher batcher)
@@ -967,7 +988,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         batcher.Text(Assets.Font, content.AsSpan(), anchor, justify, scaledSize, textStyle.Color);
     }
 
-    void DrawElementTextWrap(Batcher batcher, Vector2 anchor, Vector2 justify, bool autoHeight)
+    void DrawElementTextWrap(Batcher batcher, Vector2 anchor, Vector2 justify)
     {
         var content = textStyle.Content ?? string.Empty;
         var boxW = worldRect.Width;
@@ -980,26 +1001,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
 
         // textStyle.Size 作为逻辑字号（<=0 时使用 SpriteFont 默认 Size）
         var size = textStyle.Size > 0f ? textStyle.Size : Assets.Font.Size;
-        var sizeScale = size / Assets.Font.Size;
-
-        if (autoHeight)
-        {
-            var lines = Assets.Font.WrapText(content.AsSpan(), boxW);
-            var lineCount = lines.Count;
-
-            float height = 0;
-            if (lineCount > 0)
-                height = Assets.Font.Height * lineCount + Assets.Font.LineGap * (lineCount - 1);
-
-            // 根据字号缩放实际高度
-            height *= sizeScale;
-
-            rect.Height = height;
-            targetRect.Height = height;
-            worldRect = GetWorldRect();
-            anchor.Y = worldRect.Y + worldRect.Height * justify.Y;
-        }
-
         batcher.TextWrapped(Assets.Font, content.AsSpan(), boxW, anchor, justify, size, textStyle.Color);
     }
 
@@ -1066,9 +1067,3 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         return new Rect(p.X + rect.X, p.Y + rect.Y, rect.Width, rect.Height);
     }
 }
-
-//Image,Text=>maskable
-//Button,Dropdown,Slider,Scrollbar,Toggle,InputField=>selectable
-
-//Image,Text=>maskable
-//Button,Dropdown,Slider,Scrollbar,Toggle,InputField=>selectable

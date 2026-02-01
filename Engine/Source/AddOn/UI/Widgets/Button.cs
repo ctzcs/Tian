@@ -13,9 +13,16 @@ namespace Engine.UI;
 /// <param name="visible"></param>
 /// <param name="rect"></param>
 /// <param name="parent"></param>
-public class Button(bool maskable, bool selectable, bool visible, Rect rect, UIElement? parent = null) 
-    : UIElement(maskable, selectable, visible, rect, parent),IInputListener
+public class Button : UIElement, IInputListener
 {
+    public Button(bool maskable, bool selectable, bool visible, Rect rect, UIElement? parent = null)
+        : base(maskable, selectable, visible, rect, parent)
+    {
+        textStyle.Color = Color.White;
+        textStyle.Align = new Vector2(0.5f, 0.5f);
+        textStyle.OverflowMode = ElementTextOverflowMode.ShrinkAndWrap;
+    }
+
     public Button(Rect rect, UIElement? parent = null)
         : this(maskable: true, selectable: true, visible: true, rect: rect, parent: parent)
     {
@@ -33,7 +40,6 @@ public class Button(bool maskable, bool selectable, bool visible, Rect rect, UIE
     /// 是否按下
     /// </summary>
     protected bool _mouseDown;
-    bool _textStyleInitialized;
     public Material? _mat;
     public event Action<Button>? Enter;
     public event Action<Button>? Click;
@@ -59,7 +65,6 @@ public class Button(bool maskable, bool selectable, bool visible, Rect rect, UIE
 
         if (target is Button btn)
         {
-            btn._textStyleInitialized = _textStyleInitialized;
             btn._mat = _mat;
             btn.Enter = Enter;
             btn.Click = Click;
@@ -68,23 +73,6 @@ public class Button(bool maskable, bool selectable, bool visible, Rect rect, UIE
         }
     }
 
-    public string Text
-    {
-        get => textStyle.Content;
-        set
-        {
-            textStyle.Enabled = !string.IsNullOrEmpty(value);
-            textStyle.Content = value ?? string.Empty;
-            if (!_textStyleInitialized)
-            {
-                textStyle.Color = Color.White;
-                textStyle.Align = new Vector2(0.5f, 0.5f);
-                textStyle.OverflowMode = ElementTextOverflowMode.ShrinkAndWrap;
-                _textStyleInitialized = true;
-            }
-        }
-    }
-    
     public void OnPointerEnter(UiFrame state)
     {
         _mouseOver = true;
