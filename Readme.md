@@ -235,6 +235,9 @@ else
 ## Publish
 - win-x64 `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true`
 
+
+
+好像不咋好用，目前未完成
 ## Pack
 //release
 git tag v0.1.0

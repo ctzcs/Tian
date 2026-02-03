@@ -2,6 +2,5 @@
 **/bin
 **/obj
 **.csproj.DotSettings
-Game.sln.DotSettings.user
+Tian.Engine.sln.DotSettings.user
 .idea
-/Runner/publish
