@@ -1,0 +1,41 @@
+name: Publish NuGet (GitHub Packages)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  pack-and-push:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (10)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore Tian.Engine.sln
+
+      - name: Build
+        run: dotnet build Tian.Engine.sln -c Release --no-restore
+
+      - name: Pack
+        run: dotnet pack Tian.Engine.sln -c Release --no-build -o artifacts
+
+      - name: Push to GitHub Packages
+        shell: pwsh
+        run: |
+          $source = "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          Get-ChildItem -Path artifacts -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --source $source --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+          }
