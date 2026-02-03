@@ -22,8 +22,4 @@
         <ProjectReference Include="..\Lib\Friflo.Engine.ECS\src\ECS\Friflo.Engine.ECS.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <Folder Include="Source\AddOn\Particle\" />
-    </ItemGroup>
-
 </Project>

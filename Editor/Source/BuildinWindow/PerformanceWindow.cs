@@ -29,9 +29,9 @@ public class PerformanceWindow : EditorWindow
         {
             var world = Data.currentContent.World;
             var systemGroups = Data.currentContent.SystemGroups;
-            if (world.HasUniqueEntity(BuildInEntId.Performance))
+            if (world.HasUniqueEntity(Id.Performance))
             {
-                var entity = world.GetUniqueEntity(BuildInEntId.Performance);
+                var entity = world.GetUniqueEntity(Id.Performance);
                 ref var counter = ref entity.GetComponent<FrameCounter>();
                 ImGui.Text($"Render FPS: {counter.FPS}");
                 ref var stats = ref entity.GetComponent<RenderBatchStats>();

@@ -26,8 +26,8 @@ public class CameraCullingSystem:QuerySystem
 
     protected override void OnUpdate()
     {
-        if (!World.HasUniqueEntity(BuildInEntId.MainCamera)) return;
-        var cameraEntity = World.GetUniqueEntity(BuildInEntId.MainCamera);
+        if (!World.HasUniqueEntity(Engine.Id.MainCamera)) return;
+        var cameraEntity = World.GetUniqueEntity(Engine.Id.MainCamera);
         var camTransform = cameraEntity.GetComponent<CTransform>();
         var camera = cameraEntity.GetComponent<Camera2D>();
 
@@ -94,8 +94,8 @@ public class CameraCullingDebugSystem : QuerySystem
     }
     protected override void OnUpdate()
     {
-        if (!World.HasUniqueEntity(BuildInEntId.MainCamera)) return;
-        var cameraEntity = World.GetUniqueEntity(BuildInEntId.MainCamera);
+        if (!World.HasUniqueEntity(Engine.Id.MainCamera)) return;
+        var cameraEntity = World.GetUniqueEntity(Engine.Id.MainCamera);
         var camera = cameraEntity.GetComponent<Camera2D>();
         ref var checkBox = ref cameraEntity.GetComponent<CheckBox>();
         var (width,height) = CameraUtils.GetViewWidthHeightInWorld(camera);

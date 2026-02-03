@@ -92,9 +92,9 @@ public class UiRenderSystem : QuerySystem
 
     protected override void OnUpdate()
     {
-        if (!world.HasUniqueEntity(BuildInEntId.UiRoot))
+        if (!world.HasUniqueEntity(Engine.Id.UiRoot))
             return;
-        var uiRootComponent = world.GetUniqueEntity(BuildInEntId.UiRoot).GetComponent<UiRoot>();
+        var uiRootComponent = world.GetUniqueEntity(Engine.Id.UiRoot).GetComponent<UiRoot>();
         //TODO 修正矩阵->这里已经Pop World Matrix了，所以可能不需要这样了
         var prevMatrix = batcher.Matrix;
         batcher.Matrix = System.Numerics.Matrix3x2.Identity;

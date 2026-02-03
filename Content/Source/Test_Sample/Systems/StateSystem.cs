@@ -62,8 +62,8 @@ public partial class StateSystem : QuerySystem
     {
         if (!world.HasUniqueEntity("InfoState")) return;
         ref var state = ref world.GetUniqueEntity("InfoState").GetComponent<InfoState>();
-        if (!world.HasUniqueEntity(BuildInEntId.MainCamera)) return;
-        var cameraEntity = world.GetUniqueEntity(BuildInEntId.MainCamera);
+        if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
+        var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
         ref var camera = ref cameraEntity.GetComponent<Camera2D>();
         ref var cameraTransform = ref cameraEntity.GetComponent<CTransform>();
         if (!Cursor.CanGameUse())

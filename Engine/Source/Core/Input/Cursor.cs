@@ -11,7 +11,7 @@ public static class Cursor
     
     //TODO 按键的点击啥的，也应该在这里处理, 主要编辑器中点击也会触发Scene中的点击
     // 其实感觉Editor中Run Game也应该改一下，应该是重新new Game(); 然后就能跑了
-    public static bool IsOnUi;
+    public static bool IsOnGameUi;
     
     /// <summary>
     /// TODO 可能类似focus
@@ -21,10 +21,11 @@ public static class Cursor
     {
         return ViewportPosition is { X: >= 0 and <= 1, Y: >= 0 and <= 1 };
     }
-
+    
     public static bool CanGameUse()
     {
-        return !IsOnUi && IsInViewport();
+        //不在GameUI上，且在Viewport中
+        return !IsOnGameUi && IsInViewport();
     }
     
     

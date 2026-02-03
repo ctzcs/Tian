@@ -26,7 +26,10 @@ public sealed class UiTestLeftPanel
         this.onRebuild = onRebuild;
 
         Root = new VerticalGroup()
-            .WithRect(new Rect(0, 0, 520, 0))
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(1)
+            .WithMinWidth(420)
+            .WithMaxWidth(760)
             .WithBackgroundColor(Rgb(30, 30, 36))
             .WithPadding(12)
             .WithChildGap(10)

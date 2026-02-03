@@ -1,4 +1,7 @@
 using System.Numerics;
+using Engine;
+using Engine.Components;
+using Engine.Core.Extensions;
 using Foster.Framework;
 using ImGuiNET;
 using Cursor = Engine.Core.Input.Cursor;
@@ -33,9 +36,25 @@ public class ViewportWindow:EditorWindow
 					ImGui.Text("ScaleRate");
 					ImGui.EndTooltip();
 				}
+
+                var world = Data.currentContent.World;
+                if (world.HasUniqueEntity(Id.Coordinate))
+                {
+                    Coordinate coordinate =  world.GetUniqueEntity(Id.Coordinate).GetComponent<Coordinate>();
+                    ImGui.Text($"[{coordinate.MouseCoordinates.X}, {coordinate.MouseCoordinates.Y}]");
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.Text("Mouse Coordinates");
+                        ImGui.EndTooltip();
+                    }
+                }
 			}
 			ImGui.EndMenuBar();
 			
+            
+            
+            
 			var size = ImGui.GetContentRegionAvail();
 			if (Data.ImRenderer.BeginBatch(size, out var batch, out var bounds))
 			{

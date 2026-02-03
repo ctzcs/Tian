@@ -28,7 +28,7 @@ public partial class CameraSystem:QuerySystem
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
-        CameraUtils.CreateCamera(BuildInEntId.MainCamera,target,world,0,Vector2.One,2.5f,16);
+        CameraUtils.CreateCamera(Engine.Id.MainCamera,target,world,0,Vector2.One,2.5f,16);
         ctx.Window.OnResize += OnResize;
     }
 
@@ -40,8 +40,8 @@ public partial class CameraSystem:QuerySystem
     
     protected override void OnUpdate()
     {
-        if (!world.HasUniqueEntity(BuildInEntId.MainCamera)) return;
-        var cameraEntity = world.GetUniqueEntity(BuildInEntId.MainCamera);
+        if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
+        var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
         deltaTime = Tick.deltaTime;
         var query = world.Query<Camera2D, CTransform>();
 #if DEBUG
@@ -100,8 +100,8 @@ public partial class CameraSystem:QuerySystem
 
     void OnResize()
     {
-        if (!world.HasUniqueEntity(BuildInEntId.MainCamera)) return;
-        var cameraEntity = world.GetUniqueEntity(BuildInEntId.MainCamera);
+        if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
+        var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
         //TODO 除了直接Resize之外，还可以调控camera的缩放比例
         // ref var c = ref cameraEntity.GetComponent<Camera2D>();
         // CameraUtils.SetCameraRectToWindowSize(ref c,ctx.Window);

@@ -29,16 +29,20 @@ public class CoordinateSystem : QuerySystem<Coordinate>
         base.OnAddStore(store);
         _world = store;
 
-        coorEntity = _world.CreateEntity(new UniqueEntity("Coordinate"),new Coordinate()
+        coorEntity = _world.CreateEntity(
+        new UniqueEntity(Engine.Id.Coordinate),
+        new Coordinate()
         {
             SizeForUnit = 1,
             CenterRadius = 0.15f,
             LineWidth = 0.1f,
+            MouseCoordinates =  Vector2Int.Zero,
             CenterColor = new Color(0x808080),
             LineColor = new Color(0x454545),
             CoordinateColor = new Color(0x5A5A5A),
             SelectedColor = new Color(0x707070),
-        },new MetaGroup()
+        },
+        new MetaGroup()
         {
             GroupName = "Unique",
             SubGroupName = "BuildIn"
@@ -54,13 +58,13 @@ public class CoordinateSystem : QuerySystem<Coordinate>
 
     protected override void OnUpdate()
     {
-        if(!_world.HasUniqueEntity("MainCamera") 
-           || !_world.HasUniqueEntity("Coordinate")) return;
-        var cameraE = _world.GetUniqueEntity("MainCamera");
-        var cameraTransform = cameraE.GetComponent<CTransform>();
-        var camera = cameraE.GetComponent<Camera2D>();
+        if(!_world.HasUniqueEntity(Engine.Id.MainCamera) 
+           || !_world.HasUniqueEntity(Engine.Id.Coordinate)) return;
+        var cameraEntity = _world.GetUniqueEntity(Engine.Id.MainCamera);
+        var cameraTransform = cameraEntity.GetComponent<CTransform>();
+        var camera = cameraEntity.GetComponent<Camera2D>();
         ref var coordinate = ref coorEntity.GetComponent<Coordinate>();
-        var screenSize = new System.Numerics.Vector2(camera.viewRect.Width, camera.viewRect.Height);
+        var screenSize = new Vector2(camera.viewRect.Width, camera.viewRect.Height);
 		var pos = CameraUtils.GetWorldMousePosition(screenSize, cameraTransform, camera);
         //Log.Info("mouse WorldPos:" + pos);
         Query.ForEachEntity((ref coordinate, entity) =>
@@ -106,7 +110,8 @@ public class CoordinateSystem : QuerySystem<Coordinate>
         //绘制选中的位置
         if (!Cursor.CanGameUse())
             return;
-        Vector2 selectorPosition = GetPositonOfGrid(coordinate.SizeForUnit,GetGridIndex(coordinate.SizeForUnit, pos));
+        coordinate.MouseCoordinates = GetGridIndex(coordinate.SizeForUnit, pos);
+        Vector2 selectorPosition = GetPositonOfGrid(coordinate.SizeForUnit,coordinate.MouseCoordinates);
         _batcher.Rect(selectorPosition,new Vector2(coordinate.SizeForUnit),coordinate.SelectedColor);
     }
 

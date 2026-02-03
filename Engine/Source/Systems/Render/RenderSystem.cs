@@ -79,7 +79,7 @@ public class RenderSystem:QuerySystem
     
     protected override void OnUpdate()
     {
-        ref var camera = ref World.GetUniqueEntity(BuildInEntId.MainCamera).GetComponent<Camera2D>();
+        ref var camera = ref World.GetUniqueEntity(Engine.Id.MainCamera).GetComponent<Camera2D>();
         int ppu = camera.pixelsPerUnit;
         //画线
         //batcher.PushSampler(new TextureSampler(TextureFilter.Nearest, TextureWrap.Clamp, TextureWrap.Clamp));
@@ -136,9 +136,9 @@ public class RenderSystem:QuerySystem
             box.Draw(transform,batcher);
         });
 #endif
-        if (World.HasUniqueEntity(BuildInEntId.Performance))
+        if (World.HasUniqueEntity(Engine.Id.Performance))
         {
-            ref var batchStats = ref World.GetUniqueEntity(BuildInEntId.Performance).GetComponent<RenderBatchStats>();
+            ref var batchStats = ref World.GetUniqueEntity(Engine.Id.Performance).GetComponent<RenderBatchStats>();
             batchStats.BatchCount = batcher.BatchCount;
         }
     }

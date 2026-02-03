@@ -1,6 +1,7 @@
 using System.Numerics;
 using Engine.Asset;
 using Engine.Components;
+using Engine.Core;
 using Foster.Framework;
 using Cursor = Engine.Core.Input.Cursor;
 
@@ -39,9 +40,9 @@ public class UIRoot
         }
     }
 
-    public UIRoot(Input input,Window window,Vector2 logicScreen)
+    public UIRoot(App app,Vector2Int logicScreen)
     {
-	    this.input = input;
+	    this.input = app.Input;
 	    this.logicScreen = logicScreen;
 	    root = new UIElement(new Rect(0, 0, 0, 0));
 	    lastFrame = new UiFrame();
@@ -135,7 +136,7 @@ public class UIRoot
     {
 	    var over = root.Hit(curState.targetPosition);
         //阻挡鼠标影响GameWorld位置
-        Cursor.IsOnUi = over != null;
+        Cursor.IsOnGameUi = over != null;
 	    var inputPress = curState.Mouse.LeftPressed;
 	    var inputRelease = curState.Mouse.LeftReleased;
 	    var inputMoved = curState.targetPosition != lastState.targetPosition;

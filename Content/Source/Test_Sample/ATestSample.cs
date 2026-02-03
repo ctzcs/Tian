@@ -67,7 +67,7 @@ public class ATestSample:IContent
             font,
             Assets.Atlas,
             batcher,
-            new Vector2(LogicResolution.X,LogicResolution.Y),
+            LogicResolution,
             customMaterial);
         tempTarget = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         
@@ -110,7 +110,7 @@ public class ATestSample:IContent
     
     UIRoot BuildUI()
     {
-        var uiRoot = new UIRoot(ctx.Input,ctx.Window,res.logicSize);
+        var uiRoot = new UIRoot(ctx,res.logicSize);
         uiRoot.IsOpen = true;
         var btn = new Button(true, true, true, new Rect(0, 0, 360, 50))
             {

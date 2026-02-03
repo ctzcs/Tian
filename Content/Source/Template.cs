@@ -40,7 +40,7 @@ public class Template : IContent
 
     public void Render()
     {
-        Target.Clear(Color.White);
+        Target.Clear(Const.DefaultColor);
         batcher.Render(Target);
         batcher.Clear();
     }

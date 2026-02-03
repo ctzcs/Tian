@@ -114,20 +114,21 @@ public sealed class UiTestScene : IContent
         AssetsV1.LazyInitializeCache("pack.zip");
         Assets.LoadSpritesFromGz(app.GraphicsDevice);
         var codepoints = FontUtility.GetCodepoints(3500,FontLanguage.SimplifiedChinese);
-        font = new SpriteFont(
+        
+        font = app.GraphicsDevice.Defaults.SpriteFont;
+        /*font = new SpriteFont(
             app.GraphicsDevice,
-            Path.Join(Assets.ContentAssetsPath, "Fonts", "SmileySans-Oblique.ttf"),
+            Path.Join(Assets.ContentAssetsPath, "Fonts", "JetBrainsMono-Regular.ttf"),
             32,
             codepoints);
-
+        font.Sampler = new TextureSampler(TextureFilter.Linear, TextureWrap.Clamp);*/
+        
         Assets.SetFont(font);
     }
 
     private void BuildSystems()
     {
-        var logicSize = new Vector2(LogicResolution.X, LogicResolution.Y);
-
-        uiRoot = new UIRoot(app.Input, app.Window, logicSize);
+        uiRoot = new UIRoot(app, LogicResolution);
         debugOverlay = new UIDebugOverlay { Enabled = true };
 
         updateRoot = new SystemRoot(World, "ui-update");

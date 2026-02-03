@@ -28,10 +28,10 @@ public class BeforeRenderWorldSystem:QuerySystem
 
     protected override void OnUpdate()
     {
-        if (!World.HasUniqueEntity(BuildInEntId.MainCamera))
+        if (!World.HasUniqueEntity(Engine.Id.MainCamera))
             return;
 
-        var cameraEntity = World.GetUniqueEntity(BuildInEntId.MainCamera);
+        var cameraEntity = World.GetUniqueEntity(Engine.Id.MainCamera);
         ref var camera = ref cameraEntity.GetComponent<Camera2D>();
         ref var transform = ref cameraEntity.GetComponent<CTransform>();
 

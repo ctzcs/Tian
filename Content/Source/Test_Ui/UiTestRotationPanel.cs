@@ -82,10 +82,12 @@ public sealed class UiTestRotationPanel
             .WithChildren(btnPivotTL, btnPivotCenter, btnPivotBR);
         
 
-        rotationDemo = new UIElement(new Rect(0, 0, 320, 220))
+        rotationDemo = new UIElement(new Rect(0, 0, 0, 220))
             .WithBackgroundColor(Rgb(34, 34, 40));
 
-        var demoText = new UIElement(new Rect(0, 0, 320, 220))
+        var demoText = new UIElement(new Rect(0, 0, 0, 0))
+            .WithWidthRatioToParent(1)
+            .WithHeightRatioToParent(1)
             .WithText("Parent rotates → child should follow")
             .WithTextColor(Color.White)
             .WithTextAlign(new Vector2(0.5f, 0.5f))
@@ -111,7 +113,10 @@ public sealed class UiTestRotationPanel
             .WithTextSize(16);
 
         Root = new VerticalGroup()
-            .WithRect(new Rect(0, 0, 360, 0))
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(0.8f)
+            .WithMinWidth(320)
+            .WithMaxWidth(520)
             .WithBackgroundColor(Rgb(26, 26, 30))
             .WithPadding(12)
             .WithChildGap(10)
