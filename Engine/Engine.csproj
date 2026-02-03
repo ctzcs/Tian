@@ -6,12 +6,16 @@
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>14</LangVersion>
+
+        <PackageId>Tian.Engine</PackageId>
+        <Version>0.1.0</Version>
+        <Authors>Tian Wen</Authors>
+        <Description>Tian Engine Lib</Description>
     </PropertyGroup>
     
     <ItemGroup>
         <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
         <PackageReference Include="Tracy-CSharp" Version="0.11.1" />
-        <!--<PackageReference Include="FosterFramework" Version="0.2.1"/>-->
     </ItemGroup>
 
     <ItemGroup>

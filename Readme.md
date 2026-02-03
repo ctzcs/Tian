@@ -235,16 +235,30 @@ else
 ## Publish
 - win-x64 `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true`
 
-## Changelog
-### v0.2.1
-- 加入人物按照路径移动
+## Pack
+//release
+git tag v0.1.0
+git push origin v0.1.0
 
-### v0.2.2
-- 加入旋转大小依赖，按照示例青蛙变为两倍大小
-- 解决shader编译到多平台的问题
+//packages
+cd /d d:\MySpace\Github\Tian
+dotnet pack Tian.Engine.sln -c Release -o artifacts
+dir artifacts
 
-### v0.2.3
-- 加入相机移动，放缩，旋转
-- 所有物体的旋转，放缩都相对于世界坐标原点
-- 修复由物体震动引起的点击位置不对
-- 出现一个新的问题，FindLineSystem如果物体速度过快，可能会超出目标，并在原地弹
+dotnet nuget push artifacts\*.nupkg --source github --skip-duplicate
+
+
+
+
+
+## Use
+1. 生成PAT
+- GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate
+- scopes 勾选： read:packages （装包用），私有仓库通常还要 repo
+
+2. Powershell添加源
+dotnet nuget add source "https://nuget.pkg.github.com/你的GitHub用户名/index.json" -n github `
+  -u "你的GitHub用户名" -p "你的PAT" --store-password-in-clear-text
+
+3. 验证是否成功
+dotnet nuget list source
