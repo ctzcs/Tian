@@ -1020,7 +1020,7 @@ public class UIImage : UIElement
     }
 
     public UIImage(Rect rect, UIElement? parent = null)
-        : this(maskable: true, selectable: false, visible: true, rect: rect, parent: parent)
+        : this(maskable: true, selectable: true, visible: true, rect: rect, parent: parent)
     {
     }
 
