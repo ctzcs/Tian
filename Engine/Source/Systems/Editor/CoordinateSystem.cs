@@ -64,7 +64,7 @@ public class CoordinateSystem : QuerySystem<Coordinate>
         var cameraTransform = cameraEntity.GetComponent<CTransform>();
         var camera = cameraEntity.GetComponent<Camera2D>();
         ref var coordinate = ref coorEntity.GetComponent<Coordinate>();
-        var screenSize = new Vector2(camera.viewRect.Width, camera.viewRect.Height);
+        var screenSize = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height);
 		var pos = CameraUtils.GetWorldMousePosition(screenSize, cameraTransform, camera);
         //Log.Info("mouse WorldPos:" + pos);
         Query.ForEachEntity((ref coordinate, entity) =>
@@ -73,8 +73,8 @@ public class CoordinateSystem : QuerySystem<Coordinate>
 
             var screenMin = Vector2.Zero;
             var screenMax = screenSize;
-            var worldMin = CameraUtils.ScreenToWorld(screenMin, cameraTransform, camera);
-            var worldMax = CameraUtils.ScreenToWorld(screenMax, cameraTransform, camera);
+            var worldMin = CameraUtils.ScreenPxToWorld(screenMin, cameraTransform, camera);
+            var worldMax = CameraUtils.ScreenPxToWorld(screenMax, cameraTransform, camera);
 
             if (worldMin.X > worldMax.X)
                 (worldMin.X, worldMax.X) = (worldMax.X, worldMin.X);

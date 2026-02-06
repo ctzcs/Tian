@@ -108,7 +108,7 @@ public partial class CameraSystem:QuerySystem
         
         ref var c = ref cameraEntity.GetComponent<Camera2D>();
         
-        c.viewRect = new RectInt(0, 0, target.Width, target.Height);
+        c.viewRectInPixels = new RectInt(0, 0, target.Width, target.Height);
     }
 
     

@@ -1,4 +1,13 @@
-﻿# Tian
+﻿Please ignore things here. Just some rambling.
+
+Anyway it need dotnet10.
+
+If there is any problem, please contact with me. Feel free to DM.
+
+[Discord](https://discord.gg/9RKUMkbPYp)
+[Twitter](https://x.com/tw88088)
+
+# Tian
 
 
 ## Introduce

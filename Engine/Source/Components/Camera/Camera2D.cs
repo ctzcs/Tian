@@ -13,16 +13,11 @@ public struct Camera2D:IComponent
     /// <summary>
     /// 相机视口，x,y原点为左上角，w,h为参考的Pixels宽高
     /// </summary>
-    public RectInt viewRect;
+    public RectInt viewRectInPixels;
     /// <summary>
     /// 缩放比例
     /// </summary>
     public float zoom;// Camera zoom (scaling), should be 1.0f by default
-    /// <summary>
-    /// 偏移
-    /// </summary>
-    public Vector2 offset;// Camera offset (displacement from target) 一般是屏幕中心，决定屏幕映射到哪里
-    public Vector2 target;// Camera target (rotation and zoom origin) 相机中心或者玩家
 
     public int pixelsPerUnit;
     /*public Vector2 SetScaleRate(float scaleRateChange,Window window)
@@ -64,8 +59,7 @@ public static class CameraUtils
             new CTransform(default,Vector2.Zero, rotation,size),
             new Camera2D()
             {
-                viewRect = new RectInt(0,0, target.WidthInPixels, target.HeightInPixels),
-                offset = Vector2.Zero,
+                viewRectInPixels = new RectInt(0,0, target.WidthInPixels, target.HeightInPixels),
                 zoom = zoom,
                 pixelsPerUnit = pixelsPerUnit
             },
@@ -89,15 +83,13 @@ public static class CameraUtils
     /// <param name="camera"></param>
     /// <param name="mouseScreen"></param>
     /// <param name="zoomDelta"></param>
-    public static void ZoomAround(ref CTransform transform, ref Camera2D camera, Vector2 mouseScreen, float zoomDelta)
+    public static void ZoomAround(ref CTransform transform, ref Camera2D camera, Vector2 mouseScreenPx, float zoomDelta)
     {
-        // TODO 关于Camera的部分，逻辑坐标和窗口坐标的统一
-        var preWorld = ScreenToWorld(mouseScreen, transform, camera);
+        var preWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
         camera.zoom = Calc.Clamp(camera.zoom + zoomDelta, 0.001f, 20f);
-        var postWorld = ScreenToWorld(mouseScreen, transform, camera);
+        var postWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
         var delta = preWorld - postWorld;
         transform.SetLocalPosition(transform.localPosition + delta);
-        //Log.Info($"World: {preWorld}:{postWorld}");
     }
     
     
@@ -120,25 +112,23 @@ public static class CameraUtils
     }
     
     /// <summary>
-    /// 屏幕坐标转世界坐标
+    /// Target 像素坐标（左上角为 (0,0)）转世界坐标。
     /// </summary>
-    /// <param name="screen"></param>
-    /// <param name="cameraTransform">相机Transform</param>
-    /// <param name="camera"></param>
-    /// <returns></returns>
-    public static Vector2 ScreenToWorld(Vector2 screen, in CTransform cameraTransform, in Camera2D camera)
+    /// <param name="screenPx">渲染目标（Target）的像素坐标。</param>
+    /// <param name="cameraTransform">相机 Transform（世界单位）。</param>
+    /// <param name="camera">相机参数（viewRectInPixels 为 Target 像素尺寸）。</param>
+    public static Vector2 ScreenPxToWorld(Vector2 screenPx, in CTransform cameraTransform, in Camera2D camera)
     {
-        var mat = GetCameraMatrix(cameraTransform, camera);       // World -> Screen
-        Matrix3x2.Invert(mat, out var inv);                 // Screen -> World
-        return Vector2.Transform(screen, inv);              // 正确的向量变换
+        var mat = GetCameraMatrix(cameraTransform, camera);
+        Matrix3x2.Invert(mat, out var inv);
+        return Vector2.Transform(screenPx, inv);
     }
 
 
-    public static Vector2 GetWorldMousePosition(Vector2 logicScreen,in CTransform cameraTransform, in Camera2D camera)
+    public static Vector2 GetWorldMousePosition(Vector2 targetSizePx, in CTransform cameraTransform, in Camera2D camera)
     {
-        var screenPosition = ViewportToLogicScreen(Cursor.ViewportPosition,logicScreen );//ctx.Input.Mouse.Position;
-        var pos = ScreenToWorld(screenPosition, cameraTransform, camera);
-        return pos;
+        var screenPx = ViewportToLogicScreen(Cursor.ViewportPosition, targetSizePx);
+        return ScreenPxToWorld(screenPx, cameraTransform, camera);
     }
     
     
@@ -203,7 +193,7 @@ public static class CameraUtils
         //世界坐标里 1 个单位，在屏幕上要画 scale 个像素 。
         float scale = camera.zoom * camera.pixelsPerUnit;
         result *= Matrix3x2.CreateScale(scale,-scale);
-        result *= Matrix3x2.CreateTranslation(camera.viewRect.Width*0.5f, camera.viewRect.Height*0.5f);
+        result *= Matrix3x2.CreateTranslation(camera.viewRectInPixels.Width*0.5f, camera.viewRectInPixels.Height*0.5f);
         return result;
     }
 
@@ -238,7 +228,7 @@ public static class CameraUtils
     public static (Vector2, Vector2) GetViewMinAndMaxInPixels(in CTransform camTransform, in Camera2D camera)
     {
         var camCenterPixels = camTransform.position * camera.pixelsPerUnit;
-        var halfSizePixels = new Vector2(camera.viewRect.Width, camera.viewRect.Height) * 0.5f / camera.zoom;
+        var halfSizePixels = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height) * 0.5f / camera.zoom;
 
         var viewMin = camCenterPixels - halfSizePixels;
         var viewMax = camCenterPixels + halfSizePixels;
@@ -247,14 +237,14 @@ public static class CameraUtils
     
     public static (float, float) GetViewWidthHeightInPixels(in CTransform camTransform, in Camera2D camera)
     {
-        var viewSizePixels = new Vector2(camera.viewRect.Width, camera.viewRect.Height) / camera.zoom;
+        var viewSizePixels = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height) / camera.zoom;
         return (viewSizePixels.X, viewSizePixels.Y);
     }
     
     
     public static (Vector2, Vector2) GetViewMinAndMaxInWorld(in CTransform camTransform, in Camera2D camera)
     {
-        var halfSizeWorld = new Vector2(camera.viewRect.Width, camera.viewRect.Height)
+        var halfSizeWorld = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height)
             * 0.5f / (camera.zoom * camera.pixelsPerUnit);
         var camCenter = camTransform.position;
 
@@ -265,7 +255,7 @@ public static class CameraUtils
     
     public static (float, float) GetViewWidthHeightInWorld(in Camera2D camera)
     {
-        var viewSizeWorld = new Vector2(camera.viewRect.Width, camera.viewRect.Height)
+        var viewSizeWorld = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height)
             / (camera.zoom * camera.pixelsPerUnit);
         return (viewSizeWorld.X, viewSizeWorld.Y);
     }
