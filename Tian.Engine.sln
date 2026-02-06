@@ -12,6 +12,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Friflo.Engine.ECS.Boost", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Box2D.NET", "Lib\Box2D.NET\Box2D.NET.csproj", "{E23EEF14-F57E-4003-8A73-3709711D62D3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Content", "Test\Content\Content.csproj", "{ED533AC4-10C0-4565-89E2-05D63C78434A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Editor", "Test\Editor\Editor.csproj", "{D1D62524-53D6-44C2-996E-4CFC7DD1DC4A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Runner", "Test\Runner\Runner.csproj", "{11C94ED8-ECCA-4552-AEDD-8509EA8203B9}"
+EndProject
 
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +49,18 @@ Global
 		{E23EEF14-F57E-4003-8A73-3709711D62D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E23EEF14-F57E-4003-8A73-3709711D62D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E23EEF14-F57E-4003-8A73-3709711D62D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED533AC4-10C0-4565-89E2-05D63C78434A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED533AC4-10C0-4565-89E2-05D63C78434A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED533AC4-10C0-4565-89E2-05D63C78434A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED533AC4-10C0-4565-89E2-05D63C78434A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1D62524-53D6-44C2-996E-4CFC7DD1DC4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1D62524-53D6-44C2-996E-4CFC7DD1DC4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1D62524-53D6-44C2-996E-4CFC7DD1DC4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1D62524-53D6-44C2-996E-4CFC7DD1DC4A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11C94ED8-ECCA-4552-AEDD-8509EA8203B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11C94ED8-ECCA-4552-AEDD-8509EA8203B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11C94ED8-ECCA-4552-AEDD-8509EA8203B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11C94ED8-ECCA-4552-AEDD-8509EA8203B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
