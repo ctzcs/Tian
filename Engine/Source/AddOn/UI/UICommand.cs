@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Foster.Framework;
@@ -13,15 +14,15 @@ namespace Engine.UI
     public readonly struct UIDrawCommand
     {
         public readonly UIDrawCommandType Type;
-        public readonly UIElement Element;
+        public readonly Action<Batcher> Render;
         public readonly int Depth;
         public readonly int Group; // 用于分组渲染，如不同的 UI覆盖
         public readonly Matrix3x2 Matrix;
 
-        public UIDrawCommand(UIDrawCommandType type, UIElement element, int depth, int group, Matrix3x2 matrix)
+        public UIDrawCommand(UIDrawCommandType type, Action<Batcher> render, int depth, int group, Matrix3x2 matrix)
         {
             Type = type;
-            Element = element;
+            Render = render;
             Depth = depth;
             Group = group;
             Matrix = matrix;
@@ -75,7 +76,7 @@ namespace Engine.UI
                         if (pushed)
                             batcher.PushMatrix(cmd.Matrix, true);
 
-                        cmd.Element.DrawBackground(batcher);
+                        cmd.Render(batcher);
 
                         if (pushed)
                             batcher.PopMatrix();
@@ -92,7 +93,7 @@ namespace Engine.UI
                         if (pushed)
                             batcher.PushMatrix(cmd.Matrix, true);
 
-                        cmd.Element.DrawText(batcher);
+                        cmd.Render(batcher);
 
                         if (pushed)
                             batcher.PopMatrix();

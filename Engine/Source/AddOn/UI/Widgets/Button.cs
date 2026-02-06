@@ -15,12 +15,20 @@ namespace Engine.UI;
 /// <param name="parent"></param>
 public class Button : UIElement, IInputListener
 {
+    ButtonImage backgroundElement;
+    ButtonText textElement;
+
     public Button(bool maskable, bool selectable, bool visible, Rect rect, UIElement? parent = null)
         : base(maskable, selectable, visible, rect, parent)
     {
-        textStyle.Color = Color.White;
-        textStyle.Align = new Vector2(0.5f, 0.5f);
-        textStyle.OverflowMode = ElementTextOverflowMode.ShrinkAndWrap;
+        var childRect = new Rect(0, 0, rect.Width, rect.Height);
+        backgroundElement = new ButtonImage(this, childRect);
+        textElement = new ButtonText(this, childRect);
+        textElement.TextColor = Color.White;
+        textElement.TextAlign = new Vector2(0.5f, 0.5f);
+        textElement.TextOverflow = ElementTextOverflowMode.ShrinkAndWrap;
+        AddChild(backgroundElement);
+        AddChild(textElement);
     }
 
     public Button(Rect rect, UIElement? parent = null)
@@ -61,29 +69,116 @@ public class Button : UIElement, IInputListener
 
     protected override void CopyToClone(UIElement target, bool cloneChildren)
     {
-        base.CopyToClone(target, cloneChildren);
+        base.CopyToClone(target, false);
 
         if (target is Button btn)
         {
+            btn.backgroundElement.Background = backgroundElement.Background;
+            btn.textElement.TextStyle = textElement.TextStyle;
             btn._mat = _mat;
             btn.Enter = Enter;
             btn.Click = Click;
             btn.Exit = Exit;
             btn.Hover = Hover;
+
+            if (cloneChildren)
+            {
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var child = children[i];
+                    if (child == backgroundElement || child == textElement)
+                        continue;
+                    var childClone = child.Clone(true);
+                    btn.AddChild(childClone);
+                }
+            }
         }
+    }
+
+    protected override void UpdateLayout()
+    {
+        base.UpdateLayout();
+        var childRect = new Rect(0, 0, rect.Width, rect.Height);
+        if (backgroundElement.Rect != childRect)
+            backgroundElement.Rect = childRect;
+        if (textElement.Rect != childRect)
+            textElement.Rect = childRect;
+    }
+
+    public ElementBackgroundStyle Background
+    {
+        get => backgroundElement.Background;
+        set => backgroundElement.Background = value;
+    }
+
+    public Color BackgroundColor
+    {
+        get => backgroundElement.BackgroundColor;
+        set => backgroundElement.BackgroundColor = value;
+    }
+
+    public void SetBackgroundImage(Subtexture subtex, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
+    {
+        backgroundElement.SetBackgroundImage(subtex, fillMode, nineSliceBorder);
+    }
+
+    public void SetBackgroundImage(Texture texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
+    {
+        backgroundElement.SetBackgroundImage(texture, fillMode, nineSliceBorder);
+    }
+
+    public ElementTextStyle TextStyle
+    {
+        get => textElement.TextStyle;
+        set => textElement.TextStyle = value;
+    }
+
+    public string Text
+    {
+        get => textElement.Text;
+        set => textElement.Text = value;
+    }
+
+    public Color TextColor
+    {
+        get => textElement.TextColor;
+        set => textElement.TextColor = value;
+    }
+
+    public Vector2 TextAlign
+    {
+        get => textElement.TextAlign;
+        set => textElement.TextAlign = value;
+    }
+
+    public float TextSize
+    {
+        get => textElement.TextSize;
+        set => textElement.TextSize = value;
+    }
+
+    public ElementTextOverflowMode TextOverflow
+    {
+        get => textElement.TextOverflow;
+        set => textElement.TextOverflow = value;
+    }
+
+    public void ConfigureTextStyle(Func<ElementTextStyle, ElementTextStyle> configure)
+    {
+        textElement.TextStyle = configure(textElement.TextStyle);
     }
 
     public void OnPointerEnter(UiFrame state)
     {
         _mouseOver = true;
-        base.BackgroundColor = Color.Red;
+        BackgroundColor = Color.Red;
         InvokeEnter();
     }
     
     public void OnPointerExit(UiFrame state)
     {
         _mouseOver = false;
-        base.BackgroundColor = Color.White;
+        BackgroundColor = Color.White;
         InvokeExit();
     }
 
@@ -168,30 +263,52 @@ public class Button : UIElement, IInputListener
         // 如需右键点击事件，可以在这里扩展
     }
 
-    protected internal override void DrawBackground(Batcher batcher)
+    sealed class ButtonImage : UIImage
     {
-        if (_mat == null)
+        readonly Button owner;
+
+        public ButtonImage(Button owner, Rect rect)
+            : base(rect)
         {
-            base.DrawBackground(batcher);
-            return;
+            this.owner = owner;
         }
 
-        batcher.PushMaterial(_mat);
-        base.DrawBackground(batcher);
-        batcher.PopMaterial();
+        protected override void RenderBackground(Batcher batcher)
+        {
+            if (owner._mat == null)
+            {
+                base.RenderBackground(batcher);
+                return;
+            }
+
+            batcher.PushMaterial(owner._mat);
+            base.RenderBackground(batcher);
+            batcher.PopMaterial();
+        }
     }
 
-    protected internal override void DrawText(Batcher batcher)
+    sealed class ButtonText : UIText
     {
-        if (_mat == null)
+        readonly Button owner;
+
+        public ButtonText(Button owner, Rect rect)
+            : base(rect)
         {
-            base.DrawText(batcher);
-            return;
+            this.owner = owner;
         }
 
-        batcher.PushMaterial(_mat);
-        base.DrawText(batcher);
-        batcher.PopMaterial();
+        protected override void RenderText(Batcher batcher)
+        {
+            if (owner._mat == null)
+            {
+                base.RenderText(batcher);
+                return;
+            }
+
+            batcher.PushMaterial(owner._mat);
+            base.RenderText(batcher);
+            batcher.PopMaterial();
+        }
     }
 }
 

@@ -75,9 +75,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     protected bool isDisabled = false;
     protected bool layoutDirty = true;
 
-    protected ElementBackgroundStyle background;
-    protected ElementTextStyle textStyle;
-
     float rotation;
     Vector2 rotationPivot = new(0.5f, 0.5f);
 
@@ -262,8 +259,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         target.selectable = selectable;
         target.isDisabled = isDisabled;
         target.maskable = maskable;
-        target.background = background;
-        target.textStyle = textStyle;
         target.layout = layout;
         target.SizeMode = SizeMode;
         target.NormalizedRect = NormalizedRect;
@@ -305,76 +300,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         return instance;
     }
 
-    public ElementBackgroundStyle Background
-    {
-        get => background;
-        set => background = value;
-    }
-
-    public Color BackgroundColor
-    {
-        get => background.Color;
-        set
-        {
-            background.Enabled = true;
-            if (background.Mode == ElementBackgroundMode.None)
-                background.Mode = ElementBackgroundMode.Color;
-            background.Color = value;
-        }
-    }
-
-    public string Text
-    {
-        get => textStyle.Content;
-        set
-        {
-            textStyle.Enabled = !string.IsNullOrEmpty(value);
-            textStyle.Content = value ?? string.Empty;
-        }
-    }
-
-    public Color TextColor
-    {
-        get => textStyle.Color;
-        set
-        {
-            textStyle.Enabled = true;
-            textStyle.Color = value;
-        }
-    }
-
-    public Vector2 TextAlign
-    {
-        get => textStyle.Align;
-        set
-        {
-            textStyle.Enabled = true;
-            textStyle.Align = value;
-        }
-    }
-
-    public float TextSize
-    {
-        get => textStyle.Size;
-        set
-        {
-            textStyle.Enabled = true;
-            textStyle.Size = value;
-        }
-    }
-
-    public ElementTextOverflowMode TextOverflow
-    {
-        get => textStyle.OverflowMode;
-        set
-        {
-            textStyle.Enabled = true;
-            textStyle.OverflowMode = value;
-        }
-    }
-
-    
-
     public float Rotation
     {
         get => rotation;
@@ -385,22 +310,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     {
         get => rotationPivot;
         set => rotationPivot = value;
-    }
-
-    public UIElement ConfigureTextStyle(Func<ElementTextStyle, ElementTextStyle> configure)
-    {
-        textStyle = configure(textStyle);
-        return this;
-    }
-
-    public void SetBackgroundImage(Subtexture subtex, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
-    {
-        SetBackgroundImageInternal(subtex, null, fillMode, nineSliceBorder);
-    }
-
-    public void SetBackgroundImage(Texture texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
-    {
-        SetBackgroundImageInternal(null, texture, fillMode, nineSliceBorder);
     }
 
     /// <summary>
@@ -561,22 +470,33 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth = 0)
     {
-        CollectDrawCommands(commands, depth, 0, Matrix3x2.Identity);
+        CollectDrawCommandsInternal(commands, depth, 0, Matrix3x2.Identity);
     }
 
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group)
     {
-        CollectDrawCommands(commands, depth, group, Matrix3x2.Identity);
+        CollectDrawCommandsInternal(commands, depth, group, Matrix3x2.Identity);
     }
 
-    void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
+    protected internal virtual void CollectDrawCommandsInternal(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
+    {
+        if (!TryPrepareCollectDrawCommands(parentMatrix, out var matrix))
+            return;
+
+        CollectDrawCommandsForChildren(commands, depth, group, matrix);
+    }
+
+    protected bool TryPrepareCollectDrawCommands(Matrix3x2 parentMatrix, out Matrix3x2 matrix)
     {
         if (!visible)
-            return;
+        {
+            matrix = parentMatrix;
+            return false;
+        }
 
         worldRect = GetWorldRect();
 
-        var matrix = parentMatrix;
+        matrix = parentMatrix;
         if (rotation != 0f)
         {
             var basePivot = worldRect.Position + rotationPivot * worldRect.Size;
@@ -587,18 +507,13 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
             matrix = parentMatrix * local;
         }
 
-        bool hasBackground = background.Enabled && background.Mode != ElementBackgroundMode.None;
-        bool hasText = textStyle.Enabled && !string.IsNullOrEmpty(textStyle.Content) && Assets.Font != null;
+        return true;
+    }
 
-        if (hasBackground)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, this, depth, group, matrix));
-
-        if (hasText)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, this, depth, group, matrix));
-
-        int nextDepth = (hasBackground || hasText) ? depth + 1 : depth;
+    protected void CollectDrawCommandsForChildren(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 matrix)
+    {
         foreach (var child in children)
-            child.CollectDrawCommands(commands, nextDepth, group, matrix);
+            child.CollectDrawCommandsInternal(commands, depth, group, matrix);
     }
 
     public void CollectDrawCommandsAsRoot(List<UIDrawCommand> commands)
@@ -691,18 +606,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         }
     }
 
-    void SetBackgroundImageInternal(Subtexture? subtex, Texture? texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder)
-    {
-        background.Enabled = true;
-        background.Mode = ElementBackgroundMode.Image;
-        background.Subtex = subtex;
-        background.Texture = texture;
-        background.ImageFillMode = fillMode;
-        background.NineSliceBorder = nineSliceBorder;
-        if (background.Color.A == 0)
-            background.Color = Color.White;
-    }
-
     bool SetLayoutFloat(ref float field, float value)
     {
         if (field == value)
@@ -726,7 +629,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         sizeTween = new Interpolated<Vector2>(rect.Size, rect.Size, 0f, Transition.None, Vector2Lerp);
     }
 
-    protected internal virtual void DrawBackground(Batcher batcher)
+    protected void DrawBackgroundInternal(Batcher batcher, ElementBackgroundStyle background)
     {
         if (!background.Enabled)
             return;
@@ -738,12 +641,12 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
                 break;
 
             case ElementBackgroundMode.Image:
-                DrawBackgroundImage(batcher);
+                DrawBackgroundImage(batcher, background);
                 break;
         }
     }
 
-    protected internal virtual void DrawText(Batcher batcher)
+    protected void DrawTextInternal(Batcher batcher, ElementTextStyle textStyle)
     {
         if (!(textStyle.Enabled && !string.IsNullOrEmpty(textStyle.Content) && Assets.Font != null))
             return;
@@ -760,23 +663,23 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
             {
                 var size = textStyle.Size > 0f ? textStyle.Size : Assets.Font.Size;
                 var sizeScale = size / Assets.Font.Size;
-                ApplyTextWrapAutoHeight(boxW, sizeScale, align, ref anchor);
+                ApplyTextWrapAutoHeight(textStyle, boxW, sizeScale, align, ref anchor);
             }
         }
 
         switch (textStyle.OverflowMode)
         {
             case ElementTextOverflowMode.ShrinkToFit:
-                DrawElementTextShrinkToFit(batcher, anchor, align);
+                DrawElementTextShrinkToFit(textStyle, batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.Wrap:
-                DrawElementTextWrap(batcher, anchor, align);
+                DrawElementTextWrap(textStyle, batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.WrapAutoHeight:
-                DrawElementTextWrap(batcher, anchor, align);
+                DrawElementTextWrap(textStyle, batcher, anchor, align);
                 break;
             case ElementTextOverflowMode.ShrinkAndWrap:
-                DrawElementTextShrinkAndWrap(batcher, anchor, align);
+                DrawElementTextShrinkAndWrap(textStyle, batcher, anchor, align);
                 break;
             default:
                 var text = textStyle.Content.AsSpan();
@@ -789,7 +692,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         }
     }
 
-    void ApplyTextWrapAutoHeight(float boxW, float sizeScale, Vector2 justify, ref Vector2 anchor)
+    void ApplyTextWrapAutoHeight(ElementTextStyle textStyle, float boxW, float sizeScale, Vector2 justify, ref Vector2 anchor)
     {
         var content = textStyle.Content ?? string.Empty;
         var lines = Assets.Font.WrapText(content.AsSpan(), boxW);
@@ -807,7 +710,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         anchor.Y = worldRect.Y + worldRect.Height * justify.Y;
     }
 
-    void DrawBackgroundImage(Batcher batcher)
+    void DrawBackgroundImage(Batcher batcher, ElementBackgroundStyle background)
     {
         var tex = background.Subtex?.Texture ?? background.Texture;
         if (tex == null)
@@ -836,7 +739,6 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         }
         else
         {
-            // 原始 Texture，没有子纹理时，使用整张图
             var sub = new Subtexture(tex);
             switch (background.ImageFillMode)
             {
@@ -951,7 +853,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
             color);
     }
 
-    void DrawElementTextShrinkToFit(Batcher batcher, Vector2 anchor, Vector2 justify)
+    void DrawElementTextShrinkToFit(ElementTextStyle textStyle, Batcher batcher, Vector2 anchor, Vector2 justify)
     {
         var content = textStyle.Content ?? string.Empty;
         var textSize = Assets.Font.SizeOf(content.AsSpan());
@@ -988,7 +890,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         batcher.Text(Assets.Font, content.AsSpan(), anchor, justify, scaledSize, textStyle.Color);
     }
 
-    void DrawElementTextWrap(Batcher batcher, Vector2 anchor, Vector2 justify)
+    void DrawElementTextWrap(ElementTextStyle textStyle, Batcher batcher, Vector2 anchor, Vector2 justify)
     {
         var content = textStyle.Content ?? string.Empty;
         var boxW = worldRect.Width;
@@ -999,12 +901,11 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
             return;
         }
 
-        // textStyle.Size 作为逻辑字号（<=0 时使用 SpriteFont 默认 Size）
         var size = textStyle.Size > 0f ? textStyle.Size : Assets.Font.Size;
         batcher.TextWrapped(Assets.Font, content.AsSpan(), boxW, anchor, justify, size, textStyle.Color);
     }
 
-    void DrawElementTextShrinkAndWrap(Batcher batcher, Vector2 anchor, Vector2 justify)
+    void DrawElementTextShrinkAndWrap(ElementTextStyle textStyle, Batcher batcher, Vector2 anchor, Vector2 justify)
     {
         var content = textStyle.Content ?? string.Empty;
         var boxW = worldRect.Width;
@@ -1065,5 +966,208 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
 
         var p = parent.GetWorldRect();
         return new Rect(p.X + rect.X, p.Y + rect.Y, rect.Width, rect.Height);
+    }
+}
+
+public class UIImage : UIElement
+{
+    ElementBackgroundStyle background;
+
+    public ElementBackgroundStyle Background
+    {
+        get => background;
+        set => background = value;
+    }
+
+    public Color BackgroundColor
+    {
+        get => background.Color;
+        set
+        {
+            background.Enabled = true;
+            if (background.Mode == ElementBackgroundMode.None)
+                background.Mode = ElementBackgroundMode.Color;
+            background.Color = value;
+        }
+    }
+
+    public void SetBackgroundImage(Subtexture subtex, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
+    {
+        SetBackgroundImageInternal(subtex, null, fillMode, nineSliceBorder);
+    }
+
+    public void SetBackgroundImage(Texture texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder = default)
+    {
+        SetBackgroundImageInternal(null, texture, fillMode, nineSliceBorder);
+    }
+
+    void SetBackgroundImageInternal(Subtexture? subtex, Texture? texture, ElementImageFillMode fillMode, Vector4 nineSliceBorder)
+    {
+        background.Enabled = true;
+        background.Mode = ElementBackgroundMode.Image;
+        background.Subtex = subtex;
+        background.Texture = texture;
+        background.ImageFillMode = fillMode;
+        background.NineSliceBorder = nineSliceBorder;
+        if (background.Color.A == 0)
+            background.Color = Color.White;
+    }
+
+    public UIImage(bool maskable, bool selectable, bool visible, Rect rect, UIElement? parent = null)
+        : base(maskable, selectable, visible, rect, parent)
+    {
+        Selectable = false;
+    }
+
+    public UIImage(Rect rect, UIElement? parent = null)
+        : this(maskable: true, selectable: false, visible: true, rect: rect, parent: parent)
+    {
+    }
+
+    public UIImage() : this(new Rect(0, 0, 0, 0))
+    {
+    }
+
+    protected override UIElement CreateCloneInstance()
+    {
+        return new UIImage(maskable, selectable, visible, rect);
+    }
+
+    protected override void CopyToClone(UIElement target, bool cloneChildren)
+    {
+        base.CopyToClone(target, cloneChildren);
+
+        if (target is UIImage image)
+            image.background = background;
+    }
+
+    protected internal override void CollectDrawCommandsInternal(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
+    {
+        if (!TryPrepareCollectDrawCommands(parentMatrix, out var matrix))
+            return;
+
+        var rendered = background.Enabled && background.Mode != ElementBackgroundMode.None;
+        if (rendered)
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, RenderBackground, depth, group, matrix));
+
+        var nextDepth = rendered ? depth + 1 : depth;
+        CollectDrawCommandsForChildren(commands, nextDepth, group, matrix);
+    }
+
+    protected virtual void RenderBackground(Batcher batcher)
+    {
+        DrawBackgroundInternal(batcher, background);
+    }
+}
+
+public class UIText : UIElement
+{
+    ElementTextStyle textStyle;
+
+    public ElementTextStyle TextStyle
+    {
+        get => textStyle;
+        set => textStyle = value;
+    }
+
+    public string Text
+    {
+        get => textStyle.Content;
+        set
+        {
+            textStyle.Enabled = !string.IsNullOrEmpty(value);
+            textStyle.Content = value ?? string.Empty;
+        }
+    }
+
+    public Color TextColor
+    {
+        get => textStyle.Color;
+        set
+        {
+            textStyle.Enabled = true;
+            textStyle.Color = value;
+        }
+    }
+
+    public Vector2 TextAlign
+    {
+        get => textStyle.Align;
+        set
+        {
+            textStyle.Enabled = true;
+            textStyle.Align = value;
+        }
+    }
+
+    public float TextSize
+    {
+        get => textStyle.Size;
+        set
+        {
+            textStyle.Enabled = true;
+            textStyle.Size = value;
+        }
+    }
+
+    public ElementTextOverflowMode TextOverflow
+    {
+        get => textStyle.OverflowMode;
+        set
+        {
+            textStyle.Enabled = true;
+            textStyle.OverflowMode = value;
+        }
+    }
+
+    public void ConfigureTextStyle(Func<ElementTextStyle, ElementTextStyle> configure)
+    {
+        textStyle = configure(textStyle);
+    }
+
+    public UIText(bool maskable, bool selectable, bool visible, Rect rect, UIElement? parent = null)
+        : base(maskable, selectable, visible, rect, parent)
+    {
+        Selectable = false;
+    }
+
+    public UIText(Rect rect, UIElement? parent = null)
+        : this(maskable: true, selectable: false, visible: true, rect: rect, parent: parent)
+    {
+    }
+
+    public UIText() : this(new Rect(0, 0, 0, 0))
+    {
+    }
+
+    protected override UIElement CreateCloneInstance()
+    {
+        return new UIText(maskable, selectable, visible, rect);
+    }
+
+    protected override void CopyToClone(UIElement target, bool cloneChildren)
+    {
+        base.CopyToClone(target, cloneChildren);
+
+        if (target is UIText text)
+            text.textStyle = textStyle;
+    }
+
+    protected internal override void CollectDrawCommandsInternal(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
+    {
+        if (!TryPrepareCollectDrawCommands(parentMatrix, out var matrix))
+            return;
+
+        var rendered = textStyle.Enabled && !string.IsNullOrEmpty(textStyle.Content) && Assets.Font != null;
+        if (rendered)
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, RenderText, depth, group, matrix));
+
+        var nextDepth = rendered ? depth + 1 : depth;
+        CollectDrawCommandsForChildren(commands, nextDepth, group, matrix);
+    }
+
+    protected virtual void RenderText(Batcher batcher)
+    {
+        DrawTextInternal(batcher, textStyle);
     }
 }
