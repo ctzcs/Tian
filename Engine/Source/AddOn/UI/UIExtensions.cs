@@ -14,10 +14,7 @@ public static class UIFluentExtensions
     public static T WithBackgroundColor<T>(this T element, Color color)
         where T : UIElement
     {
-        if (element is UIImage image)
-            image.BackgroundColor = color;
-        else if (element is Button button)
-            button.BackgroundColor = color;
+        element.BackgroundColor = color;
         return element;
     }
 
@@ -31,10 +28,7 @@ public static class UIFluentExtensions
         Vector4 nineSliceBorder = default)
         where T : UIElement
     {
-        if (element is UIImage image)
-            image.SetBackgroundImage(subtex, fillMode, nineSliceBorder);
-        else if (element is Button button)
-            button.SetBackgroundImage(subtex, fillMode, nineSliceBorder);
+        element.SetBackgroundImage(subtex, fillMode, nineSliceBorder);
         return element;
     }
 
@@ -48,10 +42,7 @@ public static class UIFluentExtensions
         Vector4 nineSliceBorder = default)
         where T : UIElement
     {
-        if (element is UIImage image)
-            image.SetBackgroundImage(texture, fillMode, nineSliceBorder);
-        else if (element is Button button)
-            button.SetBackgroundImage(texture, fillMode, nineSliceBorder);
+        element.SetBackgroundImage(texture, fillMode, nineSliceBorder);
         return element;
     }
 
@@ -168,40 +159,28 @@ public static class UIFluentExtensions
     public static T WithTextColor<T>(this T element, Color color)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.TextColor = color;
-        else if (element is Button button)
-            button.TextColor = color;
+        element.TextColor = color;
         return element;
     }
 
     public static T WithTextAlign<T>(this T element, Vector2 align)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.TextAlign = align;
-        else if (element is Button button)
-            button.TextAlign = align;
+        element.TextAlign = align;
         return element;
     }
 
     public static T WithTextSize<T>(this T element, float size)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.TextSize = size;
-        else if (element is Button button)
-            button.TextSize = size;
+        element.TextSize = size;
         return element;
     }
 
     public static T WithTextOverflow<T>(this T element, ElementTextOverflowMode mode)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.TextOverflow = mode;
-        else if (element is Button button)
-            button.TextOverflow = mode;
+        element.TextOverflow = mode;
         return element;
     }
 
@@ -210,20 +189,14 @@ public static class UIFluentExtensions
         Func<ElementTextStyle, ElementTextStyle> configure)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.ConfigureTextStyle(configure);
-        else if (element is Button button)
-            button.ConfigureTextStyle(configure);
+        element.ConfigureTextStyle(configure);
         return element;
     }
 
     public static T WithText<T>(this T element, string content)
         where T : UIElement
     {
-        if (element is UIText text)
-            text.Text = content;
-        else if (element is Button button)
-            button.Text = content;
+        element.Text = content;
         return element;
     }
 
