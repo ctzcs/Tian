@@ -112,7 +112,40 @@ public sealed class UiTestRightPanel
             grid.WithChild(cell);
         }
 
-        Root.WithChildren(demoTitle, demoRow, gridTitle, grid);
+        var scrollTitle = new UIElement(new Rect(0, 0, 0, 40))
+            .WithBackgroundColor(Rgb(45, 45, 55))
+            .WithText("ScrollView Demo (Drag Bar)")
+            .WithTextColor(Color.White)
+            .WithTextAlign(new Vector2(0.5f, 0.5f))
+            .WithTextSize(22);
+
+        var scrollView = new ScrollView(new Rect(0, 0, 0, 220))
+            .WithGrowX(1)
+            .WithBackgroundColor(Rgb(34, 34, 40));
+
+        scrollView.AlwaysShowBar = true;
+        scrollView.BarWidth = 10f;
+
+        scrollView.Content
+            .WithPadding(8)
+            .WithChildGap(6)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
+
+        for (int i = 0; i < 24; i++)
+        {
+            var item = new UIElement(new Rect(0, 0, 0, 32))
+                .WithGrowX(1)
+                .WithBackgroundColor(i % 2 == 0 ? Rgb(42, 42, 52) : Rgb(36, 36, 46))
+                .WithText($"Item {i + 1}")
+                .WithTextColor(Rgb(220, 220, 220))
+                .WithTextAlign(new Vector2(0f, 0.5f))
+                .WithTextSize(16);
+
+            scrollView.Content.WithChild(item);
+        }
+
+        Root.WithChildren(demoTitle, demoRow, gridTitle, grid, scrollTitle, scrollView);
     }
 
     private static Color Rgb(byte r, byte g, byte b)

@@ -114,15 +114,15 @@ public sealed class UiTestScene : IContent
         AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
         AssetsV1.LazyInitializeCache("pack.zip");
         Assets.LoadSpritesFromGz(app.GraphicsDevice);
-        var codepoints = FontUtility.GetCodepoints(7000,FontLanguage.SimplifiedChinese);
+        var codepoints = FontUtility.GetCodepoints(7500,FontLanguage.SimplifiedChinese);
         
         //font = app.GraphicsDevice.Defaults.SpriteFont;
         font = new SpriteFont(
             app.GraphicsDevice,
-            Path.Join(Assets.ContentAssetsPath, "Fonts", "JetBrainsMono-Regular.ttf"),
+            Path.Join(Assets.ContentAssetsPath, "Fonts", "SmileySans-Oblique.ttf"),
             32,
             codepoints);
-        font.Sampler = new TextureSampler(TextureFilter.Linear, TextureWrap.Clamp);
+        //font.Sampler = new TextureSampler(TextureFilter.Linear, TextureWrap.Clamp);
         
         Assets.SetFont(font);
     }
