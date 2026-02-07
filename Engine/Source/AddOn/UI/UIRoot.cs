@@ -65,7 +65,7 @@ public class UIRoot
         if (!IsOpen) return;
         _drawCommands.Clear();
         root.CollectDrawCommandsAsRoot(_drawCommands);
-        UIDrawCommandRenderer.Render(_drawCommands, batcher);
+        UIDrawCommandRenderer.RenderDfs(_drawCommands, batcher);
     }
 
     void ApplyViewportLayout()

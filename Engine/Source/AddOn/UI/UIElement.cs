@@ -561,20 +561,35 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth = 0)
     {
-        CollectDrawCommands(commands, depth, 0, Matrix3x2.Identity);
+        CollectDrawCommands(commands, depth, 0, Matrix3x2.Identity, null);
     }
 
     public void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group)
     {
-        CollectDrawCommands(commands, depth, group, Matrix3x2.Identity);
+        CollectDrawCommands(commands, depth, group, Matrix3x2.Identity, null);
     }
 
-    void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix)
+    void CollectDrawCommands(List<UIDrawCommand> commands, int depth, int group, Matrix3x2 parentMatrix, Rect? clipRect)
     {
         if (!visible)
             return;
 
         worldRect = GetWorldRect();
+
+        Rect? elementClip = clipRect;
+        if (maskable)
+        {
+            elementClip = elementClip.HasValue
+                ? elementClip.Value.GetIntersection(worldRect)
+                : worldRect;
+        }
+
+        if (elementClip.HasValue)
+        {
+            var clip = elementClip.Value;
+            if (clip.Width <= 0f || clip.Height <= 0f)
+                return;
+        }
 
         var matrix = parentMatrix;
         if (rotation != 0f)
@@ -590,15 +605,17 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
         bool hasBackground = background.Enabled && background.Mode != ElementBackgroundMode.None;
         bool hasText = textStyle.Enabled && !string.IsNullOrEmpty(textStyle.Content) && Assets.Font != null;
 
+        var scissor = elementClip.HasValue ? elementClip.Value.Int() : (RectInt?)null;
+
         if (hasBackground)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, this, depth, group, matrix));
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Background, this, depth, group, matrix, scissor));
 
         if (hasText)
-            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, this, depth, group, matrix));
+            commands.Add(new UIDrawCommand(UIDrawCommandType.Text, this, depth, group, matrix, scissor));
 
         int nextDepth = (hasBackground || hasText) ? depth + 1 : depth;
         foreach (var child in children)
-            child.CollectDrawCommands(commands, nextDepth, group, matrix);
+            child.CollectDrawCommands(commands, nextDepth, group, matrix, elementClip);
     }
 
     public void CollectDrawCommandsAsRoot(List<UIDrawCommand> commands)

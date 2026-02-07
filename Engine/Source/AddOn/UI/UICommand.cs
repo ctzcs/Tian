@@ -17,14 +17,16 @@ namespace Engine.UI
         public readonly int Depth;
         public readonly int Group; // 用于分组渲染，如不同的 UI覆盖
         public readonly Matrix3x2 Matrix;
+        public readonly RectInt? Scissor;
 
-        public UIDrawCommand(UIDrawCommandType type, UIElement element, int depth, int group, Matrix3x2 matrix)
+        public UIDrawCommand(UIDrawCommandType type, UIElement element, int depth, int group, Matrix3x2 matrix, RectInt? scissor)
         {
             Type = type;
             Element = element;
             Depth = depth;
             Group = group;
             Matrix = matrix;
+            Scissor = scissor;
         }
     }
 
@@ -65,11 +67,22 @@ namespace Engine.UI
                 for (int depth = minDepth; depth <= maxDepth; depth++)
                 {
                     // 先画该 depth 的所有背景
+                    RectInt? currentScissor = null;
                     for (int i = 0; i < commands.Count; i++)
                     {
                         var cmd = commands[i];
                         if (cmd.Group != group || cmd.Depth != depth || cmd.Type != UIDrawCommandType.Background)
                             continue;
+
+                        var nextScissor = cmd.Scissor;
+                        if (!Nullable.Equals(currentScissor, nextScissor))
+                        {
+                            if (currentScissor.HasValue)
+                                batcher.PopScissor();
+                            if (nextScissor.HasValue)
+                                batcher.PushScissor(nextScissor);
+                            currentScissor = nextScissor;
+                        }
 
                         var pushed = cmd.Matrix != Matrix3x2.Identity;
                         if (pushed)
@@ -81,12 +94,26 @@ namespace Engine.UI
                             batcher.PopMatrix();
                     }
 
+                    if (currentScissor.HasValue)
+                        batcher.PopScissor();
+
                     // 再画该 depth 的所有文字
+                    currentScissor = null;
                     for (int i = 0; i < commands.Count; i++)
                     {
                         var cmd = commands[i];
                         if (cmd.Group != group || cmd.Depth != depth || cmd.Type != UIDrawCommandType.Text)
                             continue;
+
+                        var nextScissor = cmd.Scissor;
+                        if (!Nullable.Equals(currentScissor, nextScissor))
+                        {
+                            if (currentScissor.HasValue)
+                                batcher.PopScissor();
+                            if (nextScissor.HasValue)
+                                batcher.PushScissor(nextScissor);
+                            currentScissor = nextScissor;
+                        }
 
                         var pushed = cmd.Matrix != Matrix3x2.Identity;
                         if (pushed)
@@ -97,8 +124,48 @@ namespace Engine.UI
                         if (pushed)
                             batcher.PopMatrix();
                     }
+
+                    if (currentScissor.HasValue)
+                        batcher.PopScissor();
                 }
             }
+        }
+
+        public static void RenderDfs(IReadOnlyList<UIDrawCommand> commands, Batcher batcher)
+        {
+            if (commands.Count == 0)
+                return;
+
+            RectInt? currentScissor = null;
+            for (int i = 0; i < commands.Count; i++)
+            {
+                var cmd = commands[i];
+
+                var nextScissor = cmd.Scissor;
+                if (!Nullable.Equals(currentScissor, nextScissor))
+                {
+                    if (currentScissor.HasValue)
+                        batcher.PopScissor();
+                    if (nextScissor.HasValue)
+                        batcher.PushScissor(nextScissor);
+                    currentScissor = nextScissor;
+                }
+
+                var pushed = cmd.Matrix != Matrix3x2.Identity;
+                if (pushed)
+                    batcher.PushMatrix(cmd.Matrix, true);
+
+                if (cmd.Type == UIDrawCommandType.Background)
+                    cmd.Element.DrawBackground(batcher);
+                else
+                    cmd.Element.DrawText(batcher);
+
+                if (pushed)
+                    batcher.PopMatrix();
+            }
+
+            if (currentScissor.HasValue)
+                batcher.PopScissor();
         }
     }
 }
