@@ -52,12 +52,17 @@ public class UIRoot
     public void Update(float deltaTime)
     {
 		time += deltaTime;
-        root.Update(time);
         ApplyViewportLayout();
+        root.Update(time);
         UpdateInputMouse();
 
         if (lastOver is IInputListener listener)
             listener.OnPointerHover(currentFrame);
+    }
+
+    public void ForceViewportLayout()
+    {
+        ApplyViewportLayout();
     }
 
     public void Render(Batcher batcher)

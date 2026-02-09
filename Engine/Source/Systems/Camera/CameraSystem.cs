@@ -16,19 +16,21 @@ public partial class CameraSystem:QuerySystem
     private float scaleSpeed;
     private float deltaTime;
     private Target target;
-    public CameraSystem(EntityStore world,App ctx,Target target)
+    private int pixelsPerUnit;
+    public CameraSystem(App ctx,Target target,int pixelsPerUnit = 16)
     {
-        this.world = world;
         this.ctx = ctx;
         speed = 10;
         scaleSpeed = 5;
         this.target = target;
+        this.pixelsPerUnit = pixelsPerUnit;
     }
 
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
-        CameraUtils.CreateCamera(Engine.Id.MainCamera,target,world,0,Vector2.One,2.5f,16);
+        world = store;
+        CameraUtils.CreateCamera(Engine.Id.MainCamera,target,world,0,Vector2.One,2.5f,pixelsPerUnit);
         ctx.Window.OnResize += OnResize;
     }
 
@@ -41,7 +43,6 @@ public partial class CameraSystem:QuerySystem
     protected override void OnUpdate()
     {
         if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
-        var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
         deltaTime = Tick.deltaTime;
         var query = world.Query<Camera2D, CTransform>();
 #if DEBUG
@@ -110,6 +111,5 @@ public partial class CameraSystem:QuerySystem
         
         c.viewRectInPixels = new RectInt(0, 0, target.Width, target.Height);
     }
-
     
 }

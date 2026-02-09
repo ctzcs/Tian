@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
+﻿using System.Numerics;
 using Engine.Asset;
 using Engine.Core;
 using Foster.Framework;
@@ -144,7 +142,7 @@ public class UIElement(bool maskable, bool selectable, bool visible, Rect rect, 
     }
 
     public UIElement(Rect rect, UIElement? parent = null)
-        : this(maskable: true, selectable: false, visible: true, rect: rect, parent: parent)
+        : this(maskable: false, selectable: false, visible: true, rect: rect, parent: parent)
     {
     }
 

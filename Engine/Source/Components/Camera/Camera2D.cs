@@ -20,22 +20,6 @@ public struct Camera2D:IComponent
     public float zoom;// Camera zoom (scaling), should be 1.0f by default
 
     public int pixelsPerUnit;
-    /*public Vector2 SetScaleRate(float scaleRateChange,Window window)
-    {
-        //相机补偿
-        float newZoom = Calc.Clamp(zoom + scaleRateChange, 0.1f, 10f);
-        //这里不对，应该是逻辑屏幕
-        
-        var screenPosition = Cursor.GetScreenPosition(logicSize);
-        var worldPos = CameraUtils.ScreenToWorld(screenPosition,window,logicSize);
-        zoom = newZoom;
-        var newWorldPos = CameraUtils.ScreenToWorld(screenPosition,window,logicSize);
-
-        var cursorOffset = worldPos - newWorldPos;
-        
-        return cursorOffset;
-    }*/
-    
     
 }
 
@@ -53,7 +37,7 @@ public static class CameraUtils
     /// <param name="size"></param>
     /// <param name="pixelsPerUnit"></param>
     /// <returns></returns>
-    public static Entity CreateCamera(string cameraId,IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float zoom,int pixelsPerUnit)
+    public static Entity CreateCamera(string cameraId, IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float zoom, int pixelsPerUnit)
     {
         var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
             new CTransform(default,Vector2.Zero, rotation,size),
