@@ -8,6 +8,10 @@ namespace Content.Source.Test_Ui;
 public sealed class UiTestRightPanel
 {
     public VerticalGroup Root { get; }
+    public UIElement TextOverflowSection { get; private set; } = null!;
+    public UIElement GridSection { get; private set; } = null!;
+    public UIElement SliderSection { get; private set; } = null!;
+    public UIElement ScrollSection { get; private set; } = null!;
 
     public UiTestRightPanel(UIRoot uiRoot)
     {
@@ -19,6 +23,13 @@ public sealed class UiTestRightPanel
             .WithChildGap(10)
             .WithAutoSize(autoWidth: false, autoHeight: false);
 
+        TextOverflowSection = new VerticalGroup()
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(1)
+            .WithChildGap(8)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
+
         var demoTitle = new UIElement(new Rect(0, 0, 0, 40))
             .WithBackgroundColor(Rgb(45, 45, 55))
             .WithText("Text Overflow Demo")
@@ -27,7 +38,7 @@ public sealed class UiTestRightPanel
             .WithTextSize(22);
 
         var demoRow = new HorizontalGroup()
-            .WithRect(new Rect(0, 0, 0, 120))
+            .WithRect(new Rect(0, 0, 0, 100))
             .WithChildGap(10)
             .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
             .WithAutoSize(autoWidth: false, autoHeight: true);
@@ -68,6 +79,14 @@ public sealed class UiTestRightPanel
             .WithTextOverflow(ElementTextOverflowMode.ShrinkAndWrap);
 
         demoRow.WithChildren(boxWrap, boxShrink, boxShrinkWrap);
+        TextOverflowSection.WithChildren(demoTitle, demoRow);
+
+        GridSection = new VerticalGroup()
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(1)
+            .WithChildGap(8)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
 
         var gridTitle = new UIElement(new Rect(0, 0, 0, 40))
             .WithBackgroundColor(Rgb(45, 45, 55))
@@ -77,7 +96,7 @@ public sealed class UiTestRightPanel
             .WithTextSize(22);
 
         var grid = new GridGroup()
-            .WithRect(new Rect(0, 0, 0, 240))
+            .WithRect(new Rect(0, 0, 0, 200))
             .WithGrowX(1)
             .WithBackgroundColor(Rgb(34, 34, 40))
             .WithPadding(10)
@@ -112,6 +131,18 @@ public sealed class UiTestRightPanel
             grid.WithChild(cell);
         }
 
+        GridSection.WithChildren(gridTitle, grid);
+
+        var sliderPanel = new UiTestSliderPanel(uiRoot);
+        SliderSection = sliderPanel.Root;
+
+        ScrollSection = new VerticalGroup()
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(1)
+            .WithChildGap(8)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
+
         var scrollTitle = new UIElement(new Rect(0, 0, 0, 40))
             .WithBackgroundColor(Rgb(45, 45, 55))
             .WithText("ScrollView Demo (Drag Bar)")
@@ -119,7 +150,7 @@ public sealed class UiTestRightPanel
             .WithTextAlign(new Vector2(0.5f, 0.5f))
             .WithTextSize(22);
 
-        var scrollView = new ScrollView(new Rect(0, 0, 0, 220))
+        var scrollView = new ScrollView(new Rect(0, 0, 0, 160))
             .WithGrowX(1)
             .WithBackgroundColor(Rgb(34, 34, 40));
 
@@ -145,7 +176,9 @@ public sealed class UiTestRightPanel
             scrollView.Content.WithChild(item);
         }
 
-        Root.WithChildren(demoTitle, demoRow, gridTitle, grid, scrollTitle, scrollView);
+        ScrollSection.WithChildren(scrollTitle, scrollView);
+
+        Root.WithChildren(TextOverflowSection, GridSection, SliderSection, ScrollSection);
     }
 
     private static Color Rgb(byte r, byte g, byte b)

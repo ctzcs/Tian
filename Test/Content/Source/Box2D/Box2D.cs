@@ -94,7 +94,7 @@ public class Box2D : IContent
     void BuildSystemPipeline(out SystemRoot updateRoot, out SystemRoot renderGroup)
     {
         updateRoot = new SystemRoot(World,"Update");
-        updateRoot.Add(new CameraSystem(World,app,Target));
+        updateRoot.Add(new CameraSystem(app,Target));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         

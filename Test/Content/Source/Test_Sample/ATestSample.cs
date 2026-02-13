@@ -85,7 +85,7 @@ public class ATestSample:IContent
         updateRoot.Add(new BuildingCatchSystem(World,res));
         updateRoot.Add(new FindLineSystem(World,rng));
         updateRoot.Add(new BehaviorSystem());
-        updateRoot.Add(new CameraSystem(World,ctx,target));
+        updateRoot.Add(new CameraSystem(ctx,target));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         updateRoot.Add(new AnimationSystem());

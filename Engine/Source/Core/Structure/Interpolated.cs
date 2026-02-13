@@ -1,3 +1,5 @@
+using System;
+
 namespace Engine.Core;
 /// <summary>
 /// 插值方法
@@ -47,7 +49,7 @@ public struct Interpolated<T>(T start, T end, float currentTime,Transition trans
         if (t >= 1.0f)
             return end;
 
-        var ratio = GetRatio(t, transition);
+        var ratio = GetRatioInternal(t, transition);
         return lerp(start, end, ratio); 
     }
 
@@ -58,7 +60,7 @@ public struct Interpolated<T>(T start, T end, float currentTime,Transition trans
 
     float GetElapsedSeconds(float currentTime) => currentTime - startTime;
 
-    static float GetRatio(float t, Transition transition)
+    static float GetRatioInternal(float t, Transition transition)
     {
         t = Math.Clamp(t, 0f, 1f);
         switch (transition)

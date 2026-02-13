@@ -12,6 +12,15 @@ using Rect = Foster.Framework.Rect;
 
 namespace Content.Source.Test_Ui;
 
+public enum UiTestSection
+{
+    Rotation,
+    TextOverflow,
+    Grid,
+    ScrollView,
+    Slider
+}
+
 public sealed class UiTestScene : IContent
 {
     private readonly App app;
@@ -28,6 +37,12 @@ public sealed class UiTestScene : IContent
     private UiTestLeftPanel? leftPanel;
     private UiTestRotationPanel? rotationPanel;
     private UiTestRightPanel? rightPanel;
+
+    private bool showRotation = true;
+    private bool showTextOverflow = true;
+    private bool showGrid = true;
+    private bool showScroll = true;
+    private bool showSlider = true;
 
     public Target Target { get; }
     public EntityStore World { get; set; }
@@ -158,17 +173,22 @@ public sealed class UiTestScene : IContent
             .WithPadding(16)
             .WithChildGap(16)
             .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top);
+        dock.AnimateLayout = false;
 
         var leftPanelRoot = BuildLeftPanel();
+        leftPanelRoot.AnimateLayout = false;
 
         var rotationPanelRoot = BuildRotationPanel();
+        rotationPanelRoot.AnimateLayout = false;
 
         var rightPanelRoot = BuildRightPanel();
+        rightPanelRoot.AnimateLayout = false;
 
         dock.WithChildren(leftPanelRoot, rotationPanelRoot, rightPanelRoot);
         uiRoot.Root.WithChild(dock);
 
         leftPanel?.SeedItems(5);
+        //ApplyTestVisibility();
     }
 
     private VerticalGroup BuildLeftPanel()
@@ -177,7 +197,7 @@ public sealed class UiTestScene : IContent
         {
             BuildUI();
             SetUiOpen(true);
-        });
+        }, GetSectionVisible, SetSectionVisible);
         return leftPanel.Root;
     }
 
@@ -191,6 +211,67 @@ public sealed class UiTestScene : IContent
     {
         rightPanel = new UiTestRightPanel(uiRoot);
         return rightPanel.Root;
+    }
+
+    private bool GetSectionVisible(UiTestSection section)
+    {
+        return section switch
+        {
+            UiTestSection.Rotation => showRotation,
+            UiTestSection.TextOverflow => showTextOverflow,
+            UiTestSection.Grid => showGrid,
+            UiTestSection.ScrollView => showScroll,
+            UiTestSection.Slider => showSlider,
+            _ => true
+        };
+    }
+
+    private void SetSectionVisible(UiTestSection section, bool visible)
+    {
+        switch (section)
+        {
+            case UiTestSection.Rotation:
+                showRotation = visible;
+                break;
+            case UiTestSection.TextOverflow:
+                showTextOverflow = visible;
+                break;
+            case UiTestSection.Grid:
+                showGrid = visible;
+                break;
+            case UiTestSection.ScrollView:
+                showScroll = visible;
+                break;
+            case UiTestSection.Slider:
+                showSlider = visible;
+                break;
+        }
+
+        ApplyTestVisibility();
+    }
+
+    private void ApplyTestVisibility()
+    {
+        if (rotationPanel != null)
+            rotationPanel.Root.Visible = showRotation;
+
+        if (rightPanel == null)
+            return;
+
+        var root = rightPanel.Root;
+        root.ClearChildren();
+
+        if (showTextOverflow)
+            root.WithChild(rightPanel.TextOverflowSection);
+        if (showGrid)
+            root.WithChild(rightPanel.GridSection);
+        if (showSlider)
+            root.WithChild(rightPanel.SliderSection);
+        if (showScroll)
+            root.WithChild(rightPanel.ScrollSection);
+
+        uiRoot.Root.Apply();
+        uiRoot.Root.UpdateLayoutNow(true);
     }
     
     private bool GetUiOpen()

@@ -11,6 +11,7 @@ public sealed class UiTestLeftPanel
 {
     private readonly UIRoot uiRoot;
     private readonly Action onRebuild;
+    private readonly Action<UiTestSection, bool> onToggleTest;
 
     private readonly VerticalGroup listGroup;
     private readonly UiDragController reorderController;
@@ -20,10 +21,11 @@ public sealed class UiTestLeftPanel
 
     public VerticalGroup Root { get; }
 
-    public UiTestLeftPanel(UIRoot uiRoot, Action onRebuild)
+    public UiTestLeftPanel(UIRoot uiRoot, Action onRebuild, Func<UiTestSection, bool> getTestState, Action<UiTestSection, bool> onToggleTest)
     {
         this.uiRoot = uiRoot;
         this.onRebuild = onRebuild;
+        this.onToggleTest = onToggleTest;
 
         Root = new VerticalGroup()
             .WithRect(new Rect(0, 0, 0, 0))
@@ -68,6 +70,30 @@ public sealed class UiTestLeftPanel
 
         controlsRow.WithChildren(btnAdd, btnRemove, btnRebuild);
 
+        var testTitle = new UIElement(new Rect(0, 0, 0, 36))
+            .WithBackgroundColor(Rgb(40, 40, 48))
+            .WithText("Tests")
+            .WithTextColor(Rgb(230, 230, 230))
+            .WithTextAlign(new Vector2(0.0f, 0.5f))
+            .WithTextSize(18);
+
+        var testList = new VerticalGroup()
+            .WithRect(new Rect(0, 0, 0, 0))
+            .WithGrowX(1)
+            .WithMinHeight(180)
+            .WithBackgroundColor(Rgb(24, 24, 30))
+            .WithPadding(8)
+            .WithChildGap(6)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Top)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
+
+        testList.WithChildren(
+            BuildTestToggle("Rotation Panel", UiTestSection.Rotation, getTestState(UiTestSection.Rotation)),
+            BuildTestToggle("Text Overflow", UiTestSection.TextOverflow, getTestState(UiTestSection.TextOverflow)),
+            BuildTestToggle("Grid Drag", UiTestSection.Grid, getTestState(UiTestSection.Grid)),
+            BuildTestToggle("ScrollView", UiTestSection.ScrollView, getTestState(UiTestSection.ScrollView)),
+            BuildTestToggle("Slider", UiTestSection.Slider, getTestState(UiTestSection.Slider)));
+
         listGroup = new VerticalGroup()
             .WithRect(new Rect(0, 0, 0, 0))
             .WithGrowY(1)
@@ -87,7 +113,7 @@ public sealed class UiTestLeftPanel
             .WithTextAlign(new Vector2(0.0f, 0.5f))
             .WithTextSize(18);
 
-        Root.WithChildren(title, controlsRow, listGroup, statusBar);
+        Root.WithChildren(title, controlsRow, testTitle, testList, listGroup, statusBar);
 
         UpdateStatus();
     }
@@ -103,6 +129,27 @@ public sealed class UiTestLeftPanel
     {
         for (int i = 0; i < count; i++)
             AddItem();
+    }
+
+    private HorizontalGroup BuildTestToggle(string label, UiTestSection section, bool initial)
+    {
+        var row = new HorizontalGroup()
+            .WithRect(new Rect(0, 0, 0, 28))
+            .WithChildGap(8)
+            .WithAlign(HorizontalAlignment.Left, VerticalAlignment.Middle)
+            .WithAutoSize(autoWidth: false, autoHeight: true);
+
+        var toggle = new ToggleBox(new Rect(0, 0, 24, 24), initial, value => onToggleTest(section, value));
+
+        var text = new UIElement(new Rect(0, 0, 0, 24))
+            .WithGrowX(1)
+            .WithText(label)
+            .WithTextColor(Rgb(220, 220, 220))
+            .WithTextAlign(new Vector2(0f, 0.5f))
+            .WithTextSize(16);
+
+        row.WithChildren(toggle, text);
+        return row;
     }
 
     public void AddItem()
@@ -162,6 +209,39 @@ public sealed class UiTestLeftPanel
     private void UpdateStatus()
     {
         statusBar.Text = $"Items: {listGroup.Children.Count} | Toggle UI: U | Debug: O";
+    }
+
+    private sealed class ToggleBox : UIElement, IInputListener
+    {
+        private bool isOn;
+        private readonly Action<bool> onChanged;
+
+        public ToggleBox(Rect rect, bool initial, Action<bool> onChanged)
+            : base(maskable: true, selectable: true, visible: true, rect: rect)
+        {
+            this.onChanged = onChanged;
+            TextAlign = new Vector2(0.5f, 0.5f);
+            TextSize = 16;
+            isOn = initial;
+            UpdateVisual();
+        }
+
+        public bool OnPointerDown(UiFrame state)
+        {
+            isOn = !isOn;
+            UpdateVisual();
+            onChanged(isOn);
+            return true;
+        }
+
+        public bool OnRightPointerDown(UiFrame state) => false;
+
+        private void UpdateVisual()
+        {
+            BackgroundColor = isOn ? Rgb(80, 130, 200) : Rgb(50, 50, 60);
+            TextColor = Rgb(235, 235, 235);
+            Text = isOn ? "✓" : "";
+        }
     }
 
     private static Color Rgb(byte r, byte g, byte b)
