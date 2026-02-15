@@ -157,7 +157,7 @@ public class ATestSample:IContent
     
     public void Start()
     {
-        Profiler.AppInfo("Hello AppInfo!");
+        //Profiler.AppInfo("Hello AppInfo!");
     }
 
     public void Destroy()
@@ -202,14 +202,14 @@ public class ATestSample:IContent
         //GameRender
         tempTarget.Clear(Const.DefaultColor);
         target.Clear(Color.Transparent);
-        var zone = Profiler.BeginZone("renderGroup");
+        //var zone = Profiler.BeginZone("renderGroup");
         renderGroup.Update(new UpdateTick(ctx.Time.Delta,(float)ctx.Time.Seconds));
-        zone.Dispose();
+        //zone.Dispose();
         // 使用：将该码点嵌入字符串（C# 中转成 char）
         batcher.Render(tempTarget);
         batcher.Clear();
         PostProcess(tempTarget,target,customMaterial);//TODO 这个也应该放到系统中
-        Profiler.EmitFrameMark();
+        //Profiler.EmitFrameMark();
     }
     
     /// <summary>

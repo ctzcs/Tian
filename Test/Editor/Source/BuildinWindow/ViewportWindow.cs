@@ -37,16 +37,20 @@ public class ViewportWindow:EditorWindow
 					ImGui.EndTooltip();
 				}
 
-                var world = Data.currentContent.World;
-                if (world.HasUniqueEntity(Id.Coordinate))
+                var content = Data?.currentContent;
+                if (content != null)
                 {
-                    Coordinate coordinate =  world.GetUniqueEntity(Id.Coordinate).GetComponent<Coordinate>();
-                    ImGui.Text($"[{coordinate.MouseCoordinates.X}, {coordinate.MouseCoordinates.Y}]");
-                    if (ImGui.IsItemHovered())
+                    var world = content.World;
+                    if (world.HasUniqueEntity(Id.Coordinate))
                     {
-                        ImGui.BeginTooltip();
-                        ImGui.Text("Mouse Coordinates");
-                        ImGui.EndTooltip();
+                        var coordinate = world.GetUniqueEntity(Id.Coordinate).GetComponent<Coordinate>();
+                        ImGui.Text($"[{coordinate.MouseCoordinates.X}, {coordinate.MouseCoordinates.Y}]");
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.Text("Mouse Coordinates");
+                            ImGui.EndTooltip();
+                        }
                     }
                 }
 			}

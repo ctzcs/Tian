@@ -21,13 +21,13 @@ public class InspectorWindow:EditorWindow
     {
         if (ImGui.Begin("Inspector"))
         {
-            if (Data.currentContent == null)
+            if (Data?.currentContent == null)
             {
                 ImGui.Text("No Content");
-                return;
             }
-
-            var entity = Data.selectedEntity;
+            else
+            {
+                var entity = Data.selectedEntity;
             if (!entity.IsNull)
             {
                 var tags = entity.Tags;
@@ -123,6 +123,7 @@ public class InspectorWindow:EditorWindow
                 if (!anyComponent)
                     ImGui.TextDisabled(hasSearch ? "(No matching components)" : "(No components)");
             }
+        }
         }
         ImGui.End();
     }
