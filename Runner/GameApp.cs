@@ -35,9 +35,7 @@ public class GameApp : App
 
     protected override void Shutdown()
     {
-        
         content.Destroy();
-
     }
 
     protected override void Update()

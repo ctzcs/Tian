@@ -8,7 +8,7 @@ using Cursor = Engine.Core.Input.Cursor;
 
 namespace Editor;
 
-public class ViewportWindow:EditorWindow
+public class EditorModeWindow : EditorWindow
 {
 	// 视口缩放
 	private float viewScale = 1f;
@@ -24,7 +24,7 @@ public class ViewportWindow:EditorWindow
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
 		
 		//TODO 这里的问题是，当在编辑器中视口失去焦点的时候，由于Content直接读取的引擎的输入设备帧数据，导致无法在editor层屏蔽
-		if (ImGui.Begin("ViewPort", ImGuiWindowFlags.MenuBar))
+		if (ImGui.Begin("EditorScene", ImGuiWindowFlags.MenuBar))
 		{
 			if (ImGui.BeginMenuBar())
 			{

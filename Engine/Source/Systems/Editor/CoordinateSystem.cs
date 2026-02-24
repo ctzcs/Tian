@@ -12,6 +12,8 @@ namespace Engine.Systems.Editor;
 
 //这里最终会转化成一个无限网格系统
 //AfterBeforeRender
+
+//TODO 这些应该是在Gizmos侧，Game中不应该有这些
 public class CoordinateSystem : QuerySystem<Coordinate>
 {
     private App ctx;

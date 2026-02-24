@@ -21,6 +21,7 @@
     
     <ItemGroup>
         <ProjectReference Include="..\Content\Content.csproj"/>
+        <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
     
     <Target Name="CopySpritesAfterPublish" AfterTargets="Publish">

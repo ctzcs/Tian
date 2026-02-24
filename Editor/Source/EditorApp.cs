@@ -50,7 +50,8 @@ public class EditorApp : App
 		_editorWindowManager.AddWindow(new HierarchyWindow());
 		_editorWindowManager.AddWindow(new InspectorWindow());
 		_editorWindowManager.AddWindow(new SystemWindow());
-		_editorWindowManager.AddWindow(new ViewportWindow());
+		_editorWindowManager.AddWindow(new EditorModeWindow());
+		_editorWindowManager.AddWindow(new GameModeWindow());
 		_editorWindowManager.AddWindow(new PerformanceWindow());
 
 		_dockLayoutIniPath = Path.Combine(
@@ -221,7 +222,7 @@ public class EditorApp : App
 				
 				if (ImGui.MenuItem("Viewport"))
 				{
-					_editorWindowManager.SwitchWindowVisual<ViewportWindow>();
+					_editorWindowManager.SwitchWindowVisual<EditorModeWindow>();
 				}
 				
 				if (ImGui.MenuItem("Performance"))
