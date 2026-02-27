@@ -47,10 +47,10 @@ public class ATestSample:IContent
             JobRunner = new ParallelJobRunner(Environment.ProcessorCount)
         };
         //资源出适合
-        /*AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
+        AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
         AssetsV1.LazyInitializeCache("pack.zip");
-        Assets.LoadSpritesFromGz(ctx.GraphicsDevice);*/
-        Assets.Load(ctx.GraphicsDevice);
+        Assets.LoadSpritesFromGz(ctx.GraphicsDevice);
+        //Assets.Load(ctx.GraphicsDevice);
         var font = new SpriteFont(ctx.GraphicsDevice, 
             Path.Join(Assets.ContentAssetsPath, "Fonts", "SmileySans-Oblique.ttf"), 
             32);

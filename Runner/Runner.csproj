@@ -20,9 +20,23 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\Content\Content.csproj"/>
+        <!-- <ProjectReference Include="..\Content\Content.csproj"/> -->
         <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
+
+    <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
+        <PropertyGroup>
+            <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <ProjectConfigFile Include="..\ProjectConfig.json" />
+        </ItemGroup>
+        <MakeDir Directories="$(ProjectConfigBuildDir)" Condition="Exists('..\ProjectConfig.json')" />
+        <Copy SourceFiles="@(ProjectConfigFile)"
+              DestinationFolder="$(ProjectConfigBuildDir)"
+              SkipUnchangedFiles="true"
+              Condition="Exists('%(ProjectConfigFile.FullPath)')" />
+    </Target>
     
     <Target Name="CopySpritesAfterPublish" AfterTargets="Publish">
         <ItemGroup>

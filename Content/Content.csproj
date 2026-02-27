@@ -35,7 +35,6 @@
     <ItemGroup>
       <Folder Include="Assets\Audio\" />
       <Folder Include="Assets\Level\" />
-      <Folder Include="obj\" />
     </ItemGroup>
 
     <ItemGroup>

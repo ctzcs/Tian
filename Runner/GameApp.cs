@@ -1,13 +1,6 @@
 ﻿using System.Numerics;
-using Content.Source.Test_Ui;
-using Content.Test_Batcher;
-using Content.Test;
-using Engine.Components;
 using Engine.Core;
-using Engine.Physics;
-using Engine.Render;
 using Foster.Framework;
-using Friflo.Engine.ECS;
 using Cursor = Engine.Core.Input.Cursor;
 
 namespace Content;
@@ -16,6 +9,7 @@ public class GameApp : App
 {
     IContent content;
     Batcher batcher;
+    ContentManager contentManager;
     public GameApp(in AppConfig config) : base(in config)
     {
         //RegisterEcsComponentsForAot();
@@ -24,13 +18,29 @@ public class GameApp : App
         UpdateMode = UpdateMode.FixedStep(30,false);
         //lifetime = new FrogSample(this);
         batcher = new Batcher(GraphicsDevice);
-        content = new UiTestScene(this);
+        contentManager = new ContentManager();
+        //加载ProjectConfig
+        ProjectConfig? projectConfig = ProjectConfigUtils.LoadProjectConfig("ProjectConfig.json");
+        if (projectConfig == null)
+        {
+            Log.Error("ProjectConfig.json not found");
+            return;
+        }
+        Log.Info(projectConfig.GameAssembly);
+        var contentDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, projectConfig.GameAssembly);
+        string contentDllName = Path.GetFileNameWithoutExtension(contentDll);
+        if (!File.Exists(contentDll))
+            throw new FileNotFoundException($"Assembly not found: {contentDll}");
+        contentManager.LoadContentAssembly(contentDllName, contentDll);
+        var types = contentManager.GetAvailableContentTypes(contentDllName).ToArray();
+        if (types.Length == 0)
+            throw new InvalidOperationException($"No content types found in {contentDll}");
+        content = contentManager.Create(contentDllName, projectConfig.GameName, this);
     }
 
     protected override void Startup()
     {
         content.Start();
-        
     }
 
     protected override void Shutdown()

@@ -60,6 +60,10 @@ public class GameModeWindow:EditorWindow
             
             
 			var size = ImGui.GetContentRegionAvail();
+			var contentOrigin = ImGui.GetCursorScreenPos();
+			var mousePos = ImGui.GetMousePos();
+			var local = mousePos - contentOrigin;
+			var inside = local.X >= 0f && local.Y >= 0f && local.X <= size.X && local.Y <= size.Y;
 			if (Data.ImRenderer.BeginBatch(size, out var batch, out var bounds))
 			{
 				if (Data.currentContent != null)
@@ -71,7 +75,16 @@ public class GameModeWindow:EditorWindow
 						wsize.X / (float)screenTarget.Width,
 						wsize.Y / (float)screenTarget.Height
 						) * viewScale;
-	
+					var imageOffset = center - screenTarget.Bounds.Size / 2 * scale;
+
+					if (inside)
+					{
+						var rate = (local - imageOffset) / (screenTarget.Bounds.Size * scale);
+						rate.X = Calc.Clamp(rate.X, 0f, 1f);
+						rate.Y = Calc.Clamp(rate.Y, 0f, 1f);
+						Cursor.ViewportPosition = rate;
+					}
+                    
 					batch.PushSampler(new(TextureFilter.Nearest, TextureWrap.Clamp, TextureWrap.Clamp));
 					batch.Image(screenTarget, center, screenTarget.Bounds.Size / 2, Vector2.One * scale, 0, Color.White);
 					batch.PopSampler();

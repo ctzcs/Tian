@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
 using Foster.Framework;
 
 namespace Engine.Core;
@@ -99,6 +104,8 @@ public sealed class ContentManager
 		_current = content;
 		_current.Start();
 	}
+    
+    
 
 	// 清理当前内容和已加载的程序集
 	public void Clear()
