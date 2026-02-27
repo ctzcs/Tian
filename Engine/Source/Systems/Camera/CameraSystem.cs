@@ -1,4 +1,5 @@
 ﻿using Engine.Components;
+using Engine.Core;
 using Engine.Core.Extensions;
 using Foster.Framework;
 using Friflo.Engine.ECS;
@@ -10,19 +11,19 @@ namespace Engine.Systems;
 
 public partial class CameraSystem:QuerySystem
 {
+    private GameContent gameContent;
     private EntityStore world;
     private App ctx;
     private float speed;
     private float scaleSpeed;
     private float deltaTime;
-    private Target target;
     private int pixelsPerUnit;
-    public CameraSystem(App ctx,Target target,int pixelsPerUnit = 16)
+    public CameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16)
     {
         this.ctx = ctx;
         speed = 10;
         scaleSpeed = 5;
-        this.target = target;
+        this.gameContent = gameContent;
         this.pixelsPerUnit = pixelsPerUnit;
     }
 
@@ -30,7 +31,7 @@ public partial class CameraSystem:QuerySystem
     {
         base.OnAddStore(store);
         world = store;
-        CameraUtils.CreateCamera(Engine.Id.MainCamera,target,world,0,Vector2.One,2.5f,pixelsPerUnit);
+        CameraUtils.CreateCamera(Engine.Id.MainCamera,gameContent.Target,world,0,Vector2.One,2.5f,pixelsPerUnit);
         ctx.Window.OnResize += OnResize;
     }
 
@@ -53,6 +54,8 @@ public partial class CameraSystem:QuerySystem
 #endif
         query.ForEachEntity((ref camera, ref transform, entity) =>
         {
+            camera.viewRectInPixels = new RectInt(0, 0, gameContent.Target.Width, gameContent.Target.Height);
+            
             if (ctx.Input.Keyboard.PressedOrRepeated(Keys.Right) 
                 || ctx.Input.Keyboard.PressedOrRepeated(Keys.D))
             {
@@ -79,12 +82,12 @@ public partial class CameraSystem:QuerySystem
 
             if (ctx.Input.Mouse.Wheel.Y < 0)
             {
-                var screenPosition = Cursor.GetScreenPosition(new Vector2(target.Width, target.Height));
+                var screenPosition = Cursor.GetScreenPosition(new Vector2(gameContent.Target.Width, gameContent.Target.Height));
                 CameraUtils.ZoomAround(ref transform,ref camera,screenPosition,deltaTime * scaleSpeed);
                 
             }else if (ctx.Input.Mouse.Wheel.Y > 0)
             {
-                var screenPosition = Cursor.GetScreenPosition(new Vector2(target.Width, target.Height));
+                var screenPosition = Cursor.GetScreenPosition(new Vector2(gameContent.Target.Width, gameContent.Target.Height));
                 CameraUtils.ZoomAround(ref transform,ref camera,screenPosition,-deltaTime * scaleSpeed);
             }
 
@@ -109,7 +112,7 @@ public partial class CameraSystem:QuerySystem
         
         ref var c = ref cameraEntity.GetComponent<Camera2D>();
         
-        c.viewRectInPixels = new RectInt(0, 0, target.Width, target.Height);
+        c.viewRectInPixels = new RectInt(0, 0, gameContent.Target.Width, gameContent.Target.Height);
     }
     
 }

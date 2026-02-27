@@ -8,7 +8,7 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Content.Frog;
 
-public class FrogSample:IContent
+public class FrogSample : GameContent
 {
     private App ctx;
     private const int MaxFrogs = 1_000_000;
@@ -26,13 +26,8 @@ public class FrogSample:IContent
     private int frogCount;
 
     private Rng rng = new(1337);
-    
-    public Target Target { get; }
-    public EntityStore World { get; set; }
-    public Vector2Int LogicResolution { get; } = new (1280, 720);
-    public List<SystemGroup> SystemGroups { get; }
 
-    public FrogSample(App ctx)
+    public FrogSample(App ctx)  : base(ctx)
     {
         this.ctx = ctx;
         Target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
@@ -76,18 +71,8 @@ public class FrogSample:IContent
             vertexArray[i + 3].Tex = new Vector2(0, 1);
         }
     }
-    
-    public void Start()
-    {
-        
-    }
 
-    public void Destroy()
-    {
-        
-    }
-
-    public void Update()
+    public override void Update()
     {
         if (ctx.Input.Mouse.LeftDown)
         {

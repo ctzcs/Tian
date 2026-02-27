@@ -8,7 +8,7 @@ namespace Engine.UI_2;
 public class UIRoot
 {
     readonly App app;
-    readonly Vector2Int logicResolution;
+    Vector2Int logicResolution;
     readonly List<UICanvas> canvases = new();
     readonly Dictionary<string, UICanvas> canvasById = new();
 
@@ -101,5 +101,11 @@ public class UIRoot
             var canvasViewport = canvas.ClipRect ?? viewport;
             canvas.Render(batcher, canvasViewport);
         }
+    }
+    
+
+    public void OnResize(int width, int height)
+    {
+        logicResolution = new Vector2Int(width, height);
     }
 }

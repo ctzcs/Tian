@@ -1,30 +1,21 @@
-﻿using System.Numerics;
-using Box2D.NET;
+﻿using Box2D.NET;
 using Engine.Core;
 using Engine.Systems;
 using Engine.Systems.Editor;
-using Engine.UI;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
-using Cursor = Engine.Core.Input.Cursor;
 
 namespace Content.Source;
 
 /// <summary>
 /// 世界入口的模板
 /// </summary>
-public class Box2D : IContent
+public class Box2D : GameContent
 {
-    private readonly App app;
-    public Target Target { get; }
-    public EntityStore World { get; set; }
-    public Vector2Int LogicResolution { get; } = Const._720P;
-    public List<SystemGroup> SystemGroups { get; }
     private readonly Batcher batcher;
-    public Box2D(App app)
+    public Box2D(App app) : base(app)
     {
-        this.app = app;
         Target = new Target(app.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
@@ -35,7 +26,7 @@ public class Box2D : IContent
     private float zoom = 1f;
     private float pixelsPerMeter = 16f;
     
-    public void Start()
+    public override void Start()
     {
         var defaultConfig = B2Types.b2DefaultWorldDef();
         defaultConfig.gravity = new B2Vec2(0,-10f);
@@ -66,25 +57,25 @@ public class Box2D : IContent
     SystemRoot updateRoot;
     SystemRoot renderGroup;
 
-    public void Destroy()
+    public override void Destroy()
     {
         batcher.Dispose();
         Target.Dispose();
         World = null;
     }
 
-    public void Update()
+    public override void Update()
     {
-        updateRoot.Update(new UpdateTick(deltaTime:app.Time.Delta,time:(float)app.Time.Seconds));
-        B2Worlds.b2World_Step(physicsWorld,(float)app.Time.Delta,4);
+        updateRoot.Update(new UpdateTick(deltaTime:Ctx.Time.Delta,time:(float)Ctx.Time.Seconds));
+        B2Worlds.b2World_Step(physicsWorld,(float)Ctx.Time.Delta,4);
     }
 
     
-    public void Render()
+    public override void Render()
     {
         Target.Clear(Const.DefaultColor);
         
-        renderGroup.Update(new UpdateTick(deltaTime:app.Time.Delta,time:(float)app.Time.Seconds));
+        renderGroup.Update(new UpdateTick(deltaTime:Ctx.Time.Delta,time:(float)Ctx.Time.Seconds));
         B2Worlds.b2World_Draw(physicsWorld, debug.DebugDraw);
         batcher.Render(Target);
         batcher.Clear();
@@ -94,7 +85,7 @@ public class Box2D : IContent
     void BuildSystemPipeline(out SystemRoot updateRoot, out SystemRoot renderGroup)
     {
         updateRoot = new SystemRoot(World,"Update");
-        updateRoot.Add(new CameraSystem(app,Target));
+        updateRoot.Add(new CameraSystem(Ctx,this));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         
@@ -103,10 +94,10 @@ public class Box2D : IContent
         renderGroup.Add(new BeforeRenderWorldSystem(batcher));
         renderGroup.Add(new HierarchyOrderSystem());
         renderGroup.Add(new PerformanceSystem());
-        renderGroup.Add(new CoordinateSystem(app,batcher));
-        renderGroup.Add(new SelectableSystem(app));
+        renderGroup.Add(new CoordinateSystem(Ctx,batcher));
+        renderGroup.Add(new SelectableSystem(Ctx));
         renderGroup.Add(new CameraCullingDebugSystem(batcher));
-        renderGroup.Add(new RenderSystem(app,batcher,Target));
+        renderGroup.Add(new RenderSystem(Ctx,batcher,Target));
     }
 
     

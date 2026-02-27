@@ -6,16 +6,12 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Content.Audio;
 
-public class ZAudioContent : IContent
+public class ZAudioContent : GameContent
 {
 
     private readonly App app;
-    public Target Target { get; }
-    public EntityStore World { get; set; }
-    public Vector2Int LogicResolution { get; } = Const._720P;
-    public List<SystemGroup> SystemGroups { get; }
     private readonly Batcher batcher;
-    public ZAudioContent(App app)
+    public ZAudioContent(App app) : base(app)
     {
         this.app = app;
         int width = 1280;
@@ -24,13 +20,13 @@ public class ZAudioContent : IContent
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
     }
-    public void Start()
+    public override void Start()
     {
         Foster.Audio.Audio.Startup();
         Engine.MiniAudio.Audio.AudioTest();
     }
 
-    public void Destroy()
+    public override void Destroy()
     {
         Foster.Audio.Audio.Shutdown();
         AssetsV1.DisposeCache();
@@ -39,12 +35,12 @@ public class ZAudioContent : IContent
         World = null;
     }
 
-    public void Update()
+    public override void Update()
     {
         Foster.Audio.Audio.Update();
     }
 
-    public void Render()
+    public override void Render()
     {
         Target.Clear(Color.White);
         batcher.Render(Target);

@@ -21,7 +21,7 @@ public enum UiTestSection
     Slider
 }
 
-public sealed class UiTestScene : IContent
+public sealed class UiTestScene : GameContent
 {
     private readonly App app;
     private readonly Batcher batcher;
@@ -43,31 +43,24 @@ public sealed class UiTestScene : IContent
     private bool showGrid = true;
     private bool showScroll = true;
     private bool showSlider = true;
+    
 
-    public Target Target { get; }
-    public EntityStore World { get; set; }
-    public Vector2Int LogicResolution { get; } = Const._720P;
-    public List<SystemGroup>? SystemGroups { get; } = new();
-
-    public UiTestScene(App app)
+    public UiTestScene(App app)  : base(app)
     {
         this.app = app;
 
         Target = new Target(app.GraphicsDevice, LogicResolution.X, LogicResolution.Y);
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
-
+        SystemGroups = new();
         InitAssets();
         BuildSystems();
         BuildUI();
         SetUiOpen(true);
     }
+    
 
-    public void Start()
-    {
-    }
-
-    public void Destroy()
+    public override void Destroy()
     {
         SetUiOpen(false);
 
@@ -89,7 +82,7 @@ public sealed class UiTestScene : IContent
         rightPanel = null;
     }
 
-    public void Update()
+    public override void Update()
     {
         if (app.Input.Keyboard.Pressed(Keys.U))
             SetUiOpen(!GetUiOpen());
@@ -113,7 +106,7 @@ public sealed class UiTestScene : IContent
         rotationPanel?.Update((float)app.Time.Seconds);
     }
 
-    public void Render()
+    public override void Render()
     {
         Target.Clear(Rgb(18, 18, 22));
 

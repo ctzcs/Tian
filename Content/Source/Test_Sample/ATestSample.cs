@@ -1,10 +1,11 @@
 ﻿using System.Numerics;
 using System.Reflection;
+using Engine;
 using Engine.Asset;
 using Engine.Asset.v1;
+using Engine.Components;
 using Engine.Core;
 using Engine.Core.Graphics;
-using Engine.Performance;
 using Engine.Systems;
 using Engine.Systems.Editor;
 using Engine.UI;
@@ -14,7 +15,7 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Content.Test;
 
-public class ATestSample:IContent
+public class ATestSample : GameContent
 {
     private readonly App ctx;
     private readonly Batcher batcher;
@@ -23,23 +24,11 @@ public class ATestSample:IContent
     private Rng rng = new(1337);
     private Resources res;
     private float deltaTime = 0;
-    private Target target;
-    public Vector2Int LogicResolution { get; } = Const._720P;
-    public List<SystemGroup> SystemGroups { get; } = new();
-    public Target Target => target;
-    
-    public EntityStore World
-    {
-        get;
-        set;
-    }
-
-
     private Material customMaterial;
     private Target tempTarget;
     
 
-    public ATestSample(App ctx)
+    public ATestSample(App ctx)  : base(ctx)
     {
         this.ctx = ctx;
         World = new EntityStore()
@@ -61,9 +50,9 @@ public class ATestSample:IContent
         GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Dissolve",0,1,1,1);
         //GraphicsUtils.CreateMaterial(ctx.GraphicsDevice, asm,"Slime",0,1,1,1);
         batcher = new Batcher(ctx.GraphicsDevice);
-        target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
+        Target = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         res = new Resources(
-            target,
+            Target,
             font,
             Assets.Atlas,
             batcher,
@@ -71,9 +60,8 @@ public class ATestSample:IContent
             customMaterial);
         tempTarget = new Target(ctx.GraphicsDevice,LogicResolution.X,LogicResolution.Y);
         
-        //构建系统
-        RebuildSystem();
     }
+    
 
     void RebuildSystem()
     {
@@ -85,7 +73,7 @@ public class ATestSample:IContent
         updateRoot.Add(new BuildingCatchSystem(World,res));
         updateRoot.Add(new FindLineSystem(World,rng));
         updateRoot.Add(new BehaviorSystem());
-        updateRoot.Add(new CameraSystem(ctx,target));
+        updateRoot.Add(new CameraSystem(ctx,this));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         updateRoot.Add(new AnimationSystem());
@@ -100,7 +88,7 @@ public class ATestSample:IContent
         renderGroup.Add(new SelectableSystem(ctx));
         renderGroup.Add(new CameraCullingDebugSystem(batcher));
         
-        renderGroup.Add(new RenderSystem(ctx,res.batcher,target));
+        renderGroup.Add(new RenderSystem(ctx,res.batcher,Target));
         renderGroup.Add(new AfterRenderWorldSystem(batcher));
         renderGroup.Add(new UiRenderSystem(batcher));
         SystemGroups.Clear();
@@ -155,12 +143,14 @@ public class ATestSample:IContent
         return uiRoot;
     }
     
-    public void Start()
+    public override void Start()
     {
+        //构建系统
+        RebuildSystem();
         //Profiler.AppInfo("Hello AppInfo!");
     }
 
-    public void Destroy()
+    public override void Destroy()
     {
         if (customMaterial != null)
         {
@@ -174,10 +164,10 @@ public class ATestSample:IContent
             res.font.Dispose();
 
         batcher.Dispose();
-        target.Dispose();
+        Target.Dispose();
         tempTarget.Dispose();
 
-        Engine.Asset.Assets.DeleteCache();
+        Assets.DeleteCache();
         World.JobRunner.Dispose();
         World = null;
         updateRoot = null;
@@ -186,7 +176,7 @@ public class ATestSample:IContent
         customMaterial = null;
     }
 
-    public void Update()
+    public override void Update()
     {
         deltaTime = ctx.Time.Delta;
 
@@ -197,18 +187,18 @@ public class ATestSample:IContent
         updateRoot.Update(new UpdateTick(ctx.Time.Delta,(float)ctx.Time.Seconds));
     }
     
-    public void Render()
+    public override void Render()
     {
         //GameRender
         tempTarget.Clear(Const.DefaultColor);
-        target.Clear(Color.Transparent);
+        Target.Clear(Color.Transparent);
         //var zone = Profiler.BeginZone("renderGroup");
         renderGroup.Update(new UpdateTick(ctx.Time.Delta,(float)ctx.Time.Seconds));
         //zone.Dispose();
         // 使用：将该码点嵌入字符串（C# 中转成 char）
         batcher.Render(tempTarget);
         batcher.Clear();
-        PostProcess(tempTarget,target,customMaterial);//TODO 这个也应该放到系统中
+        PostProcess(tempTarget,Target,customMaterial);//TODO 这个也应该放到系统中
         //Profiler.EmitFrameMark();
     }
     
@@ -242,83 +232,9 @@ public class ATestSample:IContent
     }
 
 
-    /*void UITest()
+    public override void OnResize(GraphicsDevice graphicsDevice, int width, int height)
     {
-        if (ctx.Input.Keyboard.Pressed(Keys.U))
-        {
-            uiRoot.IsOpen = !uiRoot.IsOpen;
-        }
-        //TODO ui动画测试
-        
-        var btn = new Button(true, true, true, new Rect(0, 0, 200, 40))
-            {
-                Text = "Supreme",
-
-            }
-            .WithBackgroundImage(Assets.GetSubtexture("test_ui_rect/1"),
-                ElementImageFillMode.NineSlice,
-                new  Vector4(7, 7, 7, 7))
-            .WithClick((btn, data) => { Log.Info("Click"); })
-            .WithHover((btn, data) => { Log.Info("Hover"); });
-        var line = new UIElement(true, true, true, new Rect(0, 0, 200, 4))
-            .WithBackgroundColor(Color.Blue);
-        if (ctx.Input.Keyboard.Pressed(Keys.P))
-        {
-            panel.WithLayoutAnimation(0.15f, Transition.EaseInOut);
-
-            var btnClone = btn.Clone();
-            var btn2Clone = btn.Clone()
-                .WithRect(new  Rect(0, 0, 50, 40))
-                .WithTextOverflow(ElementTextOverflowMode.ShrinkToFit);
-            var lineClone = line.Clone();
-            
-            
-            btn2Clone.AddChild(new UIElement(true, true, true, new Rect(0, 0, 20, 20))
-            {
-                BackgroundColor = Color.Green,
-            });
-
-            var item2 = new HorizontalGroup()
-                .WithLayout(cfg =>
-                {
-                    cfg.AlignX = HorizontalAlignment.Center;
-                    cfg.AlignY = VerticalAlignment.Middle;
-                    cfg.ChildGap = 2;
-                    //cfg.AutoWidth = true;
-                    cfg.AutoHeight = true;
-                    return cfg;
-                })
-                .WithChild(btnClone)
-                .WithChild(btn2Clone);
-            
-            var item1 = new VerticalGroup()
-                .WithLayout(cfg =>
-                {
-                    cfg.AlignX = HorizontalAlignment.Center;
-                    cfg.AlignY = VerticalAlignment.Middle;
-                    cfg.ChildGap = 5;
-                    cfg.AutoHeight = true;
-                    return cfg;
-                })
-                .WithChild(item2)
-                .WithChild(line);
-            panel
-                //.WithChild(item)
-                .WithChild(item1);
-            panel.Apply();
-        }
-
-        if (ctx.Input.Keyboard.Pressed(Keys.L))
-        {
-            if (panel.Children.Count > 0)
-            {
-                panel.RemoveChild(panel.Children[^1]);
-                panel.Apply();
-            }
-            
-           
-        }
+        base.OnResize(graphicsDevice, width, height);
+        tempTarget = new Target(graphicsDevice, width, height);
     }
-    */
-    
 }

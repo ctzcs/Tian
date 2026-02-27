@@ -36,6 +36,7 @@ public class GameApp : App
         if (types.Length == 0)
             throw new InvalidOperationException($"No content types found in {contentDll}");
         content = contentManager.Create(contentDllName, projectConfig.GameName, this);
+        
     }
 
     protected override void Startup()
@@ -81,7 +82,7 @@ public class GameApp : App
                 size.X / (float)screenTarget.Width,
                 size.Y / (float)screenTarget.Height);
             //Log.Info( $"{size}__{scale}__{screenTarget.Bounds}");
-            batcher.PushSampler(new(TextureFilter.Nearest, TextureWrap.Clamp, TextureWrap.Clamp));
+            batcher.PushSampler(new(TextureFilter.Linear, TextureWrap.Clamp, TextureWrap.Clamp));
             batcher.Image(screenTarget, center, screenTarget.Bounds.Size / 2, Vector2.One * scale, 0, Color.White);
             batcher.PopSampler();
             batcher.Render(Window);
@@ -100,6 +101,6 @@ public class GameApp : App
     
     void OnResize()
     {
-        
+        content.OnResize(GraphicsDevice,Window.WidthInPixels,Window.HeightInPixels);
     }
 }

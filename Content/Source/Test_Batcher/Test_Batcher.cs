@@ -7,18 +7,12 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Content.Test_Batcher;
 
-public class TestBatcher:IContent
+public class TestBatcher:GameContent
 {
-    public Target Target { get; }
-    public EntityStore World { get; set; }
-    
     public App app { get; }
     public Batcher batcher { get; }
-    
-    public Vector2Int LogicResolution { get; }
-    public List<SystemGroup> SystemGroups { get; }
 
-    public TestBatcher(App app)
+    public TestBatcher(App app) : base(app)
     {
         this.app = app;
         LogicResolution = Const._2K;
@@ -26,12 +20,8 @@ public class TestBatcher:IContent
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
     }
-    public void Start()
-    {
-        
-    }
 
-    public void Destroy()
+    public override void Destroy()
     {
         batcher.Dispose();
         Target.Dispose();
@@ -39,12 +29,12 @@ public class TestBatcher:IContent
         
     }
 
-    public void Update()
+    public override void Update()
     {
         
     }
 
-    public void Render()
+    public override void Render()
     {
         Target.Clear(Color.White);
         

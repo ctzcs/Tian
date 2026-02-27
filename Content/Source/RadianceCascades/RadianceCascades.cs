@@ -8,16 +8,13 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Content.RadianceCascades;
 
-public class RadianceCascades:IContent
+public class RadianceCascades:GameContent
 {
     private readonly App app;
-    public Target Target { get; }
-    public EntityStore World { get; set; }
+    
     private readonly Batcher batcher;
-    public Vector2Int LogicResolution { get; }
-    public List<SystemGroup> SystemGroups { get; }
 
-    public RadianceCascades(App app)
+    public RadianceCascades(App app) : base(app)
     {
         this.app = app;
         LogicResolution = Const._720P;
@@ -25,24 +22,20 @@ public class RadianceCascades:IContent
         batcher = new Batcher(app.GraphicsDevice);
         World = new EntityStore();
     }
-    public void Start()
-    {
-        
-    }
 
-    public void Destroy()
+    public override void Destroy()
     {
         batcher.Dispose();
         Target.Dispose();
         World = null;
     }
 
-    public void Update()
+    public override void Update()
     {
         Foster.Audio.Audio.Update();
     }
 
-    public void Render()
+    public override void Render()
     {
         Target.Clear(Color.White);
         
