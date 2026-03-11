@@ -39,6 +39,9 @@ public class ATestSample : GameContent
         AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
         AssetsV1.LazyInitializeCache("pack.zip");
         Assets.LoadSpritesFromGz(ctx.GraphicsDevice);
+        
+        
+        
         //Assets.Load(ctx.GraphicsDevice);
         var font = new SpriteFont(ctx.GraphicsDevice, 
             Path.Join(Assets.ContentAssetsPath, "Fonts", "SmileySans-Oblique.ttf"), 
@@ -73,7 +76,7 @@ public class ATestSample : GameContent
         updateRoot.Add(new BuildingCatchSystem(World,res));
         updateRoot.Add(new FindLineSystem(World,rng));
         updateRoot.Add(new BehaviorSystem());
-        updateRoot.Add(new CameraSystem(ctx,this));
+        updateRoot.Add(new MainCameraSystem(ctx,this));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         updateRoot.Add(new AnimationSystem());

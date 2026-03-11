@@ -61,7 +61,7 @@ public class Cultivation : GameContent
         //系统模块构建
         updateRoot = new SystemRoot(World, "update-root");
         updateRoot.Add(new UiSystem(uiRoot,new UIDebugOverlay()));
-        updateRoot.Add(new CameraSystem(app,this,16));
+        updateRoot.Add(new MainCameraSystem(app,this,16));
         updateRoot.Add(new CameraCullingSystem());
         updateRoot.Add(new TransformSystem());
         updateRoot.Add(new AnimationSystem());

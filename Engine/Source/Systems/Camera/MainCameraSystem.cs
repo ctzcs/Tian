@@ -9,7 +9,7 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace Engine.Systems;
 
-public partial class CameraSystem:QuerySystem
+public partial class MainCameraSystem:QuerySystem
 {
     private GameContent gameContent;
     private EntityStore world;
@@ -18,7 +18,7 @@ public partial class CameraSystem:QuerySystem
     private float scaleSpeed;
     private float deltaTime;
     private int pixelsPerUnit;
-    public CameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16)
+    public MainCameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16)
     {
         this.ctx = ctx;
         speed = 10;

@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using Engine.Asset;
+using Engine.Asset.Pipeline;
 using Engine.Asset.v1;
 using Engine.Components;
 using Engine.Core;
@@ -46,6 +47,7 @@ public class EditorApp : App
 		// 默认从输出目录加载 Content.dll
 		//StartEditorSetting();
 		_editorWindowManager = new EditorWindowManager(_data);
+		_data.WindowManager = _editorWindowManager;
 		_editorWindowManager.AddWindow(new ContentSelectorWindow());
 		_editorWindowManager.AddWindow(new HierarchyWindow());
 		_editorWindowManager.AddWindow(new InspectorWindow());
@@ -67,7 +69,8 @@ public class EditorApp : App
 	protected override void Startup()
 	{
 		// 构造中已启动默认内容，这里无需重复
-	}
+        AssetMetaGenerate();
+    }
 
 	protected override void Shutdown()
 	{
@@ -285,4 +288,12 @@ public class EditorApp : App
 			ImGui.EndMainMenuBar();
 		}
 	}
+
+
+    void AssetMetaGenerate()
+    {
+        var assetsPath = Assets.EditorAssetsPath;
+        AssetDatabase.GenerateMetaAsset(assetsPath);
+        AssetDatabase.GenerateAssetIndexFile(assetsPath);
+    }
 }

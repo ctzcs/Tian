@@ -55,9 +55,6 @@ public class GameModeWindow:EditorWindow
                 }
 			}
 			ImGui.EndMenuBar();
-			
-            
-            
             
 			var size = ImGui.GetContentRegionAvail();
 			var contentOrigin = ImGui.GetCursorScreenPos();

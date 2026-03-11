@@ -28,7 +28,16 @@
  - 2026-01-16 第三方 UI 接入：当前“无必要”接入；满足触发条件再评估（见下）
 
 ## 问题收集 / 研究队列
-- 占位：记录待研究的问题与线索
+- P0 路径与职责边界不清：Assets/Content/Build 语义混用，且 Runtime 不应写 meta/index
+- P1 资产索引闭环不稳：Guid -> Path -> AssetsV1 规则未完全固化，路径一致性易出错
+- P2 Content 分离未完全工程化：动态加载已建立，但构建链与产物保障仍需标准化
+
+## 资产管线推进清单（P0 -> P1 -> P2）
+- [x] P0 统一路径入口：Editor 管线只使用统一 Assets 路径服务，移除硬编码目录
+- [x] P0 固化职责边界：Editor 生成 meta/index，Runtime 只读取
+- [x] P1 固化 Index 规则：AssetIndex.Path 统一为相对资源根目录路径
+- [x] P1 补齐运行时查询接口：LoadIndex/TryGetPath/TryGetRelativePath，并接入 AssetsV1 的 AssetId 读取
+- [x] P2 固化构建链：Editor/Runner 构建前自动构建 Content 项目，保证 Content.dll 产出
 
 ## 术语与约定
 - 术语：占位
@@ -40,7 +49,70 @@
 
 ## 快速记录区
 - 2026-01-16 占位：临时想法速记
- 
+- 2026-03-05 记录：自定义资源管理系统的分析与步骤
+  - 背景：缺少独立的资源元数据/导入/打包流程，需建立可扩展的资源管理系统
+  - 目标：支持源资源→导入→生成→打包→运行时加载的统一流程，编辑器与运行时一致
+  - 要实现的核心模块
+    - 资源注册与索引：资源唯一 ID、路径索引、类型映射、依赖关系图
+    - 资源元数据：每种资源的导入配置、变更时间、版本、依赖与输出清单
+    - 资源导入器：按类型/扩展名分发，执行导入、生成与验证
+    - 资源打包器：将导入产物组织为运行时可直接加载的格式
+    - 运行时加载器：按需加载、缓存策略、引用计数/生命周期
+    - 热重载与增量：变更检测、最小化重建、编辑器通知与刷新
+  - 实现步骤
+    - 1) 定义资源基类与 AssetId 规范（GUID + 稳定路径），建立资源清单与索引结构
+    - 2) 设计元数据模型（ImporterSettings、SourceHash、OutputFiles、Dependencies、Version）
+    - 3) 实现导入器接口与注册机制（按扩展名/目录过滤，允许自定义导入器）
+    - 4) 实现变更检测与增量导入（基于时间戳/Hash 的 ShouldRebuild）
+    - 5) 设计输出目录结构与打包格式（按类型/模块分包，支持平台差异）
+    - 6) 实现运行时资源加载 API（同步/异步、缓存与卸载）
+    - 7) 资源验证与诊断（缺失/循环依赖/版本不匹配）
+    - 8) 编辑器集成（导入进度、错误列表、强制重建、清理缓存）
+  - 参考机制
+    - Murder：ImporterSettingsAttribute + ResourceImporter + EditorDataManager 组织导入与保存
+    - Unity：.meta 文件记录 GUID 与导入设置
+    - Godot：导入器负责生成运行时资源
+  - **Tian Engine 落地规划 (基于现有架构)**
+    - **目录结构调整**
+      - `Engine/Source/Asset/Pipeline/`: 存放管线核心接口
+        - `AssetId.cs`: 封装 GUID
+        - `AssetMeta.cs`: 序列化数据（Hash, ImporterID, Dependencies）
+        - `IAssetImporter.cs`: 导入器接口
+        - `AssetDatabase.cs`: 运行时/编辑器共享的索引数据库
+      - `Editor/Source/Asset/Importers/`: 存放具体导入器（仅编辑器用）
+        - `TextureImporter.cs`: 处理 png/jpg -> Texture
+        - `AudioImporter.cs`: 处理 wav/ogg -> AudioBuffer
+        - `ScriptImporter.cs`: 脚本处理（可选）
+    - **关键类设计**
+      - `AssetMeta` (JSON):
+        ```csharp
+        public class AssetMeta {
+            public Guid Guid;
+            public string ImporterId; // "TextureImporter"
+            public long SourceHash;   // 变更检测
+            public List<string> Dependencies;
+            public Dictionary<string, object> ImporterSettings; // 导入参数
+        }
+        ```
+      - `IAssetImporter` (Interface):
+        ```csharp
+        [ImporterAttribute(".png", ".jpg")]
+        public abstract class AssetImporter {
+            public abstract void Import(string sourceFile, string outputDir, AssetMeta meta);
+            public virtual bool ShouldRebuild(string sourceFile, AssetMeta meta) { ... }
+        }
+        ```
+      - `EditorAssetManager` (Editor Service):
+        - 负责扫描 `Content/Assets`
+        - 维护 `AssetDatabase` (Path <-> Guid)
+        - 调度 `Import` 任务 (增量构建)
+    - **数据流向**
+      1. **Source**: `Content/Assets/image.png`
+      2. **Meta**: `Content/Assets/image.png.meta` (生成/更新)
+      3. **Import**: 读取 Source + Meta -> 处理 -> 输出到 `Library/Output/GUID.dat` (中间产物)
+      4. **Pack**: 将 `Library/Output` 打包 -> `StreamingAssets/data.pak`
+      5. **Runtime**: `ContentManager` 加载 `data.pak` -> 通过 GUID 索引资源
+
 ## TODO（UI改进）
 - [ ] 样式/主题系统：状态样式与 Style Token、统一配色与间距
 - [ ] 组件状态动画：Hover/Pressed/Disabled 的过渡与反馈

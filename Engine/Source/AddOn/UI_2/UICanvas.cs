@@ -351,13 +351,13 @@ static class Ui2RenderUtil
             case Ui2TextOverflowMode.ShrinkToFit:
             {
                 var content = cmd.Text;
-                var sizeInfo = Assets.Font.SizeOf(content.AsSpan());
+                var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
+                var sizeInfo = Assets.Font.SizeOf(content.AsSpan(), baseSize);
                 var boxW = box.Width;
                 var boxH = box.Height;
 
                 if (boxW <= 0f || sizeInfo.X <= 0f || sizeInfo.Y <= 0f)
                 {
-                    var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
                     batcher.Text(Assets.Font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
                     return;
                 }
@@ -374,13 +374,12 @@ static class Ui2RenderUtil
 
                 if (scale >= 1f)
                 {
-                    var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
+                    baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
                     batcher.Text(Assets.Font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
                     return;
                 }
 
-                var baseSize2 = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
-                var scaledSize = baseSize2 * scale;
+                var scaledSize = baseSize * scale;
                 if (scaledSize > 0f)
                     batcher.Text(Assets.Font, content.AsSpan(), anchor, align, scaledSize, cmd.Color);
                 return;
@@ -407,29 +406,30 @@ static class Ui2RenderUtil
                 var content = cmd.Text;
                 var boxW = box.Width;
                 var boxH = box.Height;
+                var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
+                var sizeScale = baseSize / Assets.Font.Size;
 
                 if (boxW <= 0f || boxH <= 0f)
                 {
-                    var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
                     batcher.Text(Assets.Font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
                     return;
                 }
 
-                var lines = Assets.Font.WrapText(content.AsSpan(), boxW);
+                var lines = Assets.Font.WrapText(content.AsSpan(), boxW, baseSize);
                 var lineCount = lines.Count;
 
                 if (lineCount == 0)
                 {
-                    var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
                     batcher.Text(Assets.Font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
                     return;
                 }
 
-                var totalHeight = Assets.Font.Height * lineCount + Assets.Font.LineGap * (lineCount - 1);
+                var lineHeight = Assets.Font.Height * sizeScale;
+                var lineGap = Assets.Font.LineGap * sizeScale;
+                var totalHeight = lineHeight * lineCount + lineGap * (lineCount - 1);
 
                 if (totalHeight <= boxH)
                 {
-                    var baseSize = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
                     batcher.TextWrapped(Assets.Font, content.AsSpan(), boxW, anchor, align, baseSize, cmd.Color);
                     return;
                 }
@@ -438,10 +438,11 @@ static class Ui2RenderUtil
                 if (scale <= 0f)
                     return;
 
-                batcher.PushMatrix(anchor, Vector2.Zero, Vector2.One * scale, 0f);
-                var baseSize2 = cmd.TextSize > 0f ? cmd.TextSize : Assets.Font.Size;
-                batcher.TextWrapped(Assets.Font, content.AsSpan(), boxW, Vector2.Zero, align, baseSize2, cmd.Color);
-                batcher.PopMatrix();
+                var scaledSize = baseSize * scale;
+                if (scaledSize <= 0f)
+                    return;
+
+                batcher.TextWrapped(Assets.Font, content.AsSpan(), boxW, anchor, align, scaledSize, cmd.Color);
                 return;
             }
 

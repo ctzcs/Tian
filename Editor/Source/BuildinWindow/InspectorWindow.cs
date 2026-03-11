@@ -28,7 +28,7 @@ public class InspectorWindow:EditorWindow
             else
             {
                 var entity = Data.selectedEntity;
-            if (!entity.IsNull)
+                if (!entity.IsNull)
             {
                 var tags = entity.Tags;
                 var components = entity.Components;
@@ -123,7 +123,7 @@ public class InspectorWindow:EditorWindow
                 if (!anyComponent)
                     ImGui.TextDisabled(hasSearch ? "(No matching components)" : "(No components)");
             }
-        }
+            }
         }
         ImGui.End();
     }

@@ -24,6 +24,10 @@
         <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
 
+    <Target Name="BuildContentProject" BeforeTargets="Build" Condition="Exists('..\Content\Content.csproj')">
+        <MSBuild Projects="..\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+    </Target>
+
     <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
         <PropertyGroup>
             <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>

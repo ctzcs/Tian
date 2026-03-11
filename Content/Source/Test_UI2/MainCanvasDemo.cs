@@ -93,7 +93,7 @@ public class MainCanvasDemo
         var textShrink = new UIText()
             .WithText("ShrinkToFit: " + longText)
             .WithTextColor(Color.White)
-            .WithTextSize(18f)
+            .WithTextSize(32f)
             .WithTextAlign(new Vector2(0.5f, 0.5f))
             .WithTextOverflow(Ui2TextOverflowMode.ShrinkToFit)
             .WithViewportRatio(new Rect(0f, 0f, 1f, 1f / 3f));
@@ -181,7 +181,8 @@ public class MainCanvasDemo
         var bottomCenterLabel = new UIText()
             .WithText("Click to toggle text")
             .WithTextColor(Color.White)
-            .WithTextSize(16f);
+            .WithTextSize(64f)
+            .WithTextOverflow(Ui2TextOverflowMode.ShrinkAndWrap);
         bottomCenter.WithChild(bottomCenterLabel);
         bool bottomCenterToggle = false;
         bottomCenter.OnClick = e =>

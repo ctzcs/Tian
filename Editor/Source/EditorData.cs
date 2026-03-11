@@ -11,6 +11,7 @@ public class EditorData:IDisposable
     public IContent? currentContent;
     public Entity selectedEntity = default;
     public App app;
+    public EditorWindowManager? WindowManager;
     
     
     public void Dispose()

@@ -29,14 +29,9 @@ public sealed class ContentManager
 		if (!File.Exists(assemblyPath))
 			throw new FileNotFoundException($"未找到程序集: {assemblyPath}");
 
-		// 每次加载前先释放旧的 LoadContext
-		if (_loadContext != null)
-		{
-			_loadContext.Unload();
-			_loadContext = null;
-		}
+		if (_loadContext == null)
+			_loadContext = new AssemblyLoadContext($"Content-{Guid.NewGuid()}", isCollectible: true);
 
-		_loadContext = new AssemblyLoadContext($"Content-{Guid.NewGuid()}", isCollectible: true);
 		var fullPath = Path.GetFullPath(assemblyPath);
 		var asm = _loadContext.LoadFromAssemblyPath(fullPath);
 		_assemblies[assemblyName] = asm;
@@ -60,6 +55,22 @@ public sealed class ContentManager
 		if (_simpleNameMap.TryGetValue(assemblyName, out var map))
 			return map.Keys.OrderBy(x => x);
 		return Enumerable.Empty<string>();
+	}
+
+	public IEnumerable<T> CreateInstances<T>(string assemblyName) where T : class
+	{
+		if (!_assemblies.TryGetValue(assemblyName, out var asm))
+			return Enumerable.Empty<T>();
+
+		var targetType = typeof(T);
+		var result = new List<T>();
+		foreach (var type in asm.GetTypes().Where(t => targetType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface))
+		{
+			if (Activator.CreateInstance(type) is T instance)
+				result.Add(instance);
+		}
+
+		return result;
 	}
 
 	// 创建实例：支持简单名或全名

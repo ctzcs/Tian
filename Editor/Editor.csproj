@@ -16,6 +16,10 @@
         <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
 
+    <Target Name="BuildContentProject" BeforeTargets="Build">
+        <MSBuild Projects="..\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+    </Target>
+
     <ItemGroup>
       <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
     </ItemGroup>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Engine.Core;
@@ -13,6 +14,10 @@ public class ContentSelectorWindow:EditorWindow
 	private ContentManager contentManager;
     private int curIndex = -1;
     private ProjectConfig? projectConfig;
+    private readonly List<EditorWindow> gameEditorWindows = new();
+    private readonly List<GameEditor> gameEditors = new();
+    private IGameEditorHost? gameEditorHost;
+    private string? gameEditorAssemblyName;
 	protected override void OnAddWindow()
 	{
 		contentManager = new ContentManager();
@@ -75,6 +80,62 @@ public class ContentSelectorWindow:EditorWindow
 		ImGui.End();
 	}
 
+	private void EnsureGameEditors(string assemblyName)
+	{
+		if (Data?.WindowManager == null)
+			return;
+
+		gameEditorHost ??= new GameEditorHost(Data, Data.WindowManager, gameEditorWindows);
+
+		if (gameEditorAssemblyName == assemblyName && gameEditors.Count > 0)
+			return;
+
+		ClearGameEditors();
+
+		foreach (var editor in contentManager.CreateInstances<GameEditor>(assemblyName))
+		{
+			gameEditors.Add(editor);
+			editor.Attach(gameEditorHost);
+		}
+
+		gameEditorAssemblyName = assemblyName;
+	}
+
+	private void ClearGameEditors()
+	{
+		if (Data?.WindowManager != null)
+		{
+			foreach (var window in gameEditorWindows)
+				Data.WindowManager.RemoveWindow(window);
+		}
+
+		gameEditorWindows.Clear();
+		gameEditors.Clear();
+	}
+
+	private sealed class GameEditorHost : IGameEditorHost
+	{
+		private readonly EditorData data;
+		private readonly EditorWindowManager windowManager;
+		private readonly List<EditorWindow> trackedWindows;
+
+		public GameEditorHost(EditorData data, EditorWindowManager windowManager, List<EditorWindow> trackedWindows)
+		{
+			this.data = data;
+			this.windowManager = windowManager;
+			this.trackedWindows = trackedWindows;
+		}
+
+		public IContent? CurrentContent => data.currentContent;
+
+		public void RegisterWindow(string title, Action draw)
+		{
+			var window = new CallbackEditorWindow(title, draw);
+			trackedWindows.Add(window);
+			windowManager.AddWindow(window);
+		}
+	}
+
 	private void TryLoadAssemblyAndDefaultContent(string contentDll)
 	{
         string contentName = Path.GetFileNameWithoutExtension(contentDll);
@@ -105,6 +166,7 @@ public class ContentSelectorWindow:EditorWindow
             
 			var content = contentManager.CreateAndSetCurrent(contentName, defaultName, Data.app);
 			Data.currentContent = content;
+			EnsureGameEditors(contentName);
 		}
 		catch
 		{
@@ -119,6 +181,7 @@ public class ContentSelectorWindow:EditorWindow
 		{
 			var content = contentManager.CreateAndSetCurrent(assemblyName, typeName, Data.app);
 			Data.currentContent = content;
+			EnsureGameEditors(assemblyName);
             GC.Collect();
         }
 		catch(Exception e)
