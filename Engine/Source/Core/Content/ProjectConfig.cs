@@ -9,6 +9,7 @@ public class ProjectConfig
     public string GameEditorAssembly;
     public string GameName;
     public string EditorName;
+    public string BuildOutputDir;
     public static string ProjectConfigFile => "ProjectConfig.json";
 }
 
@@ -19,23 +20,31 @@ public static class ProjectConfigUtils
 
     public static string? ResolveProjectConfigPath()
     {
-        if (!string.IsNullOrWhiteSpace(cachedProjectConfigPath) && File.Exists(cachedProjectConfigPath))
-            return cachedProjectConfigPath;
+        if (TryGetValidProjectConfigPath(cachedProjectConfigPath, out var cached))
+            return cached;
 
         var configured = LoadEditorProjectConfigPath();
-        if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured))
+        if (TryGetValidProjectConfigPath(configured, out var cfg))
         {
-            cachedProjectConfigPath = configured;
-            return configured;
+            cachedProjectConfigPath = cfg;
+            return cfg;
         }
 
         var cwdCandidate = Path.Combine(Environment.CurrentDirectory, ProjectConfig.ProjectConfigFile);
-        if (File.Exists(cwdCandidate))
-            return cwdCandidate;
+        if (TryGetValidProjectConfigPath(cwdCandidate, out var cwd))
+            return cwd;
 
         var baseCandidate = Path.Combine(AppContext.BaseDirectory, ProjectConfig.ProjectConfigFile);
-        if (File.Exists(baseCandidate))
-            return baseCandidate;
+        if (TryGetValidProjectConfigPath(baseCandidate, out var basePath))
+            return basePath;
+
+        var fromCurrent = TryFindProjectConfigFromAncestors(Environment.CurrentDirectory);
+        if (TryGetValidProjectConfigPath(fromCurrent, out var currentAncestor))
+            return currentAncestor;
+
+        var fromBase = TryFindProjectConfigFromAncestors(AppContext.BaseDirectory);
+        if (TryGetValidProjectConfigPath(fromBase, out var baseAncestor))
+            return baseAncestor;
 
         return null;
     }
@@ -44,6 +53,45 @@ public static class ProjectConfigUtils
     {
         var dir = Path.GetDirectoryName(configPath);
         return string.IsNullOrWhiteSpace(dir) ? Environment.CurrentDirectory : dir;
+    }
+
+    public static string? ResolveAssemblyPath(string projectDir, string assemblyName, string? buildOutputDir = null)
+    {
+        if (string.IsNullOrWhiteSpace(assemblyName))
+            return null;
+
+        if (Path.IsPathRooted(assemblyName))
+            return File.Exists(assemblyName) ? Path.GetFullPath(assemblyName) : null;
+
+        if (string.IsNullOrWhiteSpace(projectDir))
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(buildOutputDir))
+        {
+            var outputDir = Path.IsPathRooted(buildOutputDir)
+                ? buildOutputDir
+                : Path.Combine(projectDir, buildOutputDir);
+            if (Directory.Exists(outputDir))
+            {
+                var match = Directory.EnumerateFiles(outputDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(match))
+                    return match;
+            }
+        }
+
+        var direct = Path.Combine(projectDir, assemblyName);
+        if (File.Exists(direct))
+            return direct;
+
+        var buildDir = Path.Combine(projectDir, "Build");
+        if (Directory.Exists(buildDir))
+        {
+            var match = Directory.EnumerateFiles(buildDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(match))
+                return match;
+        }
+
+        return null;
     }
 
     public static bool SetProjectConfigPath(string path)
@@ -75,6 +123,40 @@ public static class ProjectConfigUtils
             Log.Info($"Failed to load ProjectConfig.json: {e.Message}");
             return null;
         }
+    }
+
+    private static bool TryGetValidProjectConfigPath(string? path, out string resolved)
+    {
+        resolved = string.Empty;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return false;
+
+        var config = LoadProjectConfig(path);
+        if (config == null)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(config.GameAssembly) || string.IsNullOrWhiteSpace(config.GameEditorAssembly))
+            return false;
+
+        resolved = Path.GetFullPath(path);
+        return true;
+    }
+
+    private static string? TryFindProjectConfigFromAncestors(string startDir)
+    {
+        if (string.IsNullOrWhiteSpace(startDir))
+            return null;
+
+        var dir = new DirectoryInfo(startDir);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "Game", ProjectConfig.ProjectConfigFile);
+            if (File.Exists(candidate))
+                return candidate;
+            dir = dir.Parent;
+        }
+
+        return null;
     }
 
     private static string GetEditorProjectConfigPath()

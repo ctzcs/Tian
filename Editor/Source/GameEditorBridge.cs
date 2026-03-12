@@ -10,16 +10,17 @@ public sealed class GameEditorBridge
 {
     private readonly EditorData data;
     private readonly EditorWindowManager windowManager;
-    private readonly ContentManager editorManager = new();
+    private readonly ContentManager contentManager;
     private readonly List<EditorWindow> windows = new();
     private readonly List<GameEditor> editors = new();
     private readonly IGameEditorHost host;
     private string? editorAssemblyName;
 
-    public GameEditorBridge(EditorData data, EditorWindowManager windowManager)
+    public GameEditorBridge(EditorData data, EditorWindowManager windowManager, ContentManager contentManager)
     {
         this.data = data;
         this.windowManager = windowManager;
+        this.contentManager = contentManager;
         host = new GameEditorHost(data, windowManager, windows);
     }
 
@@ -41,10 +42,9 @@ public sealed class GameEditorBridge
             return;
         }
 
-        editorManager.Clear();
-        editorManager.LoadContentAssembly(name, assemblyPath);
+        contentManager.LoadContentAssembly(name, assemblyPath);
 
-        foreach (var editor in editorManager.CreateInstances<GameEditor>(name))
+        foreach (var editor in contentManager.CreateInstances<GameEditor>(name))
         {
             editors.Add(editor);
             editor.Attach(host);
@@ -60,7 +60,6 @@ public sealed class GameEditorBridge
 
         windows.Clear();
         editors.Clear();
-        editorManager.Clear();
     }
 
     private sealed class GameEditorHost : IGameEditorHost

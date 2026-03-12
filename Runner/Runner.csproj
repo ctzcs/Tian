@@ -24,8 +24,8 @@
         <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
 
-    <Target Name="BuildContentProject" BeforeTargets="Build" Condition="Exists('..\Content\Content.csproj')">
-        <MSBuild Projects="..\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+    <Target Name="BuildContentProject" BeforeTargets="Build" Condition="Exists('..\Game\Content\Content.csproj')">
+        <MSBuild Projects="..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
     </Target>
 
     <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
@@ -33,9 +33,9 @@
             <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>
         </PropertyGroup>
         <ItemGroup>
-            <ProjectConfigFile Include="..\ProjectConfig.json" />
+            <ProjectConfigFile Include="..\Game\ProjectConfig.json" />
         </ItemGroup>
-        <MakeDir Directories="$(ProjectConfigBuildDir)" Condition="Exists('..\ProjectConfig.json')" />
+        <MakeDir Directories="$(ProjectConfigBuildDir)" Condition="Exists('..\Game\ProjectConfig.json')" />
         <Copy SourceFiles="@(ProjectConfigFile)"
               DestinationFolder="$(ProjectConfigBuildDir)"
               SkipUnchangedFiles="true"

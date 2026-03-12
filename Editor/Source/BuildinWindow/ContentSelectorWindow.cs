@@ -21,7 +21,7 @@ public class ContentSelectorWindow:EditorWindow
 		contentManager = new ContentManager();
         IsOpen = true;
         if (Data?.WindowManager != null)
-            gameEditorBridge = new GameEditorBridge(Data, Data.WindowManager);
+            gameEditorBridge = new GameEditorBridge(Data, Data.WindowManager, contentManager);
 
         RefreshProjectConfig();
 	}
@@ -44,7 +44,7 @@ public class ContentSelectorWindow:EditorWindow
 				return;
 			}
 
-			var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
+			var contentDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, projectConfig.GameAssembly, projectConfig.BuildOutputDir);
             var contentName = Path.GetFileNameWithoutExtension(contentDll);
 			ImGui.Separator();
 			ImGui.Text(File.Exists(contentDll) ? $"Loaded: {contentDll}" : "Content.dll not found in output folder");
@@ -84,7 +84,7 @@ public class ContentSelectorWindow:EditorWindow
 		if (string.IsNullOrWhiteSpace(projectDir))
 			return;
 
-		var editorDll = Path.Combine(projectDir, assemblyName);
+		var editorDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, assemblyName, projectConfig.BuildOutputDir);
 		gameEditorBridge.LoadEditors(editorDll);
 	}
 
@@ -106,7 +106,7 @@ public class ContentSelectorWindow:EditorWindow
 			return;
 		}
 
-		var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
+		var contentDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, projectConfig.GameAssembly, projectConfig.BuildOutputDir);
 		if (File.Exists(contentDll))
 		{
 			TryLoadAssemblyAndDefaultContent(contentDll);

@@ -34,4 +34,18 @@
     <ItemGroup>
       <Folder Include="Assets\" />
     </ItemGroup>
+
+    <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
+        <PropertyGroup>
+            <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <ProjectConfigFile Include="..\Game\ProjectConfig.json" />
+        </ItemGroup>
+        <MakeDir Directories="$(ProjectConfigBuildDir)" Condition="Exists('..\Game\ProjectConfig.json')" />
+        <Copy SourceFiles="@(ProjectConfigFile)"
+              DestinationFolder="$(ProjectConfigBuildDir)"
+              SkipUnchangedFiles="true"
+              Condition="Exists('%(ProjectConfigFile.FullPath)')" />
+    </Target>
 </Project>

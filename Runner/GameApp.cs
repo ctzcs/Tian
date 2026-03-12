@@ -35,7 +35,7 @@ public class GameApp : App
         }
         Log.Info(projectConfig.GameAssembly);
         var projectDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
-        var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
+        var contentDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, projectConfig.GameAssembly, projectConfig.BuildOutputDir);
         string contentDllName = Path.GetFileNameWithoutExtension(contentDll);
         if (!File.Exists(contentDll))
             throw new FileNotFoundException($"Assembly not found: {contentDll}");
