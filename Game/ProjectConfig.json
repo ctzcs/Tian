@@ -1,7 +1,0 @@
-{
-    "GameAssembly": "Content.dll",
-    "GameEditorAssembly": "Content.Editor.dll",
-    "GameName": "Test_UI2",
-    "EditorName": "Box2D",
-    "BuildOutputDir": "..\\Build"
-}
