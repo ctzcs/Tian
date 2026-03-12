@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Engine.Core;
@@ -14,36 +13,22 @@ public class ContentSelectorWindow:EditorWindow
 	private ContentManager contentManager;
     private int curIndex = -1;
     private ProjectConfig? projectConfig;
-    private readonly List<EditorWindow> gameEditorWindows = new();
-    private readonly List<GameEditor> gameEditors = new();
-    private IGameEditorHost? gameEditorHost;
-    private string? gameEditorAssemblyName;
+    private string? projectConfigPath;
+    private string? projectDir;
+    private GameEditorBridge? gameEditorBridge;
 	protected override void OnAddWindow()
 	{
 		contentManager = new ContentManager();
         IsOpen = true;
-        projectConfig = ProjectConfigUtils.LoadProjectConfig(ProjectConfig.ProjectConfigFile);
-        if (projectConfig == null)
-        {
-            Log.Error("Loading content failed");
-            return;
-        }
-		var contentDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, projectConfig.GameAssembly);
-		if (File.Exists(contentDll))
-		{
-			TryLoadAssemblyAndDefaultContent(contentDll);
-		}
-		else
-		{
-			// 回退：走本地引用，避免空白
-			/*Data.currentContent = new TestSample(Data.app);
-			Data.currentContent.Start();*/
-            Log.Info($"Loading content failed");
-		}
+        if (Data?.WindowManager != null)
+            gameEditorBridge = new GameEditorBridge(Data, Data.WindowManager);
+
+        RefreshProjectConfig();
 	}
 
     public override void Update()
     {
+        RefreshProjectConfig();
 	    UpdateContentSelector();
     }
     
@@ -52,7 +37,14 @@ public class ContentSelectorWindow:EditorWindow
 	{
 		if (ImGui.Begin("Content Selector"))
 		{
-			var contentDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, projectConfig.GameAssembly);
+			if (projectConfig == null || string.IsNullOrWhiteSpace(projectDir))
+			{
+				ImGui.Text("ProjectConfig not loaded");
+				ImGui.End();
+				return;
+			}
+
+			var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
             var contentName = Path.GetFileNameWithoutExtension(contentDll);
 			ImGui.Separator();
 			ImGui.Text(File.Exists(contentDll) ? $"Loaded: {contentDll}" : "Content.dll not found in output folder");
@@ -80,59 +72,48 @@ public class ContentSelectorWindow:EditorWindow
 		ImGui.End();
 	}
 
-	private void EnsureGameEditors(string assemblyName)
+	private void TryLoadGameEditors()
 	{
-		if (Data?.WindowManager == null)
+		if (projectConfig == null || gameEditorBridge == null)
 			return;
 
-		gameEditorHost ??= new GameEditorHost(Data, Data.WindowManager, gameEditorWindows);
+		var assemblyName = string.IsNullOrWhiteSpace(projectConfig.GameEditorAssembly)
+			? projectConfig.GameAssembly
+			: projectConfig.GameEditorAssembly;
 
-		if (gameEditorAssemblyName == assemblyName && gameEditors.Count > 0)
+		if (string.IsNullOrWhiteSpace(projectDir))
 			return;
 
-		ClearGameEditors();
-
-		foreach (var editor in contentManager.CreateInstances<GameEditor>(assemblyName))
-		{
-			gameEditors.Add(editor);
-			editor.Attach(gameEditorHost);
-		}
-
-		gameEditorAssemblyName = assemblyName;
+		var editorDll = Path.Combine(projectDir, assemblyName);
+		gameEditorBridge.LoadEditors(editorDll);
 	}
 
-	private void ClearGameEditors()
+	private void RefreshProjectConfig()
 	{
-		if (Data?.WindowManager != null)
+		var resolved = ProjectConfigUtils.ResolveProjectConfigPath();
+		if (string.IsNullOrWhiteSpace(resolved))
+			return;
+
+		if (resolved == projectConfigPath)
+			return;
+
+		projectConfigPath = resolved;
+		projectDir = ProjectConfigUtils.GetProjectDirectory(resolved);
+		projectConfig = ProjectConfigUtils.LoadProjectConfig(resolved);
+		if (projectConfig == null)
 		{
-			foreach (var window in gameEditorWindows)
-				Data.WindowManager.RemoveWindow(window);
+			Log.Error("Loading content failed");
+			return;
 		}
 
-		gameEditorWindows.Clear();
-		gameEditors.Clear();
-	}
-
-	private sealed class GameEditorHost : IGameEditorHost
-	{
-		private readonly EditorData data;
-		private readonly EditorWindowManager windowManager;
-		private readonly List<EditorWindow> trackedWindows;
-
-		public GameEditorHost(EditorData data, EditorWindowManager windowManager, List<EditorWindow> trackedWindows)
+		var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
+		if (File.Exists(contentDll))
 		{
-			this.data = data;
-			this.windowManager = windowManager;
-			this.trackedWindows = trackedWindows;
+			TryLoadAssemblyAndDefaultContent(contentDll);
 		}
-
-		public IContent? CurrentContent => data.currentContent;
-
-		public void RegisterWindow(string title, Action draw)
+		else
 		{
-			var window = new CallbackEditorWindow(title, draw);
-			trackedWindows.Add(window);
-			windowManager.AddWindow(window);
+			Log.Info("Loading content failed");
 		}
 	}
 
@@ -166,7 +147,7 @@ public class ContentSelectorWindow:EditorWindow
             
 			var content = contentManager.CreateAndSetCurrent(contentName, defaultName, Data.app);
 			Data.currentContent = content;
-			EnsureGameEditors(contentName);
+			TryLoadGameEditors();
 		}
 		catch
 		{
@@ -181,7 +162,7 @@ public class ContentSelectorWindow:EditorWindow
 		{
 			var content = contentManager.CreateAndSetCurrent(assemblyName, typeName, Data.app);
 			Data.currentContent = content;
-			EnsureGameEditors(assemblyName);
+			TryLoadGameEditors();
             GC.Collect();
         }
 		catch(Exception e)

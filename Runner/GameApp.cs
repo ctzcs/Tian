@@ -20,14 +20,22 @@ public class GameApp : App
         batcher = new Batcher(GraphicsDevice);
         contentManager = new ContentManager();
         //加载ProjectConfig
-        ProjectConfig? projectConfig = ProjectConfigUtils.LoadProjectConfig("ProjectConfig.json");
-        if (projectConfig == null)
+        var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
+        if (string.IsNullOrWhiteSpace(projectConfigPath))
         {
             Log.Error("ProjectConfig.json not found");
             return;
         }
+
+        ProjectConfig? projectConfig = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
+        if (projectConfig == null)
+        {
+            Log.Error("Loading content failed");
+            return;
+        }
         Log.Info(projectConfig.GameAssembly);
-        var contentDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, projectConfig.GameAssembly);
+        var projectDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
+        var contentDll = Path.Combine(projectDir, projectConfig.GameAssembly);
         string contentDllName = Path.GetFileNameWithoutExtension(contentDll);
         if (!File.Exists(contentDll))
             throw new FileNotFoundException($"Assembly not found: {contentDll}");

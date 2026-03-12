@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>14</LangVersion>
+        <AssemblyName>Content</AssemblyName>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -38,7 +39,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Engine\Engine.csproj" />
+      <ProjectReference Include="..\..\Engine\Engine.csproj" />
     </ItemGroup>
 
 </Project>

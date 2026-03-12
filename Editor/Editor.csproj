@@ -17,7 +17,8 @@
     </ItemGroup>
 
     <Target Name="BuildContentProject" BeforeTargets="Build">
-        <MSBuild Projects="..\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\Game\Editor\Content.Editor.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
     </Target>
 
     <ItemGroup>

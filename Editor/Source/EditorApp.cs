@@ -191,7 +191,11 @@ public class EditorApp : App
                         if (result == FileSystem.DialogResult.Success && paths.Length > 0)
                         {
                             var folder = paths[0];
-                            Log.Info($"{folder}");
+                            var configPath = Path.Combine(folder, ProjectConfig.ProjectConfigFile);
+                            if (ProjectConfigUtils.SetProjectConfigPath(configPath))
+                                Log.Info($"ProjectConfig: {configPath}");
+                            else
+                                Log.Info($"ProjectConfig.json not found in {folder}");
                         }
                     },false);
 				}
