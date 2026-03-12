@@ -52,6 +52,8 @@ public sealed class ContentManager
 	// 列出可用 Content 类型名（简单名）
 	public IEnumerable<string> GetAvailableContentTypes(string assemblyName)
 	{
+		if (string.IsNullOrWhiteSpace(assemblyName))
+			return Enumerable.Empty<string>();
 		if (_simpleNameMap.TryGetValue(assemblyName, out var map))
 			return map.Keys.OrderBy(x => x);
 		return Enumerable.Empty<string>();

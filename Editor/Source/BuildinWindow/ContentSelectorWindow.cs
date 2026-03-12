@@ -45,14 +45,16 @@ public class ContentSelectorWindow:EditorWindow
 			}
 
 			var contentDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, projectConfig.GameAssembly, projectConfig.BuildOutputDir);
-            var contentName = Path.GetFileNameWithoutExtension(contentDll);
+			var hasContentDll = !string.IsNullOrWhiteSpace(contentDll) && File.Exists(contentDll);
+			var contentName = hasContentDll ? Path.GetFileNameWithoutExtension(contentDll) : string.Empty;
 			ImGui.Separator();
-			ImGui.Text(File.Exists(contentDll) ? $"Loaded: {contentDll}" : "Content.dll not found in output folder");
+			ImGui.Text(hasContentDll ? $"Loaded: {contentDll}" : "Content.dll not found in output folder");
 
 			ImGui.Separator();
 			ImGui.Text("Available Types:");
-            //切换
-            var contents = contentManager.GetAvailableContentTypes(contentName).ToArray();
+            var contents = string.IsNullOrWhiteSpace(contentName)
+                ? Array.Empty<string>()
+                : contentManager.GetAvailableContentTypes(contentName).ToArray();
             if (contents.Length > 0)
             {
                 if (curIndex < 0 || curIndex >= contents.Length) {curIndex = 0;}

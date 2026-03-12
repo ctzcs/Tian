@@ -17,8 +17,8 @@
     </ItemGroup>
 
     <Target Name="BuildContentProject" BeforeTargets="Build">
-        <MSBuild Projects="..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
-        <MSBuild Projects="..\Game\Editor\Content.Editor.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\..\Game\Editor\Content.Editor.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
     </Target>
 
     <ItemGroup>
@@ -37,7 +37,7 @@
 
     <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
         <PropertyGroup>
-            <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>
+            <ProjectConfigBuildDir>$(MSBuildThisFileDirectory)..\..\Build\$(Configuration)\$(TargetFramework)\</ProjectConfigBuildDir>
         </PropertyGroup>
         <ItemGroup>
             <ProjectConfigFile Include="..\Game\ProjectConfig.json" />

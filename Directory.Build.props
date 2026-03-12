@@ -1,6 +1,6 @@
 ﻿<Project>
     <PropertyGroup>
-        <BaseOutputPath>$(MSBuildThisFileDirectory)Build\</BaseOutputPath>
+        <BaseOutputPath>$(MSBuildThisFileDirectory)..\Build\</BaseOutputPath>
         <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     </PropertyGroup>
