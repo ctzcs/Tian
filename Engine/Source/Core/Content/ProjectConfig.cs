@@ -10,6 +10,7 @@ public class ProjectConfig
     public string GameName;
     public string EditorName;
     public string BuildOutputDir;
+    public string? ContentAssetsDir;
     public static string ProjectConfigFile => "ProjectConfig.json";
 }
 

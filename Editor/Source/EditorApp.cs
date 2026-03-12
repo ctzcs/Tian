@@ -294,9 +294,30 @@ public class EditorApp : App
 	}
 
 
+    string ResolveMetaAssetsPath()
+    {
+        var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
+        if (!string.IsNullOrWhiteSpace(projectConfigPath))
+        {
+            var gameDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
+            var config = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
+            var contentAssetsDir = string.IsNullOrWhiteSpace(config?.ContentAssetsDir)
+                ? Path.Combine("Content", "Assets")
+                : config.ContentAssetsDir;
+
+            var sourceAssetsPath = Path.IsPathRooted(contentAssetsDir)
+                ? Path.GetFullPath(contentAssetsDir)
+                : Path.GetFullPath(Path.Combine(gameDir, contentAssetsDir));
+            if (Directory.Exists(sourceAssetsPath))
+                return sourceAssetsPath;
+        }
+
+        return Assets.EditorAssetsPath;
+    }
+
     void AssetMetaGenerate()
     {
-        var assetsPath = Assets.EditorAssetsPath;
+        var assetsPath = ResolveMetaAssetsPath();
         AssetDatabase.GenerateMetaAsset(assetsPath);
         AssetDatabase.GenerateAssetIndexFile(assetsPath);
     }
