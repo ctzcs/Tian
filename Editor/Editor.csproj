@@ -12,13 +12,20 @@
         <LangVersion>14</LangVersion>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <AssemblyName>Editor</AssemblyName>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <SelfContained>true</SelfContained>
+    </PropertyGroup>
+    
     <ItemGroup>
         <ProjectReference Include="..\Engine\Engine.csproj" />
     </ItemGroup>
 
     <Target Name="BuildContentProject" BeforeTargets="Build">
-        <MSBuild Projects="..\..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
-        <MSBuild Projects="..\..\Game\Editor\Content.Editor.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\..\Game\Content\Content.csproj" Targets="Restore;Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)" />
+        <MSBuild Projects="..\..\Game\Editor\Content.Editor.csproj" Targets="Restore;Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)" />
     </Target>
 
     <ItemGroup>

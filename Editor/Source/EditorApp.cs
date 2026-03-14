@@ -16,7 +16,6 @@ public class EditorApp : App
 {
 	private EditorData _data;
 	private EditorWindowManager _editorWindowManager;
-	private readonly Texture image;
 	// 动态内容管理
 
 	private bool _themeApplied = false;
@@ -34,8 +33,6 @@ public class EditorApp : App
         UpdateMode = UpdateMode.FixedStep(60,false)
 	})
 	{
-		image = new Texture(GraphicsDevice, new Image("button.png"));
-        
 		_data = new EditorData()
 		{
 			app = this,
