@@ -36,6 +36,14 @@ public sealed class TagType : SchemaType, IComparable<TagType>
     public int CompareTo(TagType other) {
         return nameSortOrder - other.nameSortOrder;
     }
+    
+    /// <summary>
+    /// Returns the enum id mapped to a tag type with a <c>[MapTag()]</c> attribute.<br/>
+    /// Returns 0 if the tag type is not mapped.<br/>
+    /// See example: <see cref="MapTagAttribute{TTag}"/>
+    /// </summary>
+    /// <remarks> Executes in O(1). Simply an array index lookup. </remarks>
+    public TEnum AsEnum<TEnum>()  where TEnum : struct, Enum => TagEnum<TEnum>.IdMap[TagIndex];
     #endregion
 }
 

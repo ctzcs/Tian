@@ -54,33 +54,33 @@ public static class Test_sizeof
     [Test]
     public static unsafe void Test_sizeof_BitSet() {
         var size = sizeof(BitSet);
-        AreEqual(64, size);
+        AreEqual(32, size);
     }
     
     [Test]
     public static unsafe void Test_sizeof_Tags() {
         var size = sizeof(Tags);
-        AreEqual(64, size);
+        AreEqual(32, size);
     }
     
     [Test]
     public static unsafe void Test_sizeof_ComponentTypes() {
         var size = sizeof(ComponentTypes);
-        AreEqual(64, size);
+        AreEqual(32, size);
     }
         
     [Test]
     public static void Test_sizeof_StructIndexes() {
         var type = typeof(SignatureIndexes);
         var size = Marshal.SizeOf(type!);
-        AreEqual(24, size);
+        AreEqual(16, size);
     }
     
     [Test]
     public static void Test_sizeof_TypeCache() {
         var type = typeof(TypeCache);
         var size = Marshal.SizeOf(type!);
-        AreEqual(28, size);
+        AreEqual(24, size);
     }
     
     [Test]

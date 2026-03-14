@@ -18,7 +18,7 @@ internal readonly struct SignatureIndexes
 {
     internal readonly   int     length; // 4    - values: [1, 5] ensured by assertion
     
-    /* internal readonly   byte    T1;     // 1
+    internal readonly   byte    T1;     // 1
     internal readonly   byte    T2;     // 1
     internal readonly   byte    T3;     // 1
     internal readonly   byte    T4;     // 1
@@ -27,18 +27,7 @@ internal readonly struct SignatureIndexes
     private  readonly   byte    T7;     // 1
     private  readonly   byte    T8;     // 1
     private  readonly   byte    T9;     // 1
-    private  readonly   byte    T10;    // 1 */
-
-    internal readonly   ushort  T1;     // 2
-    internal readonly   ushort  T2;     // 2
-    internal readonly   ushort  T3;     // 2
-    internal readonly   ushort  T4;     // 2
-    internal readonly   ushort  T5;     // 2
-    private  readonly   ushort  T6;     // 2
-    private  readonly   ushort  T7;     // 2
-    private  readonly   ushort  T8;     // 2
-    private  readonly   ushort  T9;     // 2
-    private  readonly   ushort  T10;    // 2
+    private  readonly   byte    T10;    // 1
     
     public   SignatureIndexesEnumerator GetEnumerator() => new (this);
     
@@ -48,7 +37,7 @@ internal readonly struct SignatureIndexes
         int T1
     ) {
         length = 1;
-        this.T1     = (ushort)T1;
+        this.T1     = (byte)T1;
     }
     
     internal SignatureIndexes (
@@ -57,8 +46,8 @@ internal readonly struct SignatureIndexes
 
     ) {
         this.length = 2;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
     }
     
     internal SignatureIndexes (
@@ -67,9 +56,9 @@ internal readonly struct SignatureIndexes
         int T3
     ) {
         this.length = 3;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
     }
     
     internal SignatureIndexes (
@@ -79,10 +68,10 @@ internal readonly struct SignatureIndexes
         int T4
     ) {
         this.length = 4;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
     }
     
     internal SignatureIndexes (
@@ -93,11 +82,11 @@ internal readonly struct SignatureIndexes
         int T5
     ) {
         this.length = 5;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
     }
     
     internal SignatureIndexes (
@@ -109,12 +98,12 @@ internal readonly struct SignatureIndexes
         int T6
     ) {
         this.length = 6;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
-        this.T6     = (ushort)T6;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
+        this.T6     = (byte)T6;
     }
     
     internal SignatureIndexes (
@@ -127,13 +116,13 @@ internal readonly struct SignatureIndexes
         int T7
     ) {
         this.length = 7;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
-        this.T6     = (ushort)T6;
-        this.T7     = (ushort)T7;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
+        this.T6     = (byte)T6;
+        this.T7     = (byte)T7;
     }
     
     internal SignatureIndexes (
@@ -147,14 +136,14 @@ internal readonly struct SignatureIndexes
         int T8
     ) {
         this.length = 8;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
-        this.T6     = (ushort)T6;
-        this.T7     = (ushort)T7;
-        this.T8     = (ushort)T8;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
+        this.T6     = (byte)T6;
+        this.T7     = (byte)T7;
+        this.T8     = (byte)T8;
     }
     
     internal SignatureIndexes (
@@ -169,15 +158,15 @@ internal readonly struct SignatureIndexes
         int T9
     ) {
         this.length = 9;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
-        this.T6     = (ushort)T6;
-        this.T7     = (ushort)T7;
-        this.T8     = (ushort)T8;
-        this.T9     = (ushort)T9;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
+        this.T6     = (byte)T6;
+        this.T7     = (byte)T7;
+        this.T8     = (byte)T8;
+        this.T9     = (byte)T9;
     }
     
     internal SignatureIndexes (
@@ -193,16 +182,16 @@ internal readonly struct SignatureIndexes
         int T10
     ) {
         this.length = 10;
-        this.T1     = (ushort)T1;
-        this.T2     = (ushort)T2;
-        this.T3     = (ushort)T3;
-        this.T4     = (ushort)T4;
-        this.T5     = (ushort)T5;
-        this.T6     = (ushort)T6;
-        this.T7     = (ushort)T7;
-        this.T8     = (ushort)T8;
-        this.T9     = (ushort)T9;
-        this.T10    = (ushort)T10;
+        this.T1     = (byte)T1;
+        this.T2     = (byte)T2;
+        this.T3     = (byte)T3;
+        this.T4     = (byte)T4;
+        this.T5     = (byte)T5;
+        this.T6     = (byte)T6;
+        this.T7     = (byte)T7;
+        this.T8     = (byte)T8;
+        this.T9     = (byte)T9;
+        this.T10    = (byte)T10;
     }
     
     [ExcludeFromCodeCoverage]

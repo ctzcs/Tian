@@ -27,12 +27,8 @@ public partial struct BitSet
         return
             BitOperations.PopCount((ulong)l0) +
             BitOperations.PopCount((ulong)l1) +
-            BitOperations.PopCount((ulong)l2) +
-            BitOperations.PopCount((ulong)l3) +
-            BitOperations.PopCount((ulong)l4) +
-            BitOperations.PopCount((ulong)l5) +
-            BitOperations.PopCount((ulong)l6) +
-            BitOperations.PopCount((ulong)l7);
+            BitOperations.PopCount((ulong)l2) + 
+            BitOperations.PopCount((ulong)l3);
     }
 #endif
     

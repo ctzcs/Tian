@@ -6,17 +6,11 @@ namespace Friflo.Engine.ECS;
 
 internal struct TypeCache
 {
-    /* private byte    type0;  //  1
+    private byte    type0;  //  1
     private byte    type1;  //  1
     private byte    type2;  //  1
-    private byte    type3;  //  1 */
+    private byte    type3;  //  1
     
-    private ushort  type0;  //  2
-    private ushort  type1;  //  2
-    private ushort  type2;  //  2
-    private ushort  type3;  //  2
-
-
     private int     index0; //  4
     private int     index1; //  4
     private int     index2; //  4
@@ -26,20 +20,14 @@ internal struct TypeCache
     
     internal int FindType(int type)
     {
-        /* if (type == type0)  return index0;
+        if (type == type0)  return index0;
         if (type == type1)  return index1;
         if (type == type2)  return index2;
-        if (type == type3)  return index3; */
-         var t = (ushort)type;
-        if (t == type0)  return index0;
-        if (t == type1)  return index1;
-        if (t == type2)  return index2;
-        if (t == type3)  return index3;
+        if (type == type3)  return index3;
         return -1;
     }
     
-    //internal Archetype Cache(byte type, Archetype archetype)
-    internal Archetype Cache(ushort type, Archetype archetype)
+    internal Archetype Cache(byte type, Archetype archetype)
     {
         var index   = archetype.archIndex;
         var at      = next++ % 4;
