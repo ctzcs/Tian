@@ -282,7 +282,7 @@ public class UICanvas
         foreach (var child in Root.Children)
             child.CollectDrawCommands(commands, 0);
 
-        var clip = ClipRect ?? viewport;
+        var clip = (ClipRect ?? viewport).GetIntersection(viewport);
         if (clip.Width <= 0f || clip.Height <= 0f)
             return;
 
@@ -309,7 +309,7 @@ public class UICanvas
                     break;
 
                 case Ui2DrawCommandType.ClipPush:
-                    batcher.PushScissor(cmd.Rect.Int());
+                    batcher.PushScissor(cmd.Rect.GetIntersection(viewport).Int());
                     break;
 
                 case Ui2DrawCommandType.ClipPop:

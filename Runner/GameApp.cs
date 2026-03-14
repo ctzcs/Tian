@@ -30,7 +30,7 @@ public class GameApp : App
         ProjectConfig? projectConfig = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
         if (projectConfig == null)
         {
-            Log.Error("Loading content failed");
+            Log.Error("Loading content failed in GameApp");
             return;
         }
         Log.Info(projectConfig.GameAssembly);

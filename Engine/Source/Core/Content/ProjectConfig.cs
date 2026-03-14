@@ -10,7 +10,6 @@ public class ProjectConfig
     public string GameName;
     public string EditorName;
     public string BuildOutputDir;
-    public string? ContentAssetsDir;
     public static string ProjectConfigFile => "ProjectConfig.json";
 }
 
@@ -69,9 +68,12 @@ public static class ProjectConfigUtils
 
         if (!string.IsNullOrWhiteSpace(buildOutputDir))
         {
-            var outputDir = Path.IsPathRooted(buildOutputDir)
-                ? buildOutputDir
-                : Path.Combine(projectDir, buildOutputDir);
+            var normalizedBuildOutputDir = buildOutputDir
+                .Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar);
+            var outputDir = Path.IsPathRooted(normalizedBuildOutputDir)
+                ? normalizedBuildOutputDir
+                : Path.Combine(projectDir, normalizedBuildOutputDir);
             if (Directory.Exists(outputDir))
             {
                 var match = Directory.EnumerateFiles(outputDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();

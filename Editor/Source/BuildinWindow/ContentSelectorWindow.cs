@@ -1,10 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
 using Engine.Core;
 using Foster.Framework;
 using ImGuiNET;
-using SDL3;
 
 namespace Editor;
 
@@ -104,7 +100,7 @@ public class ContentSelectorWindow:EditorWindow
 		projectConfig = ProjectConfigUtils.LoadProjectConfig(resolved);
 		if (projectConfig == null)
 		{
-			Log.Error("Loading content failed");
+			Log.Error("Loading content failed in ContentSelectorWindow");
 			return;
 		}
 
@@ -115,7 +111,7 @@ public class ContentSelectorWindow:EditorWindow
 		}
 		else
 		{
-			Log.Info("Loading content failed");
+			Log.Info($"Loading content failed : content.dll not exist path {contentDll}");
 		}
 	}
 
