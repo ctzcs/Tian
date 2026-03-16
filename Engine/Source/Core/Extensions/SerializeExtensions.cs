@@ -1,12 +1,12 @@
-using System;
-using System.IO;
+
 using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Foster.Framework;
+using Engine.Asset.Pipeline;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Serialize;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Engine.Core.Extensions;
 
@@ -46,6 +46,21 @@ public static class SerializeExtensions
             serializer.ReadIntoStore(store,readStream);
             readStream.Close();
         }
+
+
+        public Entity ReadEntity(string json)
+        {
+            var entities = AssetDatabase.DataEntities;
+            entities.Clear();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            using var stream = new MemoryStream(bytes);
+            var result = AssetDatabase.EntitySerializer.ReadEntities(entities, stream);
+            if (result.error != null) throw new JsonException(result.error);
+            var converter = AssetDatabase.EntityConverter;
+            var entity = converter.DataEntityToEntity(AssetDatabase.DataEntities[0], store, out var error);
+            return entity;
+        }
+        
         
         /// <summary>
         /// Zip压缩版本
@@ -114,11 +129,11 @@ public static class SerializeExtensions
             serializer.ReadIntoStore(store,gZipStream);
             stream.Dispose();
         }
-        
-        
+
         
         
     }
+    
     
     [Obsolete("Not using now")]
     public static void SaveFile<T>(string path,T value, bool indented = false)

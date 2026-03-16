@@ -2,6 +2,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using Friflo.Engine.ECS;
+using Friflo.Json.Fliox;
+using Friflo.Json.Fliox;
 
 namespace Engine.Components;
 
@@ -58,6 +60,7 @@ public struct CTransform : IComponent
         RotationDirty = 4
     }
     
+    [Ignore]
     public EDirtyType hierarchyDirty;
 
     //public bool localDirty;

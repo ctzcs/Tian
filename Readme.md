@@ -71,6 +71,9 @@ If there is any problem, please contact with me. Feel free to DM.
       - [ ] Build In Editor 
       - [ ] EditorWindow
      
+- ProjectConfig
+  - EditorName目前是Content.dll里面的内容
+  - 编辑器具体要做关卡编辑器，还有资源引用怎么做？
 
 
 

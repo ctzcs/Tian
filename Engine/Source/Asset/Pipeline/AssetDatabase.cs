@@ -1,5 +1,9 @@
 ﻿using System.Text.Json;
+using Engine.Asset;
+using Engine.Core;
 using Foster.Framework;
+using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Serialize;
 
 namespace Engine.Asset.Pipeline;
 
@@ -14,7 +18,15 @@ public class AssetDatabase
         IncludeFields = true,
     };
 
+    public static EntityStore PrefabWorld = new EntityStore();
+    public static EntitySerializer EntitySerializer = new EntitySerializer();
+    public static EntityConverter EntityConverter = new EntityConverter();
+    public static List<DataEntity> DataEntities = new List<DataEntity>();
+    
+    
     private static readonly Dictionary<AssetId, string> RuntimeIndex = new();
+    private static readonly Dictionary<Guid, string> PrefabPathCache = new();
+    private static JsonSerializerOptions? PrefabJsonOptions;
     private static string RuntimeAssetRootPath = string.Empty;
 
     public static bool LoadIndex(string srcPath)
@@ -179,6 +191,67 @@ public class AssetDatabase
     
     public static void UpdateAssetIndexFile(string srcPath){}
 
+    /// <summary>
+    /// 获取 Prefab 专用序列化配置（含 PrefabAsset/PrefabEntity 转换器）。
+    /// </summary>
+    public static JsonSerializerOptions GetPrefabJsonOptions()
+    {
+        if (PrefabJsonOptions != null) return PrefabJsonOptions;
+
+        PrefabJsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            IncludeFields = true,
+        };
+        PrefabJsonOptions.Converters.Add(new PrefabEntityJsonConvert());
+        PrefabJsonOptions.Converters.Add(new PrefabAssetJsonConvert());
+        return PrefabJsonOptions;
+    }
+
+    /// <summary>
+    /// 按绝对路径加载 Prefab。
+    /// </summary>
+    /// <param name="fullPath">Prefab 文件绝对路径。</param>
+    public static PrefabAsset? LoadPrefabByPath(string fullPath)
+    {
+        if (!File.Exists(fullPath)) return null;
+        var text = File.ReadAllText(fullPath);
+        return JsonSerializer.Deserialize<PrefabAsset>(text, GetPrefabJsonOptions());
+    }
+
+    /// <summary>
+    /// 按 Guid 加载 Prefab（运行时推荐入口）。
+    /// </summary>
+    /// <param name="prefabGuid">Prefab 资源 Guid。</param>
+    public static PrefabAsset? LoadPrefabByGuid(Guid prefabGuid)
+    {
+        var assetsRoot = ResolveMetaAssetsPath();
+
+        if (PrefabPathCache.TryGetValue(prefabGuid, out var cachedPath) && File.Exists(cachedPath))
+        {
+            return LoadPrefabByPath(cachedPath);
+        }
+
+        var files = Directory.GetFiles(assetsRoot, "*.prefab", SearchOption.AllDirectories);
+        for (int i = 0; i < files.Length; i++)
+        {
+            var prefab = LoadPrefabByPath(files[i]);
+            if (prefab == null) continue;
+
+            if (!PrefabPathCache.ContainsKey(prefab.Guid))
+                PrefabPathCache[prefab.Guid] = files[i];
+
+            if (prefab.Guid == prefabGuid)
+            {
+                if (string.IsNullOrWhiteSpace(prefab.Path))
+                    prefab.Path = Path.GetRelativePath(assetsRoot, files[i]);
+                return prefab;
+            }
+        }
+
+        return null;
+    }
+
     public static AssetIndex? CreateOrGetAssetIndexFile(string indexFile)
     {
         AssetIndex? assetIndexFile = null;
@@ -194,4 +267,27 @@ public class AssetDatabase
         return assetIndexFile;
     }
     
+    /// <summary>
+    /// 解析当前项目的资产根目录（优先 ProjectConfig.ContentAssetsDir）。
+    /// </summary>
+    public static string ResolveMetaAssetsPath()
+    {
+        var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
+        if (!string.IsNullOrWhiteSpace(projectConfigPath))
+        {
+            var gameDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
+            var config = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
+            var contentAssetsDir = string.IsNullOrWhiteSpace(config?.ContentAssetsDir)
+                ? Path.Combine("Content", "Assets")
+                : config.ContentAssetsDir;
+
+            var sourceAssetsPath = Path.IsPathRooted(contentAssetsDir)
+                ? Path.GetFullPath(contentAssetsDir)
+                : Path.GetFullPath(Path.Combine(gameDir, contentAssetsDir));
+            if (Directory.Exists(sourceAssetsPath))
+                return sourceAssetsPath;
+        }
+
+        return Assets.EditorAssetsPath;
+    }
 }

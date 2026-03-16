@@ -1,3 +1,4 @@
+using System;
 using Friflo.Engine.ECS;
 
 namespace Engine.Components;
@@ -14,3 +15,9 @@ public struct EditorInfo:IComponent
 }
 
 public struct Prefab : ITag { }
+
+public struct PrefabRef : IComponent
+{
+    public Guid AssetGuid;
+    public string MountKey;
+}

@@ -150,7 +150,7 @@ public class ContentSelectorWindow:EditorWindow
 		catch
 		{
 			// 出错回退
-			Log.Info("Loading content failed");
+			Log.Info("Loading content failed }");
 		}
 	}
 
