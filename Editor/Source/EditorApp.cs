@@ -1,4 +1,6 @@
-﻿using System.Numerics;
+﻿using System;
+using System.IO;
+using System.Numerics;
 using Engine.Asset;
 using Engine.Asset.Pipeline;
 using Engine.Asset.v1;
@@ -50,7 +52,6 @@ public class EditorApp : App
 		_editorWindowManager.AddWindow(new InspectorWindow());
 		_editorWindowManager.AddWindow(new SystemWindow());
 		_editorWindowManager.AddWindow(new EditorModeWindow());
-		_editorWindowManager.AddWindow(new GameModeWindow());
 		_editorWindowManager.AddWindow(new PerformanceWindow());
 
 		_dockLayoutIniPath = Path.Combine(
