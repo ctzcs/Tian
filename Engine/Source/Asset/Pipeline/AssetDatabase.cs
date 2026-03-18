@@ -10,7 +10,7 @@ namespace Engine.Asset.Pipeline;
 public class AssetDatabase
 {
 
-    public static string AssetIndexFile => "AssetIndex.json";
+    public static string AssetMetaBankFile => "AssetsMetaBank.json";
 
     public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
     {
@@ -31,7 +31,7 @@ public class AssetDatabase
 
     public static bool LoadIndex(string srcPath)
     {
-        var indexFile = Path.Combine(srcPath, AssetIndexFile);
+        var indexFile = Path.Combine(srcPath, AssetMetaBankFile);
         if (!File.Exists(indexFile))
         {
             RuntimeIndex.Clear();
@@ -40,7 +40,7 @@ public class AssetDatabase
         }
 
         var indexFileText = File.ReadAllText(indexFile);
-        var index = JsonSerializer.Deserialize<AssetIndex>(indexFileText, JsonOptions);
+        var index = JsonSerializer.Deserialize<AssetMetaBank>(indexFileText, JsonOptions);
         if (index == null)
         {
             RuntimeIndex.Clear();
@@ -95,7 +95,7 @@ public class AssetDatabase
         
         var files = Directory.GetFiles(srcPath, "*", SearchOption.AllDirectories)
             .Where(p => !p.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-            .Where(p => !string.Equals(Path.GetFileName(p), AssetIndexFile, StringComparison.OrdinalIgnoreCase))
+            .Where(p => !string.Equals(Path.GetFileName(p), AssetMetaBankFile, StringComparison.OrdinalIgnoreCase))
             .ToArray();
         
         foreach (var file in files)
@@ -144,8 +144,8 @@ public class AssetDatabase
     
     public static void GenerateAssetIndexFile(string srcPath)
     {
-        var indexFile = Path.Combine(srcPath, AssetIndexFile);
-        AssetIndex? assetIndexFile = CreateOrGetAssetIndexFile(indexFile);
+        var indexFile = Path.Combine(srcPath, AssetMetaBankFile);
+        AssetMetaBank? assetIndexFile = CreateOrGetAssetMetaBankFile(indexFile);
         if (assetIndexFile == null)
         {
             Log.Error($"AssetIndexFile {srcPath} Not Found");
@@ -156,7 +156,7 @@ public class AssetDatabase
             .Where(p => p.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         
-        var entries = new List<AssetIndex.Entry>();
+        var entries = new List<AssetMetaBank.Entry>();
         foreach (var metaFile in metaFiles)
         { 
             var metaFileTxt = File.ReadAllText(metaFile);
@@ -176,7 +176,7 @@ public class AssetDatabase
                 continue;
             }
             
-            entries.Add(new AssetIndex.Entry()
+            entries.Add(new AssetMetaBank.Entry()
             {
                 Id = meta.Id,
                 Path = meta.Path,
@@ -252,17 +252,17 @@ public class AssetDatabase
         return null;
     }
 
-    public static AssetIndex? CreateOrGetAssetIndexFile(string indexFile)
+    public static AssetMetaBank? CreateOrGetAssetMetaBankFile(string metaBankFile)
     {
-        AssetIndex? assetIndexFile = null;
-        if (!File.Exists(indexFile))
+        AssetMetaBank? assetIndexFile = null;
+        if (!File.Exists(metaBankFile))
         {
-            assetIndexFile = new AssetIndex();
+            assetIndexFile = new AssetMetaBank();
         }
         else
         {
-            var indexFileText = File.ReadAllText(indexFile);
-            assetIndexFile = JsonSerializer.Deserialize<AssetIndex>(indexFileText, JsonOptions);
+            var indexFileText = File.ReadAllText(metaBankFile);
+            assetIndexFile = JsonSerializer.Deserialize<AssetMetaBank>(indexFileText, JsonOptions);
         }
         return assetIndexFile;
     }

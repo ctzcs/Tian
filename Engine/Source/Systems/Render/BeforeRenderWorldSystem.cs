@@ -1,6 +1,7 @@
 using System.Numerics;
 using Engine.Components;
 using Engine.Core.Extensions;
+using Engine.Core.Graphics;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -18,6 +19,11 @@ public class BeforeRenderWorldSystem:QuerySystem
     public BeforeRenderWorldSystem(Batcher batcher)
     {
         this.batcher = batcher;
+    }
+
+    public BeforeRenderWorldSystem(RenderContext renderContext)
+        : this(renderContext.Batcher)
+    {
     }
     
     protected override void OnAddStore(EntityStore store)

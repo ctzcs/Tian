@@ -1,8 +1,9 @@
+using Engine.Core;
+
 namespace Engine.Asset;
 
 public partial class Assets
 {
-    private const string contentAssetFolderName = "Assets";
     private static string? path = null;
     private static string? engineAssetsPath;
 
@@ -15,44 +16,15 @@ public partial class Assets
 
     public static string GetContentAssetsPath() => AssetsPath;
 
-    // 统一开发/发布两种目录结构，避免不同入口使用不同路径策略
     private static string ResolveAssetsPath()
     {
         if (engineAssetsPath != null)
             return engineAssetsPath;
 
-        var baseDir = AppContext.BaseDirectory;
-        var local = Path.GetFullPath(Path.Combine(baseDir, contentAssetFolderName));
-        if (Directory.Exists(local))
-        {
-            engineAssetsPath = local;
-            path = local;
-            return local;
-        }
-
-        var up = "";
-        for (int i = 0; i < 12; i++)
-        {
-            var candidate = Path.GetFullPath(Path.Combine(baseDir, up, contentAssetFolderName));
-            if (Directory.Exists(candidate))
-            {
-                engineAssetsPath = candidate;
-                path = candidate;
-                return candidate;
-            }
-
-            var contentCandidate = Path.GetFullPath(Path.Combine(baseDir, up, "Content", contentAssetFolderName));
-            if (Directory.Exists(contentCandidate))
-            {
-                engineAssetsPath = contentCandidate;
-                path = contentCandidate;
-                return contentCandidate;
-            }
-
-            up = Path.Combine(up, "..");
-        }
-
-        throw new DirectoryNotFoundException("Cannot find Assets path from AppContext.BaseDirectory");
+        var resolved = ProjectConfigUtils.ResolveAssetsRootPath();
+        engineAssetsPath = resolved;
+        path = resolved;
+        return resolved;
     }
 
     // 旧逻辑保留，避免丢失历史上下文

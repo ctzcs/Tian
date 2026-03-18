@@ -104,18 +104,30 @@ public sealed class ContentManager
 	public IContent CreateAndSetCurrent(string assemblyName, string typeName, App app)
 	{
 		_current?.Destroy();
+		_current = null;
+
 		var content = Create(assemblyName, typeName, app);
-		_current = content;
-		_current.Start();
-		return content;
+		try
+		{
+			content.Start();
+			_current = content;
+			return content;
+		}
+		catch
+		{
+			content.Destroy();
+			_current = null;
+			throw;
+		}
 	}
 
 	// 切换当前 Content（自动调用 Destroy/Start）
 	public void SetCurrent(IContent content)
 	{
 		_current?.Destroy();
+		_current = null;
+		content.Start();
 		_current = content;
-		_current.Start();
 	}
     
     

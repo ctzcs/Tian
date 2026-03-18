@@ -1,4 +1,5 @@
 ﻿
+using System;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -19,22 +20,24 @@ public class RenderPass
     public SystemRoot RenderGroup { get; }
     public Entity CameraEntity { get; }
     public Color ClearColor { get; set; }
+    public Action<UpdateTick>? PostUpdate { get; set; }
 
-    public RenderPass(RenderContext context, SystemRoot renderGroup, Entity cameraEntity, Color clearColor)
+    public RenderPass(RenderContext context, SystemRoot renderGroup, Entity cameraEntity, Color clearColor, Action<UpdateTick>? postUpdate = null)
     {
         Context = context;
         RenderGroup = renderGroup;
         CameraEntity = cameraEntity;
         ClearColor = clearColor;
+        PostUpdate = postUpdate;
     }
 
     public void Render(UpdateTick tick)
     {
         Context.Clear(ClearColor);
         RenderGroup.Update(tick);
+        PostUpdate?.Invoke(tick);
         Context.Render();
     }
-    
 }
 
 

@@ -2,7 +2,7 @@
 
 namespace Engine.Asset.Pipeline;
 
-public class AssetIndex
+public class AssetMetaBank
 {
     public string Version = "1";
     public DateTime GeneratedAt;

@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using Engine.Core;
 using Foster.Framework;
 using ImGuiNET;
@@ -89,12 +92,13 @@ public class ContentSelectorWindow:EditorWindow
 	private void RefreshProjectConfig()
 	{
 		var resolved = ProjectConfigUtils.ResolveProjectConfigPath();
+        
 		if (string.IsNullOrWhiteSpace(resolved))
 			return;
 
 		if (resolved == projectConfigPath)
 			return;
-
+        Log.Info("Get Project Config Path: " + resolved);
 		projectConfigPath = resolved;
 		projectDir = ProjectConfigUtils.GetProjectDirectory(resolved);
 		projectConfig = ProjectConfigUtils.LoadProjectConfig(resolved);
@@ -149,7 +153,7 @@ public class ContentSelectorWindow:EditorWindow
 		}
 		catch
 		{
-			// 出错回退
+			Data.currentContent = contentManager.Current;
 			Log.Info("Loading content failed }");
 		}
 	}
@@ -165,7 +169,7 @@ public class ContentSelectorWindow:EditorWindow
         }
 		catch(Exception e)
 		{
-			// 加载失败则保持原样
+			Data.currentContent = contentManager.Current;
             Log.Info($"Loading content {typeName} failed {e}");
 		}
 	}

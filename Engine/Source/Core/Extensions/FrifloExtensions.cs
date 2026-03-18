@@ -36,6 +36,9 @@ public static class FrifloExtensions
 
         public bool HasUniqueEntity(string name)
         {
+            if (world == null || string.IsNullOrWhiteSpace(name))
+                return false;
+
             Entities entities = world.ComponentIndex<UniqueEntity, string>()[name];
             switch (entities.Count)
             {

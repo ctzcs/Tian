@@ -21,7 +21,7 @@ public class Audio
         AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
         Asset.v1.AssetsV1.LazyInitializeCache("pack.zip");
 
-        var indexFile = AssetDatabase.CreateOrGetAssetIndexFile("Assets/AssetIndex.json");
+        var indexFile = AssetDatabase.CreateOrGetAssetMetaBankFile("Assets/AssetMetaBank.json");
         
         
         var guid = Guid.Parse("807d313f-7635-4d9b-b05d-4d05584f78b2");

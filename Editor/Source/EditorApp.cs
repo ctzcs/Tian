@@ -98,7 +98,14 @@ public class EditorApp : App
 
 		
 		// Content Update
-		_data.currentContent?.Update();
+		try
+		{
+			_data.currentContent?.Update();
+		}
+		catch (Exception e)
+		{
+			HandleContentRuntimeException("Update", e);
+		}
 		//Inspector Update
 		imRenderer.BeginLayout();
 		UpdateEditorSetting();
@@ -111,12 +118,36 @@ public class EditorApp : App
 	protected override void Render()
 	{
 		Window.Clear(Color.Black);
-		_data.currentContent?.Render();
+		try
+		{
+			_data.currentContent?.Render();
+		}
+		catch (Exception e)
+		{
+			HandleContentRuntimeException("Render", e);
+		}
         _editorWindowManager.Render();
 		_data.ImRenderer.Render();
 	}
 
 	
+
+	private void HandleContentRuntimeException(string phase, Exception e)
+	{
+		Log.Error($"Content {phase} failed: {e}");
+		try
+		{
+			_data.currentContent?.Destroy();
+		}
+		catch (Exception destroyError)
+		{
+			Log.Error($"Destroy content after {phase} failure failed: {destroyError}");
+		}
+		finally
+		{
+			_data.currentContent = null;
+		}
+	}
 
 	void UpdateEditorSetting()
 	{
@@ -182,21 +213,7 @@ public class EditorApp : App
 		{
 			if (ImGui.BeginMenu("Edit"))
 			{
-				if (ImGui.MenuItem("OpenFolder"))
-				{
-					FileSystem.OpenFolderDialog((paths, result) =>
-                    {
-                        if (result == FileSystem.DialogResult.Success && paths.Length > 0)
-                        {
-                            var folder = paths[0];
-                            var configPath = Path.Combine(folder, ProjectConfig.ProjectConfigFile);
-                            if (ProjectConfigUtils.SetProjectConfigPath(configPath))
-                                Log.Info($"ProjectConfig: {configPath}");
-                            else
-                                Log.Info($"ProjectConfig.json not found in {folder}");
-                        }
-                    },false);
-				}
+				
 				ImGui.EndMenu();
 			}
             
@@ -292,31 +309,18 @@ public class EditorApp : App
 	}
 
 
-    string ResolveMetaAssetsPath()
-    {
-        var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
-        if (!string.IsNullOrWhiteSpace(projectConfigPath))
-        {
-            var gameDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
-            var config = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
-            var contentAssetsDir = string.IsNullOrWhiteSpace(config?.ContentAssetsDir)
-                ? Path.Combine("Content", "Assets")
-                : config.ContentAssetsDir;
-
-            var sourceAssetsPath = Path.IsPathRooted(contentAssetsDir)
-                ? Path.GetFullPath(contentAssetsDir)
-                : Path.GetFullPath(Path.Combine(gameDir, contentAssetsDir));
-            if (Directory.Exists(sourceAssetsPath))
-                return sourceAssetsPath;
-        }
-
-        return Assets.EditorAssetsPath;
-    }
-
     void AssetMetaGenerate()
     {
-        var assetsPath = ResolveMetaAssetsPath();
+        var assetsPath = ProjectConfigUtils.ResolveAssetsRootPath();
         AssetDatabase.GenerateMetaAsset(assetsPath);
         AssetDatabase.GenerateAssetIndexFile(assetsPath);
     }
+    
+    
+    
+    /*TODO :
+        1. 这里应该有一个Play模式，和一个编辑模式
+        2. 编资产管理: 辑模式可以导入资产，创建资产依赖，编辑关卡，保存关卡
+        3. Gizmos
+    */
 }

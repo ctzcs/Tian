@@ -24,7 +24,7 @@ public class EditorModeWindow : EditorWindow
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
 		
 		//TODO 这里的问题是，当在编辑器中视口失去焦点的时候，由于Content直接读取的引擎的输入设备帧数据，导致无法在editor层屏蔽
-		if (ImGui.Begin("EditorScene", ImGuiWindowFlags.MenuBar))
+		if (ImGui.Begin("Viewport", ImGuiWindowFlags.MenuBar))
 		{
 			if (ImGui.BeginMenuBar())
 			{
@@ -41,7 +41,7 @@ public class EditorModeWindow : EditorWindow
                 if (content != null)
                 {
                     var world = content.World;
-                    if (world.HasUniqueEntity(Id.Coordinate))
+                    if (world != null && world.HasUniqueEntity(Id.Coordinate))
                     {
                         var coordinate = world.GetUniqueEntity(Id.Coordinate).GetComponent<Coordinate>();
                         ImGui.Text($"[{coordinate.MouseCoordinates.X}, {coordinate.MouseCoordinates.Y}]");
@@ -71,6 +71,13 @@ public class EditorModeWindow : EditorWindow
 					var wsize = size;
 					var center = wsize / 2;
 					var screenTarget = Data.currentContent.Target;
+					if (screenTarget == null || screenTarget.IsDisposed)
+					{
+						Data.ImRenderer.EndBatch();
+						ImGui.End();
+						ImGui.PopStyleVar(1);
+						return;
+					}
 					var scale = Calc.Min(
 						wsize.X / (float)screenTarget.Width,
 						wsize.Y / (float)screenTarget.Height

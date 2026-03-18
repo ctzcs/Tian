@@ -4,6 +4,9 @@ using Foster.Framework;
 
 namespace Engine.Core;
 
+/// <summary>
+/// 游戏项目配置模型，对应 Game/ProjectConfig.json。
+/// </summary>
 public class ProjectConfig
 {
     public string GameAssembly;
@@ -16,47 +19,138 @@ public class ProjectConfig
 }
 
 
+/// <summary>
+/// 项目配置与路径解析工具：负责定位 ProjectConfig、项目根目录、资源目录与程序集输出目录。
+/// </summary>
 public static class ProjectConfigUtils
 {
     private static string? cachedProjectConfigPath;
 
+
+    #region 最常用
+    /// <summary>
+    /// 解析项目根目录：优先由 ProjectConfig 推导，失败时回退到当前工作目录。
+    /// </summary>
+    public static string ResolveProjectRootPath()
+    {
+        var projectConfigPath = ResolveProjectConfigPath();
+        if (!string.IsNullOrWhiteSpace(projectConfigPath))
+            return GetProjectDirectory(projectConfigPath);
+        return Path.GetFullPath(Environment.CurrentDirectory);
+    }
+
+    /// <summary>
+    /// 解析资源根目录。优先获取ProjectConfig中的ContentAssetsDir，其次从运行目录向上探测 Assets 或 Content/Assets。
+    /// </summary>
+    public static string ResolveAssetsRootPath()
+    {
+        var projectConfigPath = ResolveProjectConfigPath();
+        if (!string.IsNullOrWhiteSpace(projectConfigPath))
+        {
+            var projectDir = GetProjectDirectory(projectConfigPath);
+            var config = LoadProjectConfig(projectConfigPath);
+            var contentAssetsDir = string.IsNullOrWhiteSpace(config?.ContentAssetsDir)
+                ? Path.Combine("Content", "Assets")
+                : config.ContentAssetsDir;
+
+            var normalizedAssetsDir = contentAssetsDir.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+            var assetsRoot = Path.IsPathRooted(normalizedAssetsDir)
+                ? normalizedAssetsDir
+                : Path.Combine(projectDir, normalizedAssetsDir);
+            var fullAssetsRoot = Path.GetFullPath(assetsRoot);
+            if (Directory.Exists(fullAssetsRoot))
+                return fullAssetsRoot;
+        }
+
+        var baseDir = AppContext.BaseDirectory;
+        var up = "";
+        for (int i = 0; i < 12; i++)
+        {
+            var candidate = Path.GetFullPath(Path.Combine(baseDir, up, "Assets"));
+            if (Directory.Exists(candidate))
+                return candidate;
+
+            var contentCandidate = Path.GetFullPath(Path.Combine(baseDir, up, "Content", "Assets"));
+            if (Directory.Exists(contentCandidate))
+                return contentCandidate;
+
+            up = Path.Combine(up, "..");
+        }
+
+        throw new DirectoryNotFoundException("Cannot resolve assets root path.");
+    }
+
+
+
+    /// <summary>
+    /// 按缓存、本地编辑器记录、当前目录、运行目录、祖先目录等顺序解析可用的 ProjectConfig.json 路径。
+    /// 找不到时返回 null。
+    ///
+    /// Environment.CurrentDirectory由当前所在的目录决定，Rider里运行通常是工作目录
+    /// 靠锚点文件ProjectConfig.json来获取根目录
+    /// </summary>
     public static string? ResolveProjectConfigPath()
     {
         if (TryGetValidProjectConfigPath(cachedProjectConfigPath, out var cached))
             return cached;
-
-        var configured = LoadEditorProjectConfigPath();
-        if (TryGetValidProjectConfigPath(configured, out var cfg))
-        {
-            cachedProjectConfigPath = cfg;
-            return cfg;
-        }
-
-        var cwdCandidate = Path.Combine(Environment.CurrentDirectory, ProjectConfig.ProjectConfigFile);
-        if (TryGetValidProjectConfigPath(cwdCandidate, out var cwd))
-            return cwd;
-
-        var baseCandidate = Path.Combine(AppContext.BaseDirectory, ProjectConfig.ProjectConfigFile);
-        if (TryGetValidProjectConfigPath(baseCandidate, out var basePath))
-            return basePath;
+        
+        var fromBase = TryFindProjectConfigFromAncestors(AppContext.BaseDirectory);
+        if (TryGetValidProjectConfigPath(fromBase, out var baseAncestor))
+            return baseAncestor;
 
         var fromCurrent = TryFindProjectConfigFromAncestors(Environment.CurrentDirectory);
         if (TryGetValidProjectConfigPath(fromCurrent, out var currentAncestor))
             return currentAncestor;
 
-        var fromBase = TryFindProjectConfigFromAncestors(AppContext.BaseDirectory);
-        if (TryGetValidProjectConfigPath(fromBase, out var baseAncestor))
-            return baseAncestor;
+        var baseCandidate = Path.Combine(AppContext.BaseDirectory, ProjectConfig.ProjectConfigFile);
+        if (TryGetValidProjectConfigPath(baseCandidate, out var basePath))
+            return basePath;
+
+        var cwdCandidate = Path.Combine(Environment.CurrentDirectory, ProjectConfig.ProjectConfigFile);
+        if (TryGetValidProjectConfigPath(cwdCandidate, out var cwd))
+            return cwd;
 
         return null;
     }
-
+    
+    #endregion
+    
+    /// <summary>
+    /// 根据 ProjectConfig.json 文件路径获取项目根目录。
+    /// </summary>
     public static string GetProjectDirectory(string configPath)
     {
         var dir = Path.GetDirectoryName(configPath);
         return string.IsNullOrWhiteSpace(dir) ? Environment.CurrentDirectory : dir;
     }
+    
+    /// <summary>
+    /// 解析构建输出目录绝对路径。
+    /// buildOutputDir 为空时默认使用 Build。
+    /// </summary>
+    public static string ResolveBuildOutputRootPath(string projectDir, string? buildOutputDir = null)
+    {
+        var normalizedBuildOutputDir = string.IsNullOrWhiteSpace(buildOutputDir)
+            ? "Build"
+            : buildOutputDir.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
+        var outputDir = Path.IsPathRooted(normalizedBuildOutputDir)
+            ? normalizedBuildOutputDir
+            : Path.Combine(projectDir, normalizedBuildOutputDir);
+
+        return Path.GetFullPath(outputDir);
+    }
+
+   
+    /// <summary>
+    /// 解析程序集文件路径。
+    /// 先在构建输出目录递归查找，再尝试项目根目录直接路径。
+    /// 找不到时返回 null。
+    /// </summary>
+    /// <param name="projectDir">项目文件夹</param>
+    /// <param name="assemblyName">程序集文件夹</param>
+    /// <param name="buildOutputDir">项目自定义输出路径，不传时走默认 Build</param>
+    /// <returns></returns>
     public static string? ResolveAssemblyPath(string projectDir, string assemblyName, string? buildOutputDir = null)
     {
         if (string.IsNullOrWhiteSpace(assemblyName))
@@ -68,51 +162,25 @@ public static class ProjectConfigUtils
         if (string.IsNullOrWhiteSpace(projectDir))
             return null;
 
-        if (!string.IsNullOrWhiteSpace(buildOutputDir))
+        var outputDir = ResolveBuildOutputRootPath(projectDir, buildOutputDir);
+        if (Directory.Exists(outputDir))
         {
-            var normalizedBuildOutputDir = buildOutputDir
-                .Replace('\\', Path.DirectorySeparatorChar)
-                .Replace('/', Path.DirectorySeparatorChar);
-            var outputDir = Path.IsPathRooted(normalizedBuildOutputDir)
-                ? normalizedBuildOutputDir
-                : Path.Combine(projectDir, normalizedBuildOutputDir);
-            if (Directory.Exists(outputDir))
-            {
-                var match = Directory.EnumerateFiles(outputDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(match))
-                    return match;
-            }
+            var match = Directory.EnumerateFiles(outputDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(match))
+                return match;
         }
 
         var direct = Path.Combine(projectDir, assemblyName);
         if (File.Exists(direct))
             return direct;
 
-        var buildDir = Path.Combine(projectDir, "Build");
-        if (Directory.Exists(buildDir))
-        {
-            var match = Directory.EnumerateFiles(buildDir, assemblyName, SearchOption.AllDirectories).FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(match))
-                return match;
-        }
-
         return null;
     }
 
-    public static bool SetProjectConfigPath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        var fullPath = Path.GetFullPath(path);
-        if (!File.Exists(fullPath))
-            return false;
-
-        cachedProjectConfigPath = fullPath;
-        SaveEditorProjectConfigPath(fullPath);
-        return true;
-    }
-
+    /// <summary>
+    /// 从磁盘加载并反序列化 ProjectConfig。
+    /// 文件不存在或格式错误时返回 null。
+    /// </summary>
     public static ProjectConfig? LoadProjectConfig(string path)
     {
         if (!File.Exists(path))
@@ -129,9 +197,12 @@ public static class ProjectConfigUtils
             return null;
         }
     }
-    
-    
-    
+
+    #region Private
+
+    /// <summary>
+    /// 验证候选 ProjectConfig 路径是否可用，并输出规范化后的绝对路径。
+    /// </summary>
     private static bool TryGetValidProjectConfigPath(string? path, out string resolved)
     {
         resolved = string.Empty;
@@ -149,6 +220,9 @@ public static class ProjectConfigUtils
         return true;
     }
 
+    /// <summary>
+    /// 从给定目录开始向上查找 Game/ProjectConfig.json。
+    /// </summary>
     private static string? TryFindProjectConfigFromAncestors(string startDir)
     {
         if (string.IsNullOrWhiteSpace(startDir))
@@ -166,55 +240,7 @@ public static class ProjectConfigUtils
         return null;
     }
 
-    private static string GetEditorProjectConfigPath()
-    {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TianEngine",
-            "Editor",
-            "project.json");
-    }
-
-    private static string? LoadEditorProjectConfigPath()
-    {
-        var path = GetEditorProjectConfigPath();
-        if (!File.Exists(path))
-            return null;
-        try
-        {
-            var json = File.ReadAllText(path);
-            var options = new JsonSerializerOptions { IncludeFields = true,PropertyNameCaseInsensitive = true };
-            var cfg = JsonSerializer.Deserialize<EditorProjectConfig>(json, options);
-            return cfg?.ProjectConfigPath;
-        }
-        catch (Exception e)
-        {
-            Log.Info($"Failed to load editor project config: {e.Message}");
-            return null;
-        }
-    }
-
-    private static void SaveEditorProjectConfigPath(string projectConfigPath)
-    {
-        try
-        {
-            var path = GetEditorProjectConfigPath();
-            var dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrWhiteSpace(dir))
-                Directory.CreateDirectory(dir);
-
-            var payload = new EditorProjectConfig { ProjectConfigPath = projectConfigPath };
-            var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
-            File.WriteAllText(path, json);
-        }
-        catch (Exception e)
-        {
-            Log.Info($"Failed to save editor project config: {e.Message}");
-        }
-    }
-
-    private sealed class EditorProjectConfig
-    {
-        public string ProjectConfigPath;
-    }
+    #endregion
+    
+    
 }

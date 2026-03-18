@@ -29,7 +29,7 @@ public class PerformanceWindow : EditorWindow
         {
             var world = Data.currentContent.World;
             var systemGroups = Data.currentContent.SystemGroups;
-            if (world.HasUniqueEntity(Id.Performance))
+            if (world != null && world.HasUniqueEntity(Id.Performance))
             {
                 var entity = world.GetUniqueEntity(Id.Performance);
                 ref var counter = ref entity.GetComponent<FrameCounter>();

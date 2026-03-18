@@ -21,6 +21,7 @@ public class GameApp : App
         contentManager = new ContentManager();
         //加载ProjectConfig
         var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
+        Log.Info("Get Project Config Path: " + projectConfigPath);
         if (string.IsNullOrWhiteSpace(projectConfigPath))
         {
             Log.Error("ProjectConfig.json not found");

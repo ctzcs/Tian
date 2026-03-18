@@ -1,3 +1,4 @@
+using System;
 using Engine.Core;
 using Engine.Editor;
 using Foster.Framework;
@@ -5,7 +6,7 @@ using Friflo.Engine.ECS;
 
 namespace Editor;
 
-public class EditorData:IDisposable
+public class EditorData : IDisposable
 {
     public Renderer ImRenderer;
     public IContent? currentContent;

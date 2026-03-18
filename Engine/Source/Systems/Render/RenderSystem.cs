@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Components;
 using Engine.Core.Extensions;
+using Engine.Core.Graphics;
 using Engine.Performance;
 using Engine.Render;
 using Engine.Utility;
@@ -66,6 +67,11 @@ public class RenderSystem:QuerySystem
         ctx = app;
         this.batcher = batcher;
         this.renderTarget = renderTarget;
+    }
+
+    public RenderSystem(App app, RenderContext renderContext)
+        : this(app, renderContext.Batcher, renderContext.Target)
+    {
     }
 
     protected override void OnAddStore(EntityStore store)
