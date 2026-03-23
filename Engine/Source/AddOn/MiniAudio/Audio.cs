@@ -1,4 +1,6 @@
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using Engine.Asset;
 using Engine.Asset.Pipeline;
@@ -22,8 +24,7 @@ public class Audio
         Asset.v1.AssetsV1.LazyInitializeCache("pack.zip");
 
         var indexFile = AssetDatabase.CreateOrGetAssetMetaBankFile("Assets/AssetMetaBank.json");
-        
-        
+        //TODO 这里的要去掉用guid加载
         var guid = Guid.Parse("807d313f-7635-4d9b-b05d-4d05584f78b2");
         var assetId = new AssetId(guid);
 
@@ -32,7 +33,7 @@ public class Audio
             Log.Info($"Index path: {guid}  {assetId}  {path}");
         }
         
-        if (!AssetsV1.TryOpenCachedEntry(path/*"Audio/shortcuts.ogg"*/, out var stream))
+        if (!AssetsV1.TryOpenCachedEntry("Audio/shortcuts.ogg", out var stream))
             return;
         if (stream == null)
         {

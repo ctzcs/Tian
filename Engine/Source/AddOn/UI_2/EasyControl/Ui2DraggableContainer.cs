@@ -3,12 +3,12 @@ using Foster.Framework;
 
 namespace Engine.UI_2;
 
-public class Ui2DraggableContainer : ColumnGroup
+public class Ui2DraggableContainer : VContainer
 {
-    public RowGroup Header { get; }
+    public HContainer Header { get; }
     public Ui2DragHandle Handle { get; }
     public UIText Title { get; }
-    public ColumnGroup Content { get; }
+    public VContainer Content { get; }
 
     Vector2 dragOffset;
     bool dragging;
@@ -25,7 +25,7 @@ public class Ui2DraggableContainer : ColumnGroup
         layout.AlignY = VerticalAlignment.Start;
         Layout = layout;
 
-        Header = new RowGroup
+        Header = new HContainer
         {
             Gap = 4f
         };
@@ -46,7 +46,7 @@ public class Ui2DraggableContainer : ColumnGroup
 
         Header.WithChildren(Handle, Title);
 
-        Content = new ColumnGroup
+        Content = new VContainer
         {
             Gap = 4f
         };

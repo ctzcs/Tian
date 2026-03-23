@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Engine.Asset;
 using Engine.Core;
 using Foster.Framework;
 using Friflo.Engine.ECS;
@@ -7,9 +6,11 @@ using Friflo.Engine.ECS.Serialize;
 
 namespace Engine.Asset.Pipeline;
 
+//TODO 这里有一部分是EditorOnly的
+
 public class AssetDatabase
 {
-
+    
     public static string AssetMetaBankFile => "AssetsMetaBank.json";
 
     public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions()

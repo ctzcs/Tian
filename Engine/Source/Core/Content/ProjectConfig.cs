@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using Engine.Asset;
 using Foster.Framework;
 
@@ -18,7 +21,9 @@ public class ProjectConfig
     public static string ProjectConfigFile => "ProjectConfig.json";
 }
 
-
+///
+///TODO 这里修改的时候考虑三个问题 1. Editor在Build中如何获取项目中的Assets文件夹 2. Editor在Build中如何获取Build中的Assets文件夹 3. 游戏中如何获取Zip文件
+/// 
 /// <summary>
 /// 项目配置与路径解析工具：负责定位 ProjectConfig、项目根目录、资源目录与程序集输出目录。
 /// </summary>
@@ -27,7 +32,7 @@ public static class ProjectConfigUtils
     private static string? cachedProjectConfigPath;
 
 
-    #region 最常用
+    #region EditorOnly
     /// <summary>
     /// 解析项目根目录：优先由 ProjectConfig 推导，失败时回退到当前工作目录。
     /// </summary>
@@ -40,6 +45,9 @@ public static class ProjectConfigUtils
     }
 
     /// <summary>
+    /// TODO 这个方法有问题，Editor中应该可以定位，Runner中应该是直接从zip获取 
+    /// 
+    /// 这里是直接寻找文件夹的方式不打zip包，目前这里默认文件夹应该是Game文件夹，
     /// 解析资源根目录。优先获取ProjectConfig中的ContentAssetsDir，其次从运行目录向上探测 Assets 或 Content/Assets。
     /// </summary>
     public static string ResolveAssetsRootPath()
@@ -79,10 +87,10 @@ public static class ProjectConfigUtils
 
         throw new DirectoryNotFoundException("Cannot resolve assets root path.");
     }
-
-
-
+    
+    
     /// <summary>
+    /// Editor Only
     /// 按缓存、本地编辑器记录、当前目录、运行目录、祖先目录等顺序解析可用的 ProjectConfig.json 路径。
     /// 找不到时返回 null。
     ///

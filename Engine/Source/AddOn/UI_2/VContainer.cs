@@ -4,7 +4,10 @@ using Foster.Framework;
 
 namespace Engine.UI_2;
 
-public class RowGroup : UIElement
+/// <summary>
+/// 垂直容器，排成一列
+/// </summary>
+public class VContainer : UIElement
 {
     public float Gap { get; set; }
 
@@ -12,9 +15,9 @@ public class RowGroup : UIElement
     readonly List<UIElement> pixelChildren = new();
     readonly List<UIElement> ratioChildren = new();
 
-    public RowGroup()
+    public VContainer()
     {
-        Layout.LayoutType = LayoutType.Row;
+        Layout.LayoutType = LayoutType.Column;
     }
 
     public override Vector2 Measure(Vector2 availableSize)
@@ -22,10 +25,10 @@ public class RowGroup : UIElement
         float innerW = availableSize.X - Layout.PaddingLeft - Layout.PaddingRight;
         float innerH = availableSize.Y - Layout.PaddingTop - Layout.PaddingBottom;
 
-        float totalBaseWidth = 0f;
-        float totalMarginX = 0f;
-        float maxHeight = 0f;
-        float maxMarginY = 0f;
+        float totalBaseHeight = 0f;
+        float totalMarginY = 0f;
+        float maxWidth = 0f;
+        float maxMarginX = 0f;
         int visibleCount = 0;
         float totalGrow = 0f;
 
@@ -40,31 +43,31 @@ public class RowGroup : UIElement
 
             var childSize = child.Measure(new Vector2(innerW - marginX, innerH - marginY));
 
-            float baseWidth = childSize.X;
-            if (style.Grow > 0f && style.Width <= 0f)
-                baseWidth = 0f;
+            float baseHeight = childSize.Y;
+            if (style.Grow > 0f && style.Height <= 0f)
+                baseHeight = 0f;
 
-            totalBaseWidth += baseWidth;
-            totalMarginX += marginX;
+            totalBaseHeight += baseHeight;
+            totalMarginY += marginY;
             totalGrow += style.Grow;
 
-            float blockHeight = childSize.Y + marginY;
-            if (blockHeight > maxHeight)
-                maxHeight = blockHeight;
-            if (marginY > maxMarginY)
-                maxMarginY = marginY;
+            float blockWidth = childSize.X + marginX;
+            if (blockWidth > maxWidth)
+                maxWidth = blockWidth;
+            if (marginX > maxMarginX)
+                maxMarginX = marginX;
             visibleCount++;
         }
 
         if (visibleCount > 1)
-            totalBaseWidth += Gap * (visibleCount - 1);
+            totalBaseHeight += Gap * (visibleCount - 1);
 
-        float contentWidth = totalBaseWidth + totalMarginX;
-        if (totalGrow > 0f && contentWidth < innerW)
-            contentWidth = innerW;
+        float contentHeight = totalBaseHeight + totalMarginY;
+        if (totalGrow > 0f && contentHeight < innerH)
+            contentHeight = innerH;
 
-        float width = contentWidth + Layout.PaddingLeft + Layout.PaddingRight;
-        float height = maxHeight + Layout.PaddingTop + Layout.PaddingBottom;
+        float width = maxWidth + Layout.PaddingLeft + Layout.PaddingRight;
+        float height = contentHeight + Layout.PaddingTop + Layout.PaddingBottom;
 
         if (Layout.Width > 0f)
             width = Layout.Width;
@@ -95,8 +98,8 @@ public class RowGroup : UIElement
         measuredPixel.Clear();
         pixelChildren.Clear();
         ratioChildren.Clear();
-        float totalBaseContentWidth = 0f;
-        float totalMarginX = 0f;
+        float totalBaseContentHeight = 0f;
+        float totalMarginY = 0f;
         float totalGrow = 0f;
         float totalShrink = 0f;
 
@@ -117,14 +120,14 @@ public class RowGroup : UIElement
             measuredPixel.Add(size);
             pixelChildren.Add(child);
 
-            float baseWidth = size.X;
-            if (style.Grow > 0f && style.Width <= 0f)
-                baseWidth = 0f;
+            float baseHeight = size.Y;
+            if (style.Grow > 0f && style.Height <= 0f)
+                baseHeight = 0f;
 
-            float marginX = style.MarginLeft + style.MarginRight;
+            float marginY = style.MarginTop + style.MarginBottom;
 
-            totalBaseContentWidth += baseWidth;
-            totalMarginX += marginX;
+            totalBaseContentHeight += baseHeight;
+            totalMarginY += marginY;
             totalGrow += style.Grow;
             if (style.Shrink > 0f)
                 totalShrink += style.Shrink;
@@ -132,39 +135,39 @@ public class RowGroup : UIElement
 
         int pixelCount = pixelChildren.Count;
 
-        float totalWidth = totalBaseContentWidth + totalMarginX;
+        float totalHeight = totalBaseContentHeight + totalMarginY;
         if (pixelCount > 1)
-            totalWidth += Gap * (pixelCount - 1);
+            totalHeight += Gap * (pixelCount - 1);
 
-        float free = innerW - totalWidth;
+        float free = innerH - totalHeight;
         if (free < 0f)
             free = 0f;
 
-        float overflow = totalWidth - innerW;
+        float overflow = totalHeight - innerH;
         if (overflow < 0f)
             overflow = 0f;
 
-        float x = innerX;
+        float y = innerY;
         for (int i = 0; i < pixelCount; i++)
         {
             var child = pixelChildren[i];
             var size = measuredPixel[i];
             var style = child.Layout;
 
-            float baseWidth = size.X;
-            if (style.Grow > 0f && style.Width <= 0f)
-                baseWidth = 0f;
+            float baseHeight = size.Y;
+            if (style.Grow > 0f && style.Height <= 0f)
+                baseHeight = 0f;
 
-            float width = baseWidth;
+            float height = baseHeight;
             if (totalGrow > 0f && style.Grow > 0f)
-                width += free * (style.Grow / totalGrow);
+                height += free * (style.Grow / totalGrow);
 
             if (overflow > 0f && totalShrink > 0f && style.Shrink > 0f)
             {
                 float shrinkDelta = overflow * (style.Shrink / totalShrink);
-                width -= shrinkDelta;
-                if (width < 0f)
-                    width = 0f;
+                height -= shrinkDelta;
+                if (height < 0f)
+                    height = 0f;
             }
 
             float marginLeft = style.MarginLeft;
@@ -172,34 +175,34 @@ public class RowGroup : UIElement
             float marginTop = style.MarginTop;
             float marginBottom = style.MarginBottom;
 
-            float height = size.Y;
-            if (height <= 0f || Layout.AlignY == VerticalAlignment.Stretch)
-                height = innerH - marginTop - marginBottom;
+            float width = size.X;
+            if (width <= 0f || Layout.AlignX == HorizontalAlignment.Stretch)
+                width = innerW - marginLeft - marginRight;
 
-            if (height < 0f)
-                height = 0f;
+            if (width < 0f)
+                width = 0f;
 
-            float y;
-            switch (Layout.AlignY)
+            float x;
+            switch (Layout.AlignX)
             {
-                case VerticalAlignment.Start:
-                    y = innerY + marginTop;
+                case HorizontalAlignment.Start:
+                    x = innerX + marginLeft;
                     break;
-                case VerticalAlignment.End:
-                    y = innerY + innerH - marginBottom - height;
+                case HorizontalAlignment.End:
+                    x = innerX + innerW - marginRight - width;
                     break;
-                case VerticalAlignment.Center:
-                    y = innerY + marginTop + (innerH - marginTop - marginBottom - height) * 0.5f;
+                case HorizontalAlignment.Center:
+                    x = innerX + marginLeft + (innerW - marginLeft - marginRight - width) * 0.5f;
                     break;
-                case VerticalAlignment.Stretch:
+                case HorizontalAlignment.Stretch:
                 default:
-                    y = innerY + marginTop;
+                    x = innerX + marginLeft;
                     break;
             }
 
-            float contentX = x + marginLeft;
-            child.Arrange(new Rect(contentX, y, width, height));
-            x += marginLeft + width + marginRight + Gap;
+            float contentY = y + marginTop;
+            child.Arrange(new Rect(x, contentY, width, height));
+            y += marginTop + height + marginBottom + Gap;
         }
 
         foreach (var child in ratioChildren)

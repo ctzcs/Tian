@@ -12,6 +12,9 @@ public static partial class AssetsV1
     private static string? CachedZipPath { get; set; }
 
     public static ZipArchive Zip => _zip;
+
+
+    #region LifeTime
     /// <summary>
     /// 初始化
     /// </summary>
@@ -41,6 +44,21 @@ public static partial class AssetsV1
         InitializeCache(zipPath);
     }
     
+    public static void DisposeCache()
+    {
+        _index?.Clear();
+        _index = null;
+        _zip?.Dispose();
+        _zip = null;
+        _fs?.Dispose();
+        _fs = null;
+        CachedZipPath = null;
+    }
+    
+
+    #endregion
+    
+    
     /// <summary>
     /// 这里拿到的是不用解压的数据流，如果已经是gz格式，那么还需要再解压
     /// 如果已经是普通格式：
@@ -50,7 +68,7 @@ public static partial class AssetsV1
     /// 如果还需再解压，继续将其放入Gzip流
     ///  using var gZipStream = new GZipStream(stream,CompressionMode.Decompress, true);
     /// </summary>
-    /// <param name="relativePath"></param>
+    /// <param name="relativePath">从Assets作为根目录的相对路径</param>
     /// <param name="stream"></param>
     /// <returns></returns>
     public static bool TryOpenCachedEntry(string relativePath, out Stream? stream)
@@ -75,17 +93,39 @@ public static partial class AssetsV1
         stream = entry.Open();
         return true;
     }
-
-    public static void DisposeCache()
+    
+    public static bool TryReadCachedBytes(string relativePath, out byte[] bytes)
     {
-        _index?.Clear();
-        _index = null;
-        _zip?.Dispose();
-        _zip = null;
-        _fs?.Dispose();
-        _fs = null;
-        CachedZipPath = null;
+        bytes = Array.Empty<byte>();
+        if (!TryOpenCachedEntry(relativePath, out var stream) || stream == null)
+            return false;
+
+        using (stream)
+        {
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            bytes = ms.ToArray();
+        }
+        return bytes.Length > 0;
     }
+
+    public static bool TryReadCachedImage(string relativePath, out Image image)
+    {
+        image = null;
+        if (!TryOpenCachedEntry(relativePath, out var stream) || stream == null)
+            return false;
+
+        using (stream)
+        {
+            image = new Image(stream);
+            return true;
+        }
+    }
+    
+    
+    
+
+    
 }
 
 /// <summary>

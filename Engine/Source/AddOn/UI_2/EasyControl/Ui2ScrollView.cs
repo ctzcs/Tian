@@ -35,7 +35,7 @@ public class Ui2ScrollView : UIElement
         BackgroundEnabled = false;
         ClipChildren = true;
 
-        Content = new ColumnGroup();
+        Content = new VContainer();
         AddChild(Content);
 
         scrollBar = new Ui2Slider

@@ -52,7 +52,7 @@ public class Ui2DragHandle : UIElement
     }
 }
 
-public class Ui2ReorderableColumn : ColumnGroup
+public class Ui2ReorderableColumn : VContainer
 {
     UIElement draggingItem;
     UIElement dragPlaceholder;
@@ -117,7 +117,7 @@ public class Ui2ReorderableColumn : ColumnGroup
 
     public void AddItem(string text)
     {
-        var row = new RowGroup
+        var row = new HContainer
         {
             Gap = 4f
         }
@@ -195,7 +195,7 @@ public class Ui2ReorderableColumn : ColumnGroup
 
                 Children.Insert(originalIndex, dragPlaceholder);
 
-                var ghostRow = new RowGroup
+                var ghostRow = new HContainer
                 {
                     Gap = row.Gap
                 }
