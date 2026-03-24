@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using Foster.Framework;
 using Friflo.Engine.ECS;
+using Friflo.Json.Fliox;
 using Cursor = Engine.Core.Input.Cursor;
 
 
@@ -20,6 +21,12 @@ public struct Camera2D:IComponent
     public float zoom;// Camera zoom (scaling), should be 1.0f by default
 
     public int pixelsPerUnit;
+
+    [Ignore]
+    public Matrix3x2 worldToScreenMatrix;
+
+    [Ignore]
+    public Matrix3x2 screenToWorldMatrix;
     
 }
 
@@ -158,6 +165,12 @@ public static class CameraUtils
         result *= matTranslation;
         return result;*/
         return GetViewMatrix(transform, camera) * GetProjectionMatrix(camera);
+    }
+
+    public static void UpdateCachedMatrices(ref Camera2D camera, in CTransform transform)
+    {
+        camera.worldToScreenMatrix = GetCameraMatrix(transform, camera);
+        Matrix3x2.Invert(camera.worldToScreenMatrix, out camera.screenToWorldMatrix);
     }
     
     //世界到相机矩阵

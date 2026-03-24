@@ -21,7 +21,6 @@ public class RenderSystem:QuerySystem
 {
     /*private const int BatchRenderCount = 32768;*/
     private Batcher batcher;
-    private Target renderTarget;
     private int renderCount = 0;
     private readonly OrderRecord[] entities = new OrderRecord[1_000_000];
     private int entityCount = 0;
@@ -63,15 +62,19 @@ public class RenderSystem:QuerySystem
         }
     }
     
-    public RenderSystem(App app,Batcher batcher,Target renderTarget)
+    public RenderSystem(App app, Batcher batcher)
     {
         ctx = app;
         this.batcher = batcher;
-        this.renderTarget = renderTarget;
+    }
+
+    public RenderSystem(App app,Batcher batcher,Target renderTarget)
+        : this(app, batcher)
+    {
     }
 
     public RenderSystem(App app, RenderContext renderContext)
-        : this(app, renderContext.Batcher, renderContext.Target)
+        : this(app, renderContext.Batcher)
     {
     }
 
@@ -198,8 +201,9 @@ public class RenderSystem:QuerySystem
             }
             sr.DrawGeometry(batcher, in transform, ppu);
             renderCount++;
-            if (currentMaterial != null) batcher.PopMaterial();
         });
-        
+
+        if (currentMaterial != null)
+            batcher.PopMaterial();
     }
 }
