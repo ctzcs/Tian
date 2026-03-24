@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Engine.Asset.v1;
 using Foster.Framework;
 
@@ -143,62 +143,57 @@ public static partial class Assets
         //png图集？
     }
 
-    public static void LoadSpritesFromGz(GraphicsDevice gfx)
+    public static void LoadSpritesFromGz(GraphicsDevice gfx, string spriteSubDirectory = "Sprites")
     {
+        Log.Info("load: sprite from gz");
         DeleteCache();
         var zipArchive= AssetsV1.Zip;
-        //var spritesPath = Path.Join(AssetsPath, "Sprites");
         var aseFiles = new Dictionary<string, Aseprite>();
         var imageFiles = new Dictionary<string, Image>();
         
+        var subDir = spriteSubDirectory.Replace('\\', '/').Trim('/');
+        var subDirPrefix = subDir + "/";
+
         foreach (var entry in zipArchive.Entries)
         {
-            var ext = Path.GetExtension(entry.FullName);
-            if (string.Equals(ext, ".ase", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(ext, ".asesprite", StringComparison.OrdinalIgnoreCase))
-            {
-                var name = Path.ChangeExtension(entry.Name, null);
-                Log.Info($"packing:" + name);
-                try
-                {
-                    using var stream = entry.Open();
-                    using var ms = new MemoryStream();
-                    stream.CopyTo(ms);
-                    ms.Position = 0;
-                    var ase = new Aseprite(ms);
-                    if (ase.Frames.Length > 0)
-                        aseFiles.Add(name, ase);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-            } 
-            else if(string.Equals(ext,".png", StringComparison.OrdinalIgnoreCase))
-            {
-                var name = Path.ChangeExtension(entry.Name, null);
-                Log.Info($"packing:" + name);
-                try
-                {
-                    using var stream = entry.Open();
-                    using var ms = new MemoryStream();
-                    stream.CopyTo(ms);
-                    ms.Position = 0;
-                    var png = new Image(ms);
-                    imageFiles.Add(name, png);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-            }
-            else
-            {
+            var relativePath = entry.FullName.Replace('\\', '/');
+            if (!relativePath.StartsWith(subDirPrefix, StringComparison.OrdinalIgnoreCase) ||
+                relativePath.EndsWith("/", StringComparison.Ordinal))
                 continue;
-            }
 
+            var ext = Path.GetExtension(relativePath);
+            var name = Path.ChangeExtension(relativePath.Substring(subDirPrefix.Length), null)!.Replace('\\', '/');
+            Log.Info($"packing: name-{name} full_name-{relativePath}");
+
+            if (!AssetsV1.TryOpenCachedEntry(relativePath, out var stream) || stream == null)
+                continue;
+
+            try
+            {
+                using (stream)
+                {
+                    using var ms = new MemoryStream();
+                    stream.CopyTo(ms);
+                    ms.Position = 0;
+
+                    if (string.Equals(ext, ".ase", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(ext, ".asesprite", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var ase = new Aseprite(ms);
+                        if (ase.Frames.Length > 0)
+                            aseFiles[name] = ase;
+                    }
+                    else if (string.Equals(ext, ".png", StringComparison.OrdinalIgnoreCase))
+                    {
+                        imageFiles[name] = new Image(ms);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
         
 		// 打包所有的sprites
