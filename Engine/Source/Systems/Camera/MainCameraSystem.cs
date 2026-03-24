@@ -18,6 +18,8 @@ public partial class MainCameraSystem:QuerySystem
     private float scaleSpeed;
     private float deltaTime;
     private int pixelsPerUnit;
+    private int lastViewportWidth = -1;
+    private int lastViewportHeight = -1;
     public MainCameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16)
     {
         this.ctx = ctx;
@@ -54,7 +56,7 @@ public partial class MainCameraSystem:QuerySystem
 #endif
         query.ForEachEntity((ref camera, ref transform, entity) =>
         {
-            camera.viewRectInPixels = new RectInt(0, 0, gameContent.Target.Width, gameContent.Target.Height);
+            SyncCameraViewport(ref camera, ref transform);
             
             if (ctx.Input.Keyboard.PressedOrRepeated(Keys.Right) 
                 || ctx.Input.Keyboard.PressedOrRepeated(Keys.D))
@@ -98,7 +100,8 @@ public partial class MainCameraSystem:QuerySystem
             {
                 transform.SetLocalRotation(transform.localRad + 1*Calc.DegToRad);
             }
-            
+
+            CameraUtils.UpdateCachedMatrices(ref camera, in transform);
         });
     }
 
@@ -106,13 +109,30 @@ public partial class MainCameraSystem:QuerySystem
     {
         if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
         var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
-        //TODO 除了直接Resize之外，还可以调控camera的缩放比例
-        // ref var c = ref cameraEntity.GetComponent<Camera2D>();
-        // CameraUtils.SetCameraRectToWindowSize(ref c,ctx.Window);
-        
         ref var c = ref cameraEntity.GetComponent<Camera2D>();
-        
-        c.viewRectInPixels = new RectInt(0, 0, gameContent.Target.Width, gameContent.Target.Height);
+        ref var t = ref cameraEntity.GetComponent<CTransform>();
+        SyncCameraViewport(ref c, ref t);
     }
-    
+
+    void SyncCameraViewport(ref Camera2D camera, ref CTransform transform)
+    {
+        var width = gameContent.Target.Width <= 0 ? 1 : gameContent.Target.Width;
+        var height = gameContent.Target.Height <= 0 ? 1 : gameContent.Target.Height;
+
+        if (lastViewportWidth == width && lastViewportHeight == height &&
+            camera.viewRectInPixels.Width == width && camera.viewRectInPixels.Height == height)
+            return;
+
+        var oldHeight = camera.viewRectInPixels.Height <= 0 ? height : camera.viewRectInPixels.Height;
+        if (oldHeight != height)
+        {
+            var zoomScale = (float)height / oldHeight;
+            camera.zoom = Calc.Clamp(camera.zoom * zoomScale, 0.001f, 20f);
+        }
+
+        camera.viewRectInPixels = new RectInt(0, 0, width, height);
+        lastViewportWidth = width;
+        lastViewportHeight = height;
+        CameraUtils.UpdateCachedMatrices(ref camera, in transform);
+    }
 }

@@ -6,6 +6,9 @@ using Cursor = Engine.Core.Input.Cursor;
 
 
 namespace Engine.Components;
+
+
+//编辑器中得缩放现在有问题了
 //首先让这个相机中直接有所需的数据，而不需要读取Transform
 public struct Camera2D:IComponent
 {
