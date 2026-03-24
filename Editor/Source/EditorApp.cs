@@ -217,9 +217,6 @@ public class EditorApp : App
 				ImGui.EndMenu();
 			}
             
-            
-
-
 			if (ImGui.BeginMenu("Panels"))
 			{
 				if (ImGui.MenuItem("ContentSelector"))
@@ -301,9 +298,17 @@ public class EditorApp : App
                 ImGui.EndMenu();
             }
             
+            // MenuBar 会自动横向排版，不会自动继承上一个元素的 Y 轴偏移
+            // 如果要统一控制按钮的 Y 轴偏移，最简单的做法是在每个按钮绘制前调整，或者修改 FramePadding
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 1f);
+            if (ImGui.Button("Play",  new Vector2(64,26))){}
             
-
-			
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 1f);
+            if (ImGui.Button("Pause", new Vector2(64,26))){}
+            
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 1f);
+            if (ImGui.Button("Stop",  new Vector2(64,26))){}
+            
 			ImGui.EndMainMenuBar();
 		}
 	}
@@ -322,5 +327,6 @@ public class EditorApp : App
         1. 这里应该有一个Play模式，和一个编辑模式
         2. 编资产管理: 辑模式可以导入资产，创建资产依赖，编辑关卡，保存关卡
         3. Gizmos
+        4. ImGui的使用问题太大了，有很多API不理解，绘制模式也不理解
     */
 }

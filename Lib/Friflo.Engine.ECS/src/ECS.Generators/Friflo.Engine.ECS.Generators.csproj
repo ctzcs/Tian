@@ -1,25 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>library</OutputType>
-    <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
+
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+      
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
-    <RootNamespace>Friflo.Engine.ECS</RootNamespace>
-    <AssemblyName>Friflo.Engine.ECS</AssemblyName>
+    <RootNamespace>Friflo.Engine.ECS.Generators</RootNamespace>
+    <AssemblyName>Friflo.Engine.ECS.Generators</AssemblyName>
     <LangVersion>12.0</LangVersion>
       
-    <IsTrimmable>true</IsTrimmable>
-    <IsAotCompatible>true</IsAotCompatible>
-
     <!-- packaging -->
     <PackageVersion>0.0.0</PackageVersion>
     <AssemblyVersion>0.0.0.0</AssemblyVersion>
     <FileVersion>0.0.0.0</FileVersion>
 
-    <Title>Friflo Engine ECS</Title>
+    <Title>friflo ECS - Source Generator</Title>
     <Authors>Ullrich Praetz</Authors>
-    <Description>Entity Component System - ECS - optimized for performance and cache locality</Description>
+    <Description>Source Generator to generate Query methods for: friflo ECS</Description>
     <Copyright>Ullrich Praetz</Copyright>
     <PackageProjectUrl>https://github.com/friflo/Friflo.Engine.ECS</PackageProjectUrl>
     <RepositoryUrl>https://github.com/friflo/Friflo.Engine.ECS</RepositoryUrl>
@@ -30,7 +32,7 @@
     <PackageIcon>package-icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PublishRepositoryUrl>false</PublishRepositoryUrl>
-    <IncludeSymbols>true</IncludeSymbols>
+    <!-- <IncludeSymbols>true</IncludeSymbols> -->
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EmbedAllSources>true</EmbedAllSources>
     <!-- packaging: end -->
@@ -50,7 +52,6 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>1591</NoWarn>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
@@ -66,13 +67,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Friflo.Json.Fliox" Version="1.0.4" />
-      
-    <!-- System.Runtime is required by System.Runtime.CompilerServices.RuntimeFeature for NativeAOT
-    <PackageReference Include="System.Runtime" Version="4.3.1" />  -->
-      
-    <!-- System.Runtime.CompilerServices.Unsafe is required by Unity -->
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

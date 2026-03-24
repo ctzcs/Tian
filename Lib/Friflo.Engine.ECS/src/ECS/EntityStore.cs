@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Friflo.Engine.ECS.Serialize;
 using static System.Diagnostics.DebuggerBrowsableState;
 using static Friflo.Engine.ECS.StoreOwnership;
@@ -79,7 +80,49 @@ public sealed partial class EntityStore : EntityStoreBase
     /// <summary> Return the largest entity <see cref="Entity.Id"/> store in the entity store. </summary>
     [Browse(Never)] public              int                 NodeMaxId        => nodes.Length - 1;
     #endregion
+
+#region user data
+    /// <summary> Method not intended to be used by user code. </summary>
+    /// <remarks> Method is used for generated query methods. </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static object UserDataGet(EntityStore store, int slot)
+    {
+        var slots = store.userDataSlots;
+        if (slot < slots.Length) { 
+            return slots[slot];
+        }
+        return null;
+    }
+
+    /// <summary> Method not intended to be used by user code. </summary>
+    /// <remarks> Method is used for generated query methods. </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static void UserDataSet(EntityStore store, int slot, object data)
+    {
+        var slots = store.userDataSlots;
+        if (slot >= slots.Length) {
+            var map = new object[UserDataMaxSlot];
+            Array.Copy(slots, map, slots.Length);
+            slots = store.userDataSlots = map;
+        }
+        slots[slot] = data;
+    }
     
+    /// <summary> Method not intended to be used by user code. </summary>
+    /// <remarks> Method is used for generated query methods. </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static int UserDataNewSlot() {
+        return UserDataMaxSlot++;
+    }
+    
+    [Browse(Never)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    private object[] userDataSlots = [];
+    
+    [Browse(Never)]
+    private static int UserDataMaxSlot;
+    #endregion
+
 #region events
     /// <summary>Add / remove an event handler for <see cref="ECS.ChildEntitiesChanged"/> events triggered by:<br/>
     /// <see cref="Entity.AddChild"/> <br/> <see cref="Entity.InsertChild"/> <br/> <see cref="Entity.RemoveChild"/>.</summary>
