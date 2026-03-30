@@ -15,7 +15,7 @@ public partial class MainCameraSystem:QuerySystem
     private EntityStore world;
     private App ctx;
     private float speed;
-    private float scaleSpeed;
+    private float zoomStep;
     private float deltaTime;
     private int pixelsPerUnit;
     private int lastViewportWidth = -1;
@@ -24,7 +24,7 @@ public partial class MainCameraSystem:QuerySystem
     {
         this.ctx = ctx;
         speed = 10;
-        scaleSpeed = 5;
+        zoomStep = 0.25f;
         this.gameContent = gameContent;
         this.pixelsPerUnit = pixelsPerUnit;
     }
@@ -33,7 +33,8 @@ public partial class MainCameraSystem:QuerySystem
     {
         base.OnAddStore(store);
         world = store;
-        CameraUtils.CreateCamera(Engine.Id.MainCamera,gameContent.Target,world,0,Vector2.One,2.5f,pixelsPerUnit);
+        var orthographicSize = CameraUtils.ZoomToOrthographicSize(gameContent.Target.Height, 2.5f, pixelsPerUnit);
+        CameraUtils.CreateCamera(Engine.Id.MainCamera,gameContent.Target,world,0,Vector2.One,orthographicSize,pixelsPerUnit);
         ctx.Window.OnResize += OnResize;
     }
 
@@ -82,15 +83,12 @@ public partial class MainCameraSystem:QuerySystem
                 transform.SetLocalPosition(transform.localPosition);
             }
 
-            if (ctx.Input.Mouse.Wheel.Y < 0)
+            var wheel = ctx.Input.Mouse.Wheel.Y;
+            if (wheel != 0)
             {
-                var screenPosition = Cursor.GetScreenPosition(new Vector2(gameContent.Target.Width, gameContent.Target.Height));
-                CameraUtils.ZoomAround(ref transform,ref camera,screenPosition,deltaTime * scaleSpeed);
-                
-            }else if (ctx.Input.Mouse.Wheel.Y > 0)
-            {
-                var screenPosition = Cursor.GetScreenPosition(new Vector2(gameContent.Target.Width, gameContent.Target.Height));
-                CameraUtils.ZoomAround(ref transform,ref camera,screenPosition,-deltaTime * scaleSpeed);
+                var screenPosition = Cursor.GetScreenPosition(new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height));
+                var zoomDelta = -wheel * zoomStep;
+                CameraUtils.ZoomAround(ref transform, ref camera, screenPosition, zoomDelta);
             }
 
             if (ctx.Input.Keyboard.PressedOrRepeated(Keys.E))
@@ -100,8 +98,6 @@ public partial class MainCameraSystem:QuerySystem
             {
                 transform.SetLocalRotation(transform.localRad + 1*Calc.DegToRad);
             }
-
-            CameraUtils.UpdateCachedMatrices(ref camera, in transform);
         });
     }
 
@@ -123,16 +119,8 @@ public partial class MainCameraSystem:QuerySystem
             camera.viewRectInPixels.Width == width && camera.viewRectInPixels.Height == height)
             return;
 
-        var oldHeight = camera.viewRectInPixels.Height <= 0 ? height : camera.viewRectInPixels.Height;
-        if (oldHeight != height)
-        {
-            var zoomScale = (float)height / oldHeight;
-            camera.zoom = Calc.Clamp(camera.zoom * zoomScale, 0.001f, 20f);
-        }
-
-        camera.viewRectInPixels = new RectInt(0, 0, width, height);
+        CameraUtils.SetViewport(ref camera, width, height);
         lastViewportWidth = width;
         lastViewportHeight = height;
-        CameraUtils.UpdateCachedMatrices(ref camera, in transform);
     }
 }

@@ -18,19 +18,29 @@ public struct Camera2D:IComponent
     /// 相机视口，x,y原点为左上角，w,h为参考的Pixels宽高
     /// </summary>
     public RectInt viewRectInPixels;
-    /// <summary>
-    /// 缩放比例
-    /// </summary>
-    public float zoom;// Camera zoom (scaling), should be 1.0f by default
-
+    public float orthographicSize;
     public int pixelsPerUnit;
+    public float aspect;
+    public float nearClip;
+    public float farClip;
+
+    [Ignore]
+    public Vector2 ViewportSizeInPixels => new(viewRectInPixels.Width, viewRectInPixels.Height);
+
+    [Ignore]
+    public float PixelsPerWorldUnit => viewRectInPixels.Height / (2f * orthographicSize);
+
+    [Ignore]
+    public float ViewWidthInWorld => ViewHeightInWorld * aspect;
+
+    [Ignore]
+    public float ViewHeightInWorld => orthographicSize * 2f;
 
     [Ignore]
     public Matrix3x2 worldToScreenMatrix;
 
     [Ignore]
     public Matrix3x2 screenToWorldMatrix;
-    
 }
 
 
@@ -47,16 +57,20 @@ public static class CameraUtils
     /// <param name="size"></param>
     /// <param name="pixelsPerUnit"></param>
     /// <returns></returns>
-    public static Entity CreateCamera(string cameraId, IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float zoom, int pixelsPerUnit)
+    public static Entity CreateCamera(string cameraId, IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float orthographicSize, int pixelsPerUnit)
     {
+        var camera = new Camera2D
+        {
+            pixelsPerUnit = pixelsPerUnit,
+            nearClip = -1f,
+            farClip = 1f,
+        };
+        SetOrthographicSize(ref camera, orthographicSize);
+        SetViewport(ref camera, target.WidthInPixels, target.HeightInPixels);
+
         var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
             new CTransform(default,Vector2.Zero, rotation,size),
-            new Camera2D()
-            {
-                viewRectInPixels = new RectInt(0,0, target.WidthInPixels, target.HeightInPixels),
-                zoom = zoom,
-                pixelsPerUnit = pixelsPerUnit
-            },
+            camera,
             new CheckBox()
             {
                 Pivot = RectPivot.Center
@@ -70,23 +84,56 @@ public static class CameraUtils
         return ent;
     }
     
-    /// <summary>
-    /// 放缩
-    /// </summary>
-    /// <param name="transform"></param>
-    /// <param name="camera"></param>
-    /// <param name="mouseScreen"></param>
-    /// <param name="zoomDelta"></param>
+    public static void SetViewport(ref Camera2D camera, int width, int height)
+    {
+        width = width <= 0 ? 1 : width;
+        height = height <= 0 ? 1 : height;
+        camera.viewRectInPixels = new RectInt(0, 0, width, height);
+        camera.aspect = (float)width / height;
+    }
+
+    public static void SetOrthographicSize(ref Camera2D camera, float orthographicSize)
+    {
+        camera.orthographicSize = Calc.Clamp(orthographicSize, 0.001f, 100000f);
+    }
+
+    public static float ZoomToOrthographicSize(int viewportHeight, float zoom, int pixelsPerUnit)
+    {
+        viewportHeight = viewportHeight <= 0 ? 1 : viewportHeight;
+        pixelsPerUnit = pixelsPerUnit <= 0 ? 1 : pixelsPerUnit;
+        zoom = Calc.Clamp(zoom, 0.001f, 20f);
+        return viewportHeight / (2f * zoom * pixelsPerUnit);
+    }
+
+    public static float GetZoom(in Camera2D camera)
+    {
+        return camera.viewRectInPixels.Height / (2f * camera.orthographicSize * camera.pixelsPerUnit);
+    }
+
+    public static void SetZoom(ref Camera2D camera, float zoom)
+    {
+        SetOrthographicSize(ref camera, ZoomToOrthographicSize(camera.viewRectInPixels.Height, zoom, camera.pixelsPerUnit));
+    }
+
+    public static void SetClipPlanes(ref Camera2D camera, float nearClip, float farClip)
+    {
+        camera.nearClip = nearClip;
+        camera.farClip = farClip <= nearClip ? nearClip + 0.001f : farClip;
+    }
+
+    public static Matrix4x4 GetProjectionMatrix4x4(in Camera2D camera)
+    {
+        return Matrix4x4.CreateOrthographic(camera.ViewWidthInWorld, camera.ViewHeightInWorld, camera.nearClip, camera.farClip);
+    }
+
     public static void ZoomAround(ref CTransform transform, ref Camera2D camera, Vector2 mouseScreenPx, float zoomDelta)
     {
         var preWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
-        camera.zoom = Calc.Clamp(camera.zoom + zoomDelta, 0.001f, 20f);
+        SetZoom(ref camera, GetZoom(camera) + zoomDelta);
         var postWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
         var delta = preWorld - postWorld;
         transform.SetLocalPosition(transform.localPosition + delta);
     }
-    
-    
     
     /// <summary>
     /// 如果是target不在视口中心，得让mouse跟target一样移动到原点，然后放缩
@@ -191,7 +238,7 @@ public static class CameraUtils
         // 将世界空间的Y向上翻转成Y向下，再把原点挪到视口中心。
         Matrix3x2 result = Matrix3x2.Identity;
         //世界坐标里 1 个单位，在屏幕上要画 scale 个像素 。
-        float scale = camera.zoom * camera.pixelsPerUnit;
+        float scale = camera.PixelsPerWorldUnit;
         result *= Matrix3x2.CreateScale(scale,-scale);
         result *= Matrix3x2.CreateTranslation(camera.viewRectInPixels.Width*0.5f, camera.viewRectInPixels.Height*0.5f);
         return result;
@@ -228,7 +275,7 @@ public static class CameraUtils
     public static (Vector2, Vector2) GetViewMinAndMaxInPixels(in CTransform camTransform, in Camera2D camera)
     {
         var camCenterPixels = camTransform.position * camera.pixelsPerUnit;
-        var halfSizePixels = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height) * 0.5f / camera.zoom;
+        var halfSizePixels = new Vector2(camera.ViewWidthInWorld, camera.ViewHeightInWorld) * 0.5f * camera.pixelsPerUnit;
 
         var viewMin = camCenterPixels - halfSizePixels;
         var viewMax = camCenterPixels + halfSizePixels;
@@ -237,15 +284,14 @@ public static class CameraUtils
     
     public static (float, float) GetViewWidthHeightInPixels(in CTransform camTransform, in Camera2D camera)
     {
-        var viewSizePixels = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height) / camera.zoom;
+        var viewSizePixels = new Vector2(camera.ViewWidthInWorld, camera.ViewHeightInWorld) * camera.pixelsPerUnit;
         return (viewSizePixels.X, viewSizePixels.Y);
     }
     
     
     public static (Vector2, Vector2) GetViewMinAndMaxInWorld(in CTransform camTransform, in Camera2D camera)
     {
-        var halfSizeWorld = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height)
-            * 0.5f / (camera.zoom * camera.pixelsPerUnit);
+        var halfSizeWorld = new Vector2(camera.ViewWidthInWorld, camera.ViewHeightInWorld) * 0.5f;
         var camCenter = camTransform.position;
 
         var viewMin = camCenter - halfSizeWorld;
@@ -255,9 +301,7 @@ public static class CameraUtils
     
     public static (float, float) GetViewWidthHeightInWorld(in Camera2D camera)
     {
-        var viewSizeWorld = new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height)
-            / (camera.zoom * camera.pixelsPerUnit);
-        return (viewSizeWorld.X, viewSizeWorld.Y);
+        return (camera.ViewWidthInWorld, camera.ViewHeightInWorld);
     }
     #endregion
     

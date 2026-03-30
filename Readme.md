@@ -19,6 +19,11 @@ If there is any problem, please contact with me. Feel free to DM.
 
 ## TODO
 
+### Now Working
+- [ ] remake camera : zoom and resize have some problem
+
+### Roadmap
+
 - 引擎
   - 框架
     - FosterFramework

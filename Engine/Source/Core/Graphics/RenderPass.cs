@@ -58,13 +58,8 @@ public class RenderPass
 
             ref var camera = ref CameraEntity.GetComponent<Camera2D>();
             ref var transform = ref CameraEntity.GetComponent<CTransform>();
-            var matrix = camera.worldToScreenMatrix;
-            if (matrix == default)
-            {
-                matrix = CameraUtils.GetCameraMatrix(transform, camera);
-                camera.worldToScreenMatrix = matrix;
-            }
-            Batcher.PushMatrix(matrix);
+            CameraUtils.UpdateCachedMatrices(ref camera, in transform);
+            Batcher.PushMatrix(camera.worldToScreenMatrix);
             hasCameraMatrix = true;
         }
 
