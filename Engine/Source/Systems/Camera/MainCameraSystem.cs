@@ -1,4 +1,5 @@
-﻿using Engine.Components;
+﻿using System;
+using Engine.Components;
 using Engine.Core;
 using Engine.Core.Extensions;
 using Foster.Framework;
@@ -9,32 +10,33 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace Engine.Systems;
 
-public partial class MainCameraSystem:QuerySystem
+public partial class MainCameraSystem : QuerySystem
 {
-    private GameContent gameContent;
     private EntityStore world;
     private App ctx;
+    private Func<IDrawableTarget> getCameraViewportTarget;
     private float speed;
     private float zoomStep;
     private float deltaTime;
     private int pixelsPerUnit;
     private int lastViewportWidth = -1;
     private int lastViewportHeight = -1;
-    public MainCameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16)
+    public MainCameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16, Func<IDrawableTarget>? cameraViewportTargetProvider = null)
     {
         this.ctx = ctx;
         speed = 10;
         zoomStep = 0.25f;
-        this.gameContent = gameContent;
         this.pixelsPerUnit = pixelsPerUnit;
+        getCameraViewportTarget = cameraViewportTargetProvider ?? (() => gameContent.Target);
     }
 
     protected override void OnAddStore(EntityStore store)
     {
         base.OnAddStore(store);
         world = store;
-        var orthographicSize = CameraUtils.ZoomToOrthographicSize(gameContent.Target.Height, 2.5f, pixelsPerUnit);
-        CameraUtils.CreateCamera(Engine.Id.MainCamera,gameContent.Target,world,0,Vector2.One,orthographicSize,pixelsPerUnit);
+        var cameraViewportTarget = getCameraViewportTarget();
+        var orthographicSize = CameraUtils.ZoomToOrthographicSize(cameraViewportTarget.HeightInPixels, 2.5f, pixelsPerUnit);
+        CameraUtils.CreateCamera(Engine.Id.MainCamera,cameraViewportTarget,world,0,Vector2.One,orthographicSize,pixelsPerUnit);
         ctx.Window.OnResize += OnResize;
     }
 
@@ -112,8 +114,9 @@ public partial class MainCameraSystem:QuerySystem
 
     void SyncCameraViewport(ref Camera2D camera, ref CTransform transform)
     {
-        var width = gameContent.Target.Width <= 0 ? 1 : gameContent.Target.Width;
-        var height = gameContent.Target.Height <= 0 ? 1 : gameContent.Target.Height;
+        var cameraViewportTarget = getCameraViewportTarget();
+        var width = cameraViewportTarget.WidthInPixels <= 0 ? 1 : cameraViewportTarget.WidthInPixels;
+        var height = cameraViewportTarget.HeightInPixels <= 0 ? 1 : cameraViewportTarget.HeightInPixels;
 
         if (lastViewportWidth == width && lastViewportHeight == height &&
             camera.viewRectInPixels.Width == width && camera.viewRectInPixels.Height == height)

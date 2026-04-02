@@ -8,33 +8,33 @@ using Cursor = Engine.Core.Input.Cursor;
 namespace Engine.Components;
 
 
-//编辑器中得缩放现在有问题了
-//首先让这个相机中直接有所需的数据，而不需要读取Transform
 public struct Camera2D:IComponent
 {
-    
-    //TODO 相机的视口，这里应该可能跟Target相关
     /// <summary>
-    /// 相机视口，x,y原点为左上角，w,h为参考的Pixels宽高
+    /// 相机对应的渲染目标像素区域，左上角为原点。
+    /// 当前项目里通常等于逻辑分辨率下的 Target 像素尺寸。
     /// </summary>
     public RectInt viewRectInPixels;
-    public float orthographicSize;
-    public int pixelsPerUnit;
-    public float aspect;
-    public float nearClip;
-    public float farClip;
 
-    [Ignore]
-    public Vector2 ViewportSizeInPixels => new(viewRectInPixels.Width, viewRectInPixels.Height);
+    /// <summary>
+    /// 正交相机半高，单位是世界单位。
+    /// </summary>
+    public float orthographicSize;
+
+    /// <summary>
+    /// 资源像素到世界单位的换算基准。
+    /// 例如 16 表示 16 像素约定为 1 个世界单位。
+    /// </summary>
+    public int pixelsPerUnit;
 
     [Ignore]
     public float PixelsPerWorldUnit => viewRectInPixels.Height / (2f * orthographicSize);
 
     [Ignore]
-    public float ViewWidthInWorld => ViewHeightInWorld * aspect;
+    public float ViewHeightInWorld => orthographicSize * 2f;
 
     [Ignore]
-    public float ViewHeightInWorld => orthographicSize * 2f;
+    public float ViewWidthInWorld => ViewHeightInWorld * viewRectInPixels.Width / viewRectInPixels.Height;
 
     [Ignore]
     public Matrix3x2 worldToScreenMatrix;
@@ -46,50 +46,12 @@ public struct Camera2D:IComponent
 
 public static class CameraUtils
 {
-    
-    /// <summary>
-    /// Create Cameraz
-    /// </summary>
-    /// <param name="cameraId"></param>
-    /// <param name="target"></param>
-    /// <param name="world"></param>
-    /// <param name="rotation"></param>
-    /// <param name="size"></param>
-    /// <param name="pixelsPerUnit"></param>
-    /// <returns></returns>
-    public static Entity CreateCamera(string cameraId, IDrawableTarget target,EntityStore world,float rotation ,Vector2 size,float orthographicSize, int pixelsPerUnit)
-    {
-        var camera = new Camera2D
-        {
-            pixelsPerUnit = pixelsPerUnit,
-            nearClip = -1f,
-            farClip = 1f,
-        };
-        SetOrthographicSize(ref camera, orthographicSize);
-        SetViewport(ref camera, target.WidthInPixels, target.HeightInPixels);
-
-        var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
-            new CTransform(default,Vector2.Zero, rotation,size),
-            camera,
-            new CheckBox()
-            {
-                Pivot = RectPivot.Center
-            },
-            new MetaGroup()
-            {
-                GroupName = "Unique",
-                SubGroupName = "BuildIn"
-            });
-        
-        return ent;
-    }
-    
+    #region Core
     public static void SetViewport(ref Camera2D camera, int width, int height)
     {
         width = width <= 0 ? 1 : width;
         height = height <= 0 ? 1 : height;
         camera.viewRectInPixels = new RectInt(0, 0, width, height);
-        camera.aspect = (float)width / height;
     }
 
     public static void SetOrthographicSize(ref Camera2D camera, float orthographicSize)
@@ -115,64 +77,22 @@ public static class CameraUtils
         SetOrthographicSize(ref camera, ZoomToOrthographicSize(camera.viewRectInPixels.Height, zoom, camera.pixelsPerUnit));
     }
 
-    public static void SetClipPlanes(ref Camera2D camera, float nearClip, float farClip)
-    {
-        camera.nearClip = nearClip;
-        camera.farClip = farClip <= nearClip ? nearClip + 0.001f : farClip;
-    }
-
-    public static Matrix4x4 GetProjectionMatrix4x4(in Camera2D camera)
-    {
-        return Matrix4x4.CreateOrthographic(camera.ViewWidthInWorld, camera.ViewHeightInWorld, camera.nearClip, camera.farClip);
-    }
-
-    public static void ZoomAround(ref CTransform transform, ref Camera2D camera, Vector2 mouseScreenPx, float zoomDelta)
-    {
-        var preWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
-        SetZoom(ref camera, GetZoom(camera) + zoomDelta);
-        var postWorld = ScreenPxToWorld(mouseScreenPx, transform, camera);
-        var delta = preWorld - postWorld;
-        transform.SetLocalPosition(transform.localPosition + delta);
-    }
-    
     /// <summary>
-    /// 如果是target不在视口中心，得让mouse跟target一样移动到原点，然后放缩
-    /// 将Screen坐标转到Window坐标系得到新的屏幕坐标
+    /// 将渲染目标上的像素坐标转换为世界坐标。
     /// </summary>
-    /// <param name="screenPosition"></param>
-    /// <param name="window"></param>
-    /// <returns></returns>
-    public static Vector2 ScreenToViewport(Vector2 screenPosition,Window window)
+    /// <param name="targetPixelPosition">Target 像素坐标，左上角为 (0,0)。</param>
+    /// <param name="cameraTransform">相机 Transform，单位是世界单位。</param>
+    /// <param name="camera">相机参数，viewRectInPixels 表示 Target 像素尺寸。</param>
+    public static Vector2 ScreenPxToWorld(Vector2 targetPixelPosition, in CTransform cameraTransform, in Camera2D camera)
     {
-        return new Vector2(screenPosition.X / window.WidthInPixels, screenPosition.Y / window.HeightInPixels);
+        var inv = camera.screenToWorldMatrix;
+        if (inv == default)
+        {
+            var mat = GetCameraMatrix(cameraTransform, camera);
+            Matrix3x2.Invert(mat, out inv);
+        }
+        return Vector2.Transform(targetPixelPosition, inv);
     }
-
-    public static Vector2 ViewportToLogicScreen(Vector2 viewport,Vector2 logicScreen)
-    {
-        return new Vector2(logicScreen.X * viewport.X, logicScreen.Y *  viewport.Y);
-    }
-    
-    /// <summary>
-    /// Target 像素坐标（左上角为 (0,0)）转世界坐标。
-    /// </summary>
-    /// <param name="screenPx">渲染目标（Target）的像素坐标。</param>
-    /// <param name="cameraTransform">相机 Transform（世界单位）。</param>
-    /// <param name="camera">相机参数（viewRectInPixels 为 Target 像素尺寸）。</param>
-    public static Vector2 ScreenPxToWorld(Vector2 screenPx, in CTransform cameraTransform, in Camera2D camera)
-    {
-        var mat = GetCameraMatrix(cameraTransform, camera);
-        Matrix3x2.Invert(mat, out var inv);
-        return Vector2.Transform(screenPx, inv);
-    }
-
-
-    public static Vector2 GetWorldMousePosition(Vector2 targetSizePx, in CTransform cameraTransform, in Camera2D camera)
-    {
-        var screenPx = ViewportToLogicScreen(Cursor.ViewportPosition, targetSizePx);
-        return ScreenPxToWorld(screenPx, cameraTransform, camera);
-    }
-    
-    
 
     /// <summary>
     /// 从世界坐标到屏幕坐标的矩阵
@@ -244,8 +164,68 @@ public static class CameraUtils
         return result;
     }
 
+    #endregion
 
-    #region Culling Func
+    #region Tools
+    /// <summary>
+    /// Create Cameraz
+    /// </summary>
+    /// <param name="cameraId"></param>
+    /// <param name="target"></param>
+    /// <param name="world"></param>
+    /// <param name="rotation"></param>
+    /// <param name="scale">相机 Transform 的缩放，不是屏幕尺寸。</param>
+    /// <param name="pixelsPerUnit"></param>
+    /// <returns></returns>
+    public static Entity CreateCamera(string cameraId, IDrawableTarget target,EntityStore world,float rotation ,Vector2 scale,float orthographicSize, int pixelsPerUnit)
+    {
+        var camera = new Camera2D
+        {
+            pixelsPerUnit = pixelsPerUnit,
+        };
+        SetOrthographicSize(ref camera, orthographicSize);
+        SetViewport(ref camera, target.WidthInPixels, target.HeightInPixels);
+
+        var ent = world.CreateEntity(new UniqueEntity($"{cameraId}"),
+            new CTransform(default,Vector2.Zero, rotation,scale),
+            camera,
+            new CheckBox()
+            {
+                Pivot = RectPivot.Center
+            },
+            new MetaGroup()
+            {
+                GroupName = "Unique",
+                SubGroupName = "BuildIn"
+            });
+        
+        return ent;
+    }
+
+    public static void ZoomAround(ref CTransform transform, ref Camera2D camera, Vector2 mouseScreenPx, float zoomDelta)
+    {
+        var preMatrix = GetCameraMatrix(transform, camera);
+        Matrix3x2.Invert(preMatrix, out var preInv);
+        var preWorld = Vector2.Transform(mouseScreenPx, preInv);
+        SetZoom(ref camera, GetZoom(camera) + zoomDelta);
+        var postMatrix = GetCameraMatrix(transform, camera);
+        Matrix3x2.Invert(postMatrix, out var postInv);
+        var postWorld = Vector2.Transform(mouseScreenPx, postInv);
+        var delta = preWorld - postWorld;
+        transform.SetLocalPosition(transform.localPosition + delta);
+    }
+
+    public static Vector2 ViewportToLogicScreen(Vector2 viewportPosition,Vector2 targetSizeInPixels)
+    {
+        return new Vector2(targetSizeInPixels.X * viewportPosition.X, targetSizeInPixels.Y * viewportPosition.Y);
+    }
+
+    public static Vector2 GetWorldMousePosition(Vector2 targetSizeInPixels, in CTransform cameraTransform, in Camera2D camera)
+    {
+        var targetPixelPosition = ViewportToLogicScreen(Cursor.ViewportPosition, targetSizeInPixels);
+        return ScreenPxToWorld(targetPixelPosition, cameraTransform, camera);
+    }
+
     /// <summary>
     /// 剔除SpriteRenderer
     /// </summary>
@@ -305,87 +285,4 @@ public static class CameraUtils
     }
     #endregion
     
-}
-
-
-public struct NewCamera2D : IComponent
-{
-    public Vector2 Center; // 相机世界中心
-    public float Rad; // 旋转
-    public float Zoom; // zoom
-    public int Width; //宽度
-    public int Height; //高度
-    public int PixelPerUnit; // 单元像素
-}
-
-
-public static class CameraExtensions
-{
-    // 世界 → 相机（View），世界单位下的相机空间
-    public static Matrix3x2 GetViewMatrix(this in NewCamera2D cam)
-    {
-        Matrix3x2 result = Matrix3x2.Identity;
-        result *= Matrix3x2.CreateTranslation(-cam.Center);
-        result *= Matrix3x2.CreateRotation(-cam.Rad);
-        return result;
-    }
-
-    // 相机 → 屏幕像素（Projection + Viewport）
-    public static Matrix3x2 GetProjectionMatrix(this in NewCamera2D cam)
-    {
-        Matrix3x2 result = Matrix3x2.Identity;
-        float scale = cam.Zoom * cam.PixelPerUnit;
-        // Y 轴翻转：世界/相机空间 Y 向上，映射到屏幕像素 Y 向下
-        result *= Matrix3x2.CreateScale(scale, -scale);
-        result *= Matrix3x2.CreateTranslation(new Vector2(cam.Width * 0.5f, cam.Height * 0.5f));
-        return result;
-    }
-
-    // 世界 → 屏幕像素：World → View → Screen
-    public static Matrix3x2 GetWorldToScreenMatrix(this in NewCamera2D cam)
-    {
-        var view = cam.GetViewMatrix();
-        var proj = cam.GetProjectionMatrix();
-        return view * proj;
-    }
-
-    // 屏幕像素 → 世界：逆矩阵
-    public static Matrix3x2 GetScreenToWorldMatrix(this in NewCamera2D cam)
-    {
-        var worldToScreen = cam.GetWorldToScreenMatrix();
-        Matrix3x2.Invert(worldToScreen, out var inv);
-        return inv;
-    }
-
-    // 世界空间下的可见范围（AABB，忽略旋转，适合做剔除）
-    public static (Vector2 min, Vector2 max) GetWorldViewBounds(this in NewCamera2D cam)
-    {
-        var size = cam.GetWorldViewSize();
-        var half = new Vector2(size.width * 0.5f, size.height * 0.5f);
-        var min = cam.Center - half;
-        var max = cam.Center + half;
-        return (min, max);
-    }
-
-    // 世界空间下的视口宽高（世界单位）
-    public static (float width, float height) GetWorldViewSize(this in NewCamera2D cam)
-    {
-        float widthWorld = cam.Width / (cam.Zoom * cam.PixelPerUnit);
-        float heightWorld = cam.Height / (cam.Zoom * cam.PixelPerUnit);
-        return (widthWorld, heightWorld);
-    }
-
-    // 屏幕像素空间下的可见范围（当前实现相机占满整个屏幕）
-    public static (Vector2 min, Vector2 max) GetScreenViewBounds(this in NewCamera2D cam)
-    {
-        var min = Vector2.Zero;
-        var max = new Vector2(cam.Width, cam.Height);
-        return (min, max);
-    }
-
-    // 屏幕像素空间下的视口宽高（像素）
-    public static (float width, float height) GetScreenViewSize(this in NewCamera2D cam)
-    {
-        return (cam.Width, cam.Height);
-    }
 }

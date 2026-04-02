@@ -280,6 +280,7 @@ public class UIRoot
 		}
 	}
 	
+    public void OnResize(int width, int height){}
 	
 	
 }
