@@ -62,10 +62,11 @@ public static class CheckBoxExtensions
 
         public void Draw(in CTransform transform,Batcher batcher)
         {
+            var current = transform;
             var size = box.Size;
             var half = size * 0.5f;
 
-            var center = transform.position;
+            var center = current.GetWorldPosition();
             center += box.GetCenterOffset();
             //这里适配Y向上
             var topLeft = new Vector2(center.X - half.X, center.Y + half.Y);
@@ -77,7 +78,8 @@ public static class CheckBoxExtensions
 
         public bool Contains(in CTransform transform, in Vector2 point)
         {
-            var center = transform.position + box.GetCenterOffset();
+            var current = transform;
+            var center = current.GetWorldPosition() + box.GetCenterOffset();
             //目前当成Center
             float minX = center.X - box.HalfWidth;
             float minY = center.Y - box.HalfHeight;

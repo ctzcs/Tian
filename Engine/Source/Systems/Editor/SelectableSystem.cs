@@ -54,6 +54,7 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
         ref var selector = ref _world.GetUniqueEntity("Selector").GetComponent<Selector>();
         var cameraE = _world.GetUniqueEntity("MainCamera");
         ref var cameraTransform = ref cameraE.GetComponent<CTransform>();
+        cameraTransform.EnsureWorldTransform();
         ref var camera = ref cameraE.GetComponent<Camera2D>();
         var screenSize = new System.Numerics.Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height);
 		var screenPosition = CameraUtils.ViewportToLogicScreen(Cursor.ViewportPosition, screenSize);

@@ -44,9 +44,10 @@ public class HierarchyOrderSystem : QuerySystem
             }
 
             ref var rootTransform = ref root.GetComponent<CTransform>();
+            var rootY = rootTransform.GetWorldPosition().Y;
             //最终是升序编码所以Y越小越靠前，这里翻转是因为y
-            uint group = Mathf.FloatToSortable(- rootTransform.position.Y);
-            uint index = Mathf.FloatToSortable(- transform.localPosition.Y);
+            uint group = Mathf.FloatToSortable(-rootY);
+            uint index = Mathf.FloatToSortable(-transform.localPosition.Y);
 
             if (entity.HasComponent<HierarchyOrder>())
             {

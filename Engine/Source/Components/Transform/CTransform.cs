@@ -105,6 +105,7 @@ public struct CTransform : IComponent
     public bool HasParent => parent != default;
     
     public bool HasChildren =>  children?.Count > 0;
+    public bool IsWorldDirty => hierarchyDirty != EDirtyType.Clean;
     
     
     /// <summary>
@@ -227,9 +228,56 @@ public static class TransformExt
             transform.hierarchyDirty = CTransform.EDirtyType.Clean;
         }
 
+        public ref CTransform EnsureWorldTransform()
+        {
+            UpdateTransform(ref transform);
+            return ref transform;
+        }
+
+        public Vector2 GetWorldPosition()
+        {
+            EnsureWorldTransform();
+            return transform.position;
+        }
+
+        public float GetWorldRotation()
+        {
+            EnsureWorldTransform();
+            return transform.rad;
+        }
+
+        public Vector2 GetWorldScale()
+        {
+            EnsureWorldTransform();
+            return transform.scale;
+        }
+
+        public Matrix3x2 GetWorldMatrix()
+        {
+            EnsureWorldTransform();
+            return transform.worldTransform;
+        }
+
         public ref CTransform SetLocalPosition(Vector2 localPosition)
         {
             transform.localPosition = localPosition;
+            transform.SetDirty(CTransform.EDirtyType.PositionDirty);
+            return ref transform;
+        }
+
+        public ref CTransform SetWorldPosition(Vector2 worldPosition)
+        {
+            if (!transform.Parent.IsNull)
+            {
+                ref var parentTransform = ref transform.Parent.GetComponent<CTransform>();
+                parentTransform.EnsureWorldTransform();
+                Matrix3x2.Invert(parentTransform.worldTransform, out var parentInverse);
+                transform.localPosition = Vector2.Transform(worldPosition, parentInverse);
+            }
+            else
+            {
+                transform.localPosition = worldPosition;
+            }
             transform.SetDirty(CTransform.EDirtyType.PositionDirty);
             return ref transform;
         }
@@ -241,17 +289,59 @@ public static class TransformExt
             return ref transform;
         }
 
+        public ref CTransform SetWorldRotation(float worldRad)
+        {
+            if (!transform.Parent.IsNull)
+            {
+                ref var parentTransform = ref transform.Parent.GetComponent<CTransform>();
+                parentTransform.EnsureWorldTransform();
+                transform.localRad = worldRad - parentTransform.rad;
+            }
+            else
+            {
+                transform.localRad = worldRad;
+            }
+            transform.SetDirty(CTransform.EDirtyType.RotationDirty);
+            return ref transform;
+        }
+
         public ref CTransform SetLocalScale(Vector2 scale)
         {
             transform.localScale = scale;
             transform.SetDirty(CTransform.EDirtyType.ScaleDirty);
             return ref transform;
         }
-        
-        
-        //世界转本地
-        public Vector2 WorldToLocal(Vector2 worldPosition) => throw new NotImplementedException();
-        public Vector2 LocalToWorld(Vector2 localPosition) => throw new NotImplementedException();
+
+        public ref CTransform SetWorldScale(Vector2 worldScale)
+        {
+            if (!transform.Parent.IsNull)
+            {
+                ref var parentTransform = ref transform.Parent.GetComponent<CTransform>();
+                parentTransform.EnsureWorldTransform();
+                transform.localScale = new Vector2(
+                    parentTransform.scale.X != 0 ? worldScale.X / parentTransform.scale.X : 0,
+                    parentTransform.scale.Y != 0 ? worldScale.Y / parentTransform.scale.Y : 0);
+            }
+            else
+            {
+                transform.localScale = worldScale;
+            }
+            transform.SetDirty(CTransform.EDirtyType.ScaleDirty);
+            return ref transform;
+        }
+
+        public Vector2 WorldToLocal(Vector2 worldPosition)
+        {
+            EnsureWorldTransform();
+            Matrix3x2.Invert(transform.worldTransform, out var inverse);
+            return Vector2.Transform(worldPosition, inverse);
+        }
+
+        public Vector2 LocalToWorld(Vector2 localPosition)
+        {
+            EnsureWorldTransform();
+            return Vector2.Transform(localPosition, transform.worldTransform);
+        }
     }
 
     
@@ -321,9 +411,10 @@ public static class TransformExt
                 
             }
             //cmb.Remove<HasParent>(child); //child.Remove<HasParent>();
+            var worldPosition = childTransform.GetWorldPosition();
             childTransform.Parent = default;
             
-            childTransform.SetLocalPosition(childTransform.position);
+            childTransform.SetLocalPosition(worldPosition);
             
             //cmb.Playback(World.Worlds.DangerousGetReferenceAt(child.WorldId),true);
             return;

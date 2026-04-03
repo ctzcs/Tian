@@ -44,15 +44,17 @@ public struct LineRenderer:IComponent
     }
 
     public void DrawGeometry(Batcher batcher, in CTransform transform, int pixelsPerUnit)
-    {
-        if (line == null || line.Count <= 1)
-            return;
+        {
+            if (line == null || line.Count <= 1)
+                return;
 
-        renderPoint ??= new List<Vector2>(line.Count);
-        renderPoint.Clear();
+            var current = transform;
+            var origin = current.GetWorldPosition();
+            renderPoint ??= new List<Vector2>(line.Count);
+            renderPoint.Clear();
 
-        for (int i = 0; i < line.Count; i++)
-            renderPoint.Add(transform.position + line[i]);
+            for (int i = 0; i < line.Count; i++)
+                renderPoint.Add(origin + line[i]);
 
         var st = subtexture;
         if (st.IsEmpty && !string.IsNullOrEmpty(subTextureName))

@@ -13,6 +13,7 @@ public interface IContent : ILifetime
     Target Target { get; set; } // 感觉这个应该作为Window渲染？随着window大小改变
     EntityStore World { get; set; }
     Vector2Int LogicResolution { get; set; }
+    Rect GameViewportRect { get; }
     
     List<SystemGroup>? SystemGroups { get; set; }
 
@@ -26,6 +27,7 @@ public abstract class GameContent : IContent
     public Target Target { get; set; }
     public EntityStore World { get; set; }
     public Vector2Int LogicResolution { get; set; }
+    public virtual Rect GameViewportRect => Target != null ? new Rect(0, 0, Target.Width, Target.Height) : default;
     public List<SystemGroup>? SystemGroups { get; set; } = new();
 
     public GameContent(App ctx)

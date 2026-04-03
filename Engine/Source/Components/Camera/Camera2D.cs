@@ -146,9 +146,12 @@ public static class CameraUtils
     //世界到相机矩阵
     public static Matrix3x2 GetViewMatrix(in CTransform cameraTransform, in Camera2D camera)
     {
+        var transform = cameraTransform;
+        var position = transform.GetWorldPosition();
+        var rotation = transform.GetWorldRotation();
         Matrix3x2 result = Matrix3x2.Identity;
-        result *= Matrix3x2.CreateTranslation(-cameraTransform.position); //将相机带着整个世界平移到原点
-        result *= Matrix3x2.CreateRotation(-cameraTransform.rad);
+        result *= Matrix3x2.CreateTranslation(-position); //将相机带着整个世界平移到原点
+        result *= Matrix3x2.CreateRotation(-rotation);
         return result;
     }
 

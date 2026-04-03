@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Numerics;
 using Engine.Components;
 using Foster.Framework;
 using Friflo.Engine.ECS;
@@ -13,6 +14,45 @@ public enum RenderPassSpace
     World,
 }
 
+public enum ViewportFitMode
+{
+    Stretch,
+    Fit,
+    Fill,
+    IntegerFit,
+    OneToOne,
+}
+
+public sealed class ContentViewport
+{
+    public Vector2Int SourceSize { get; set; }
+    public ViewportFitMode FitMode { get; set; } = ViewportFitMode.Fit;
+    public TextureFilter Filter { get; set; } = TextureFilter.Linear;
+    public Vector2 Align { get; set; } = new(0.5f, 0.5f);
+
+    public Rect Resolve(RectInt outputBounds)
+    {
+        float sw = Math.Max(1, SourceSize.X);
+        float sh = Math.Max(1, SourceSize.Y);
+        float ow = outputBounds.Width;
+        float oh = outputBounds.Height;
+        if (FitMode == ViewportFitMode.Stretch)
+            return new Rect(outputBounds.X, outputBounds.Y, ow, oh);
+        float scale = FitMode switch
+        {
+            ViewportFitMode.Fill => MathF.Max(ow / sw, oh / sh),
+            ViewportFitMode.OneToOne => 1f,
+            ViewportFitMode.IntegerFit => Calc.Min(ow / sw, oh / sh) >= 1f ? MathF.Floor(Calc.Min(ow / sw, oh / sh)) : Calc.Min(ow / sw, oh / sh),
+            _ => Calc.Min(ow / sw, oh / sh),
+        };
+        float w = sw * scale;
+        float h = sh * scale;
+        float x = outputBounds.X + (ow - w) * Align.X;
+        float y = outputBounds.Y + (oh - h) * Align.Y;
+        return new Rect(x, y, w, h);
+    }
+}
+
 public class RenderPass
 {
     public Batcher Batcher { get; }
@@ -23,6 +63,8 @@ public class RenderPass
     public Action<UpdateTick>? PostUpdate { get; set; }
     public RenderPassSpace Space { get; set; }
     public bool ShouldClear { get; set; }
+    public ContentViewport? Viewport { get; set; }
+    public Target? SourceTarget { get; set; }
 
     public RenderPass(Batcher batcher, SystemRoot renderGroup, Entity cameraEntity, Color clearColor, Target? outputTarget = null, Action<UpdateTick>? postUpdate = null, RenderPassSpace space = RenderPassSpace.Screen, bool shouldClear = true)
     {
@@ -58,6 +100,7 @@ public class RenderPass
 
             ref var camera = ref CameraEntity.GetComponent<Camera2D>();
             ref var transform = ref CameraEntity.GetComponent<CTransform>();
+            transform.EnsureWorldTransform();
             CameraUtils.UpdateCachedMatrices(ref camera, in transform);
             Batcher.PushMatrix(camera.worldToScreenMatrix);
             hasCameraMatrix = true;
@@ -66,6 +109,17 @@ public class RenderPass
         try
         {
             RenderGroup.Update(tick);
+            if (SourceTarget != null)
+            {
+                var viewport = Viewport;
+                var dest = viewport?.Resolve(target.Bounds) ?? new Rect(0, 0, target.Width, target.Height);
+                var center = new Vector2(dest.X + dest.Width / 2f, dest.Y + dest.Height / 2f);
+                var origin = new Vector2(SourceTarget.Width, SourceTarget.Height) / 2f;
+                var scale = new Vector2(dest.Width / SourceTarget.Width, dest.Height / SourceTarget.Height);
+                Batcher.PushSampler(new(viewport?.Filter ?? TextureFilter.Linear, TextureWrap.Clamp, TextureWrap.Clamp));
+                Batcher.Image(SourceTarget, center, origin, scale, 0, Color.White);
+                Batcher.PopSampler();
+            }
             PostUpdate?.Invoke(tick);
         }
         finally

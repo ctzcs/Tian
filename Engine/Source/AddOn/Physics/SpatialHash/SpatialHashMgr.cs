@@ -46,7 +46,8 @@ public class SpatialHashMgr
 
     public void Add(Entity obj, in CTransform transform)
     {
-        var pos = transform.position;
+        var current = transform;
+        var pos = current.GetWorldPosition();
         var gridIndex = VectorToIndex(pos);
         if (Chunks.TryGetValue(GetChunkIndex(gridIndex, _chunkSize), out var chunk))
         {
@@ -70,9 +71,10 @@ public class SpatialHashMgr
     /// <param name="obj"></param>
     public void MoveTo(Entity obj, ref SpatialHash spatialHash, in CTransform transform)
     {
+        var current = transform;
         var preIndex = spatialHash.index;
         var preChunkIndex = GetChunkIndex(preIndex, _chunkSize);
-        var pos = transform.position;
+        var pos = current.GetWorldPosition();
         var nowIndex = VectorToIndex(pos);
         var gridChunkIndex = GetChunkIndex(nowIndex, _chunkSize);
         if (preIndex == nowIndex)
