@@ -275,18 +275,32 @@ public class UICanvas
         hasLastPointer = true;
     }
 
-    public void Render(Batcher batcher, Rect viewport)
+    static Rect TransformRect(Rect rect, Rect from, Rect to)
+    {
+        if (from.Width <= 0f || from.Height <= 0f)
+            return to;
+        return new Rect(
+            to.X + (rect.X - from.X) / from.Width * to.Width,
+            to.Y + (rect.Y - from.Y) / from.Height * to.Height,
+            rect.Width / from.Width * to.Width,
+            rect.Height / from.Height * to.Height);
+    }
+
+    public void Render(Batcher batcher, Rect viewport, Rect outputViewport)
     {
         var commands = new List<Ui2DrawCommand>();
 
         foreach (var child in Root.Children)
             child.CollectDrawCommands(commands, 0);
 
-        var clip = (ClipRect ?? viewport).GetIntersection(viewport);
+        var clip = TransformRect((ClipRect ?? viewport).GetIntersection(viewport), viewport, outputViewport);
         if (clip.Width <= 0f || clip.Height <= 0f)
             return;
 
+        var matrix = Matrix3x2.CreateScale(outputViewport.Width / viewport.Width, outputViewport.Height / viewport.Height)
+                     * Matrix3x2.CreateTranslation(outputViewport.X, outputViewport.Y);
         batcher.PushScissor(clip.Int());
+        batcher.PushMatrix(matrix, true);
 
         foreach (var cmd in commands)
         {
@@ -309,7 +323,7 @@ public class UICanvas
                     break;
 
                 case Ui2DrawCommandType.ClipPush:
-                    batcher.PushScissor(cmd.Rect.GetIntersection(viewport).Int());
+                    batcher.PushScissor(TransformRect(cmd.Rect.GetIntersection(viewport), viewport, outputViewport).Int());
                     break;
 
                 case Ui2DrawCommandType.ClipPop:
@@ -321,6 +335,7 @@ public class UICanvas
                 batcher.PopMatrix();
         }
 
+        batcher.PopMatrix();
         batcher.PopScissor();
     }
 }

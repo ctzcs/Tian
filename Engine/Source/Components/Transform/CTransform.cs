@@ -236,25 +236,25 @@ public static class TransformExt
 
         public Vector2 GetWorldPosition()
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             return transform.position;
         }
 
         public float GetWorldRotation()
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             return transform.rad;
         }
 
         public Vector2 GetWorldScale()
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             return transform.scale;
         }
 
         public Matrix3x2 GetWorldMatrix()
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             return transform.worldTransform;
         }
 
@@ -332,14 +332,14 @@ public static class TransformExt
 
         public Vector2 WorldToLocal(Vector2 worldPosition)
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             Matrix3x2.Invert(transform.worldTransform, out var inverse);
             return Vector2.Transform(worldPosition, inverse);
         }
 
         public Vector2 LocalToWorld(Vector2 localPosition)
         {
-            EnsureWorldTransform();
+            EnsureWorldTransform(ref transform);
             return Vector2.Transform(localPosition, transform.worldTransform);
         }
     }
