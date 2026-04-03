@@ -48,7 +48,7 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
             return;
         }
         
-        if (!Cursor.CanGameUse())
+        if (!Cursor.CanGameWorldUse())
             return;
         
         ref var selector = ref _world.GetUniqueEntity("Selector").GetComponent<Selector>();
@@ -57,7 +57,7 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
         cameraTransform.EnsureWorldTransform();
         ref var camera = ref cameraE.GetComponent<Camera2D>();
         var screenSize = new System.Numerics.Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height);
-		var screenPosition = CameraUtils.ViewportToLogicScreen(Cursor.ViewportPosition, screenSize);
+		var screenPosition = Cursor.GetGameScreenPosition(screenSize);
 		var pos = CameraUtils.ScreenPxToWorld(screenPosition, cameraTransform, camera);
         Entity lastSelectTarget = selector.SelectTarget;
         Entity selectTarget = default;

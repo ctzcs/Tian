@@ -67,11 +67,26 @@ public class GameApp : App
 		var scale = Calc.Min(
 			winSize.X / (float)target.Width,
 			winSize.Y / (float)target.Height);
-		var imageOffset = center - target.Bounds.Size / 2 * scale;
-		var rate = (Input.Mouse.Position - imageOffset) / (target.Bounds.Size * scale);
-		rate.X = Calc.Clamp(rate.X, 0f, 1f);
-		rate.Y = Calc.Clamp(rate.Y, 0f, 1f);
-		Cursor.ViewportPosition = rate;
+		var imageSize = target.Bounds.Size * scale;
+		var imageOffset = center - imageSize / 2;
+		Cursor.ViewportPosition = new Vector2(-1f, -1f);
+		Cursor.GameViewportPosition = new Vector2(-1f, -1f);
+		var localInImage = Input.Mouse.Position - imageOffset;
+		if (localInImage.X >= 0f && localInImage.Y >= 0f && localInImage.X <= imageSize.X && localInImage.Y <= imageSize.Y)
+		{
+			var rate = localInImage / imageSize;
+			rate.X = Calc.Clamp(rate.X, 0f, 1f);
+			rate.Y = Calc.Clamp(rate.Y, 0f, 1f);
+			Cursor.ViewportPosition = rate;
+			var screenPos = rate * target.Bounds.Size;
+			var gameRect = content.GameViewportRect;
+			if (gameRect.Width > 0f && gameRect.Height > 0f)
+			{
+				Cursor.GameViewportPosition = new Vector2(
+					(screenPos.X - gameRect.X) / gameRect.Width,
+					(screenPos.Y - gameRect.Y) / gameRect.Height);
+			}
+		}
 		content.Update();
 	}
 

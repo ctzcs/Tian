@@ -8,6 +8,7 @@ public static class Cursor
     /// 0，1的范围
     /// </summary>
     public static Vector2 ViewportPosition;
+    public static Vector2 GameViewportPosition;
     
     //TODO 按键的点击啥的，也应该在这里处理, 主要编辑器中点击也会触发Scene中的点击
     // 其实感觉Editor中Run Game也应该改一下，应该是重新new Game(); 然后就能跑了
@@ -22,16 +23,28 @@ public static class Cursor
         return ViewportPosition is { X: >= 0 and <= 1, Y: >= 0 and <= 1 };
     }
     
+    public static bool IsInGameViewport()
+    {
+        return GameViewportPosition is { X: >= 0 and <= 1, Y: >= 0 and <= 1 };
+    }
+
     public static bool CanGameUse()
     {
-        //不在GameUI上，且在Viewport中
         return !IsOnGameUi && IsInViewport();
     }
-    
-    
-    
+
+    public static bool CanGameWorldUse()
+    {
+        return !IsOnGameUi && IsInGameViewport();
+    }
+
     public static Vector2 GetScreenPosition(Vector2 windowSizeInPixels)
     {
         return ViewportPosition * windowSizeInPixels;
+    }
+
+    public static Vector2 GetGameScreenPosition(Vector2 targetSizeInPixels)
+    {
+        return GameViewportPosition * targetSizeInPixels;
     }
 }

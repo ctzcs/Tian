@@ -63,7 +63,8 @@ public class EditorModeWindow : EditorWindow
 			var contentOrigin = ImGui.GetCursorScreenPos();
 			var mousePos = ImGui.GetMousePos();
 			var local = mousePos - contentOrigin;
-			var inside = local.X >= 0f && local.Y >= 0f && local.X <= size.X && local.Y <= size.Y;
+			Cursor.ViewportPosition = new Vector2(-1f, -1f);
+			Cursor.GameViewportPosition = new Vector2(-1f, -1f);
 			if (Data.ImRenderer.BeginBatch(size, out var batch, out var bounds))
 			{
 				if (Data.currentContent != null)
@@ -82,14 +83,25 @@ public class EditorModeWindow : EditorWindow
 						wsize.X / (float)screenTarget.Width,
 						wsize.Y / (float)screenTarget.Height
 						) * viewScale;
-					var imageOffset = center - screenTarget.Bounds.Size / 2 * scale;
+					var imageSize = screenTarget.Bounds.Size * scale;
+					var imageOffset = center - imageSize / 2;
+					var localInImage = local - imageOffset;
+					var insideImage = localInImage.X >= 0f && localInImage.Y >= 0f && localInImage.X <= imageSize.X && localInImage.Y <= imageSize.Y;
 
-					if (inside)
+					if (insideImage)
 					{
-						var rate = (local - imageOffset) / (screenTarget.Bounds.Size * scale);
+						var rate = localInImage / imageSize;
 						rate.X = Calc.Clamp(rate.X, 0f, 1f);
 						rate.Y = Calc.Clamp(rate.Y, 0f, 1f);
 						Cursor.ViewportPosition = rate;
+						var screenPos = rate * screenTarget.Bounds.Size;
+						var gameRect = Data.currentContent.GameViewportRect;
+						if (gameRect.Width > 0f && gameRect.Height > 0f)
+						{
+							Cursor.GameViewportPosition = new Vector2(
+								(screenPos.X - gameRect.X) / gameRect.Width,
+								(screenPos.Y - gameRect.Y) / gameRect.Height);
+						}
 					}
 	
 					batch.PushSampler(new(TextureFilter.Nearest, TextureWrap.Clamp, TextureWrap.Clamp));

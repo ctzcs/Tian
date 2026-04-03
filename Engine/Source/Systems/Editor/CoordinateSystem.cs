@@ -110,7 +110,7 @@ public class CoordinateSystem : QuerySystem<Coordinate>
             _batcher.Circle(new Vector2(0, 0), coordinate.CenterRadius, 8, coordinate.CenterColor);
         });
         //绘制选中的位置
-        if (!Cursor.CanGameUse())
+        if (!Cursor.CanGameWorldUse())
             return;
         coordinate.MouseCoordinates = GetGridIndex(coordinate.SizeForUnit, pos);
         Vector2 selectorPosition = GetPositonOfGrid(coordinate.SizeForUnit,coordinate.MouseCoordinates);

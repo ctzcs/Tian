@@ -52,7 +52,7 @@ public partial class MainCameraSystem : QuerySystem
         deltaTime = Tick.deltaTime;
         var query = world.Query<Camera2D, CTransform>();
 #if DEBUG
-        if (!Cursor.IsInViewport())
+        if (!Cursor.IsInGameViewport())
         {
             return;
         }
@@ -88,7 +88,7 @@ public partial class MainCameraSystem : QuerySystem
             var wheel = ctx.Input.Mouse.Wheel.Y;
             if (wheel != 0)
             {
-                var screenPosition = Cursor.GetScreenPosition(new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height));
+                var screenPosition = Cursor.GetGameScreenPosition(new Vector2(camera.viewRectInPixels.Width, camera.viewRectInPixels.Height));
                 var zoomDelta = -wheel * zoomStep;
                 CameraUtils.ZoomAround(ref transform, ref camera, screenPosition, zoomDelta);
             }

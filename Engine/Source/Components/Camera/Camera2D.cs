@@ -225,7 +225,7 @@ public static class CameraUtils
 
     public static Vector2 GetWorldMousePosition(Vector2 targetSizeInPixels, in CTransform cameraTransform, in Camera2D camera)
     {
-        var targetPixelPosition = ViewportToLogicScreen(Cursor.ViewportPosition, targetSizeInPixels);
+        var targetPixelPosition = ViewportToLogicScreen(Cursor.GameViewportPosition, targetSizeInPixels);
         return ScreenPxToWorld(targetPixelPosition, cameraTransform, camera);
     }
 
