@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Engine.Components;
 using Engine.Core;
 using Foster.Framework;
 
@@ -8,22 +10,26 @@ namespace Engine.UI_2;
 public class UIRoot
 {
     readonly App app;
-    Vector2Int logicResolution;
+    /// <summary>
+    /// 用来获取鼠标位置
+    /// </summary>
+    Vector2Int outputResolution;
     readonly List<UICanvas> canvases = new();
     readonly Dictionary<string, UICanvas> canvasById = new();
-
-    public Vector2Int ReferenceResolution { get; set; }
+    /// <summary>
+    /// 布局的窗口，比如GameViewRect，去掉黑边
+    /// </summary>
     public Rect? ViewportRect { get; set; }
 
     public IReadOnlyList<UICanvas> Canvases => canvases;
 
     public bool Enabled { get; set; } = true;
+    public Action? OnUpdateLayout;
 
-    public UIRoot(App app, Vector2Int logicResolution)
+    public UIRoot(App app, Vector2Int outputResolution)
     {
         this.app = app;
-        this.logicResolution = logicResolution;
-        ReferenceResolution = logicResolution;
+        this.outputResolution = outputResolution;
     }
 
     public UICanvas CreateCanvas()
@@ -71,21 +77,34 @@ public class UIRoot
         return null;
     }
 
-    Rect GetLayoutViewport() => new Rect(0, 0, ReferenceResolution.X, ReferenceResolution.Y);
+    Rect GetLayoutViewport() => ViewportRect ?? new Rect(0, 0, outputResolution.X, outputResolution.Y);
 
-    Rect GetOutputViewport() => ViewportRect ?? new Rect(0, 0, logicResolution.X, logicResolution.Y);
+    Rect GetOutputViewport() => GetLayoutViewport();
 
     Vector2 GetPointerPosition()
     {
-        var pointer = Core.Input.Cursor.GetScreenPosition(logicResolution);
-        var outputViewport = GetOutputViewport();
-        if (!outputViewport.Contains(pointer) || outputViewport.Width <= 0f || outputViewport.Height <= 0f)
+        var pointer = Core.Input.Cursor.GetScreenPosition(outputResolution);
+        var layoutViewport = GetLayoutViewport();
+        if (!layoutViewport.Contains(pointer) || layoutViewport.Width <= 0f || layoutViewport.Height <= 0f)
             return new Vector2(-1f, -1f);
 
-        var layoutViewport = GetLayoutViewport();
-        return new Vector2(
-            (pointer.X - outputViewport.X) / outputViewport.Width * layoutViewport.Width,
-            (pointer.Y - outputViewport.Y) / outputViewport.Height * layoutViewport.Height);
+        return pointer;
+    }
+
+    public bool TryWorldToUiPx(Vector2 worldPosition, in CTransform cameraTransform, in Camera2D camera, out Vector2 uiPosition)
+    {
+        var viewport = GetLayoutViewport();
+        var normalized = CameraUtils.WorldToViewport(worldPosition, in cameraTransform, in camera);
+        if (normalized.X < 0f || normalized.X > 1f || normalized.Y < 0f || normalized.Y > 1f)
+        {
+            uiPosition = default;
+            return false;
+        }
+
+        uiPosition = new Vector2(
+            viewport.X + normalized.X * viewport.Width,
+            viewport.Y + normalized.Y * viewport.Height);
+        return true;
     }
 
     public void Update()
@@ -102,6 +121,8 @@ public class UIRoot
             canvas.Layout(canvasViewport);
             canvas.Update(time);
         }
+
+        OnUpdateLayout?.Invoke();
 
         var mouse = app.Input.Mouse;
         var pointer = GetPointerPosition();
@@ -128,6 +149,6 @@ public class UIRoot
 
     public void OnResize(int width, int height)
     {
-        logicResolution = new Vector2Int(width, height);
+        outputResolution = new Vector2Int(width, height);
     }
 }

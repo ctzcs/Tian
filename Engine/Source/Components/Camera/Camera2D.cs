@@ -94,6 +94,22 @@ public static class CameraUtils
         return Vector2.Transform(targetPixelPosition, inv);
     }
 
+    public static Vector2 WorldToScreenPx(Vector2 worldPosition, in CTransform cameraTransform, in Camera2D camera)
+    {
+        var mat = camera.worldToScreenMatrix;
+        if (mat == default)
+            mat = GetCameraMatrix(cameraTransform, camera);
+        return Vector2.Transform(worldPosition, mat);
+    }
+
+    public static Vector2 WorldToViewport(Vector2 worldPosition, in CTransform cameraTransform, in Camera2D camera)
+    {
+        var screen = WorldToScreenPx(worldPosition, cameraTransform, camera);
+        float width = Math.Max(1, camera.viewRectInPixels.Width);
+        float height = Math.Max(1, camera.viewRectInPixels.Height);
+        return new Vector2(screen.X / width, screen.Y / height);
+    }
+
     /// <summary>
     /// 从世界坐标到屏幕坐标的矩阵
     /// World To Screen

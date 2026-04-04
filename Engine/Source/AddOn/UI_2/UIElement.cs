@@ -103,6 +103,14 @@ public class UIElement
         ContentRect = new Rect(innerX, innerY, innerW, innerH);
     }
 
+    // 布局矩形改变时调用
+    protected virtual void OnLayoutRectChanged(Rect rect)
+    {
+    }
+
+    // 安排元素的布局矩形
+    // 子类可以重写此方法来实现自定义的布局逻辑
+    // 默认实现只是将目标矩形赋值给布局矩形
     public virtual void Arrange(Rect rect)
     {
         if (!TargetRect.Equals(rect))
@@ -123,6 +131,7 @@ public class UIElement
         sizeTween = new Interpolated<Vector2>(size, size, time, Transition.None, Vector2Lerp);
         LayoutRect = TargetRect;
         ApplyContentRect(LayoutRect);
+        OnLayoutRectChanged(LayoutRect);
         initialized = true;
         targetDirty = false;
     }
@@ -146,6 +155,7 @@ public class UIElement
                 {
                     LayoutRect = TargetRect;
                     ApplyContentRect(LayoutRect);
+                    OnLayoutRectChanged(LayoutRect);
                 }
                 else
                 {
@@ -164,11 +174,13 @@ public class UIElement
                 var size = sizeTween.GetValue(time);
                 LayoutRect = new Rect(pos.X, pos.Y, size.X, size.Y);
                 ApplyContentRect(LayoutRect);
+                OnLayoutRectChanged(LayoutRect);
             }
             else
             {
                 LayoutRect = TargetRect;
                 ApplyContentRect(LayoutRect);
+                OnLayoutRectChanged(LayoutRect);
             }
         }
 
@@ -299,6 +311,7 @@ public class UIElement
             TargetRect = rect;
             LayoutRect = rect;
             ApplyContentRect(LayoutRect);
+            OnLayoutRectChanged(LayoutRect);
             initialized = true;
             targetDirty = false;
         }
@@ -306,6 +319,7 @@ public class UIElement
         {
             LayoutRect = rect;
             ApplyContentRect(LayoutRect);
+            OnLayoutRectChanged(LayoutRect);
         }
     }
 }

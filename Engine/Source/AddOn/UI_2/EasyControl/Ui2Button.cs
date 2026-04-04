@@ -73,10 +73,18 @@ public class Ui2Button : UIElement
     public override void Arrange(Rect rect)
     {
         base.Arrange(rect);
+    }
 
-        var contentRect = new Rect(0f, 0f, rect.Width, rect.Height);
-        Image.Arrange(contentRect);
-        Label.Arrange(contentRect);
+    protected override void OnLayoutRectChanged(Rect rect)
+    {
+        SyncContentLayout(rect.Width, rect.Height);
+    }
+
+    void SyncContentLayout(float width, float height)
+    {
+        var contentRect = new Rect(0f, 0f, width, height);
+        Image.ForceLayoutRect(contentRect);
+        Label.ForceLayoutRect(contentRect);
     }
 
     void HandlePointerEnter(Ui2PointerEvent e)
