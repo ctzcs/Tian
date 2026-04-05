@@ -135,6 +135,9 @@ public class UIRoot
 
         foreach (var canvas in canvases)
         {
+            if (!canvas.Visible)
+                continue;
+
             var canvasViewport = canvas.ClipRect ?? viewport;
             canvas.Layout(canvasViewport);
             canvas.Update(time);
@@ -196,6 +199,9 @@ public class UIRoot
 
         foreach (var canvas in canvases)
         {
+            if (!canvas.Visible)
+                continue;
+
             var canvasViewport = canvas.ClipRect ?? viewport;
             canvas.Render(batcher, canvasViewport, outputViewport);
         }
@@ -211,6 +217,9 @@ public class UIRoot
 
         foreach (var canvas in canvases)
         {
+            if (!canvas.Visible)
+                continue;
+
             var canvasViewport = canvas.ClipRect ?? viewport;
             debugger.Render(batcher, canvas, canvasViewport, outputViewport);
         }

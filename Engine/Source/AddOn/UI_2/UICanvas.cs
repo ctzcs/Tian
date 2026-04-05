@@ -9,6 +9,7 @@ public class UICanvas
 {
     public string? Id { get; set; }
     public Rect? ClipRect { get; set; }
+    public bool Visible { get; set; } = true;
 
     public UIElement Root { get; }
 
