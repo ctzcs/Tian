@@ -23,7 +23,14 @@ public class UIRoot
 
     public IReadOnlyList<UICanvas> Canvases => canvases;
 
+    float scale = 1f;
+
     public bool Enabled { get; set; } = true;
+    public float Scale
+    {
+        get => scale;
+        set => scale = MathF.Max(0.01f, value);
+    }
     public Action? OnUpdateLayout;
 
     public UIRoot(App app, Vector2Int outputResolution)
@@ -77,18 +84,29 @@ public class UIRoot
         return null;
     }
 
-    Rect GetLayoutViewport() => ViewportRect ?? new Rect(0, 0, outputResolution.X, outputResolution.Y);
+    Rect GetOutputViewport() => ViewportRect ?? new Rect(0, 0, outputResolution.X, outputResolution.Y);
 
-    Rect GetOutputViewport() => GetLayoutViewport();
+    Rect GetLayoutViewport()
+    {
+        var outputViewport = GetOutputViewport();
+        return new Rect(
+            outputViewport.X,
+            outputViewport.Y,
+            outputViewport.Width / Scale,
+            outputViewport.Height / Scale);
+    }
 
     Vector2 GetPointerPosition()
     {
         var pointer = Core.Input.Cursor.GetScreenPosition(outputResolution);
-        var layoutViewport = GetLayoutViewport();
-        if (!layoutViewport.Contains(pointer) || layoutViewport.Width <= 0f || layoutViewport.Height <= 0f)
+        var outputViewport = GetOutputViewport();
+        if (!outputViewport.Contains(pointer) || outputViewport.Width <= 0f || outputViewport.Height <= 0f)
             return new Vector2(-1f, -1f);
 
-        return pointer;
+        var layoutViewport = GetLayoutViewport();
+        return new Vector2(
+            layoutViewport.X + (pointer.X - outputViewport.X) / outputViewport.Width * layoutViewport.Width,
+            layoutViewport.Y + (pointer.Y - outputViewport.Y) / outputViewport.Height * layoutViewport.Height);
     }
 
     public bool TryWorldToUiPx(Vector2 worldPosition, in CTransform cameraTransform, in Camera2D camera, out Vector2 uiPosition)
@@ -127,8 +145,45 @@ public class UIRoot
         var mouse = app.Input.Mouse;
         var pointer = GetPointerPosition();
 
-        foreach (var canvas in canvases)
-            canvas.UpdateInput(pointer, mouse.LeftPressed, mouse.LeftReleased);
+        int captureCanvasIndex = -1;
+        for (int i = canvases.Count - 1; i >= 0; i--)
+        {
+            if (!canvases[i].Visible)
+                continue;
+            if (!canvases[i].HasPointerCapture)
+                continue;
+            captureCanvasIndex = i;
+            break;
+        }
+
+        if (captureCanvasIndex >= 0)
+        {
+            canvases[captureCanvasIndex].UpdateInput(pointer, mouse.LeftPressed, mouse.LeftReleased);
+            for (int i = 0; i < canvases.Count; i++)
+            {
+                if (i == captureCanvasIndex || !canvases[i].Visible)
+                    continue;
+                canvases[i].BlockInput(pointer);
+            }
+        }
+        else
+        {
+            bool blocked = false;
+            for (int i = canvases.Count - 1; i >= 0; i--)
+            {
+                var canvas = canvases[i];
+                if (!canvas.Visible)
+                    continue;
+
+                if (blocked)
+                {
+                    canvas.BlockInput(pointer);
+                    continue;
+                }
+
+                blocked = canvas.UpdateInput(pointer, mouse.LeftPressed, mouse.LeftReleased);
+            }
+        }
     }
 
     public void Render(Batcher batcher)
@@ -145,7 +200,21 @@ public class UIRoot
             canvas.Render(batcher, canvasViewport, outputViewport);
         }
     }
-    
+
+    public void RenderDebug(Batcher batcher, UIDebugger debugger)
+    {
+        if (!Enabled || !debugger.Enabled)
+            return;
+
+        var viewport = GetLayoutViewport();
+        var outputViewport = GetOutputViewport();
+
+        foreach (var canvas in canvases)
+        {
+            var canvasViewport = canvas.ClipRect ?? viewport;
+            debugger.Render(batcher, canvas, canvasViewport, outputViewport);
+        }
+    }
 
     public void OnResize(int width, int height)
     {

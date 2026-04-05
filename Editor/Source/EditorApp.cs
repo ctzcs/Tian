@@ -53,6 +53,7 @@ public class EditorApp : App
 		_editorWindowManager.AddWindow(new SystemWindow());
 		_editorWindowManager.AddWindow(new EditorModeWindow());
 		_editorWindowManager.AddWindow(new PerformanceWindow());
+		_editorWindowManager.AddWindow(new UI2DebugWindow());
 
 		_dockLayoutIniPath = Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -247,6 +248,11 @@ public class EditorApp : App
 				if (ImGui.MenuItem("Performance"))
 				{
 					_editorWindowManager.SwitchWindowVisual<PerformanceWindow>();
+				}
+				
+				if (ImGui.MenuItem("UI2 Debug"))
+				{
+					_editorWindowManager.SwitchWindowVisual<UI2DebugWindow>();
 				}
 				ImGui.EndMenu();
 			}
