@@ -322,7 +322,7 @@ public class EditorApp : App
 
     void AssetMetaGenerate()
     {
-        var assetsPath = ProjectConfigUtils.ResolveAssetsRootPath();
+        var assetsPath = ProjectConfigUtils.ResolveEditorAssetsRootPath();
         AssetDatabase.GenerateMetaAsset(assetsPath);
         AssetDatabase.GenerateAssetIndexFile(assetsPath);
     }

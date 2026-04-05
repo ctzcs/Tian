@@ -4,28 +4,17 @@ namespace Engine.Asset;
 
 public partial class Assets
 {
-    private static string? path = null;
-    private static string? engineAssetsPath;
+    private static string? editorAssetsPath;
+    private static string? contentAssetsPath;
+    private static string? contentAssetsPackagePath;
 
-    //Editor中往往是相对Bin
-    public static string EditorAssetsPath => AssetsPath;
+    public static string EditorAssetsPath => editorAssetsPath ??= ProjectConfigUtils.ResolveEditorAssetsRootPath();
 
-    public static string ContentAssetsPath => AssetsPath;
+    public static string ContentAssetsPath => contentAssetsPath ??= ProjectConfigUtils.ResolveContentAssetsRootPath();
 
-    public static string AssetsPath => ResolveAssetsPath();
+    public static string? ContentAssetsPackagePath => contentAssetsPackagePath ??= ProjectConfigUtils.ResolveContentAssetsPackagePath();
 
-    public static string GetContentAssetsPath() => AssetsPath;
-
-    private static string ResolveAssetsPath()
-    {
-        if (engineAssetsPath != null)
-            return engineAssetsPath;
-
-        var resolved = ProjectConfigUtils.ResolveAssetsRootPath();
-        engineAssetsPath = resolved;
-        path = resolved;
-        return resolved;
-    }
+    public static bool HasContentAssetsPackage => !string.IsNullOrWhiteSpace(ContentAssetsPackagePath);
 
     // 旧逻辑保留，避免丢失历史上下文
     // public static string EditorAssetsPath

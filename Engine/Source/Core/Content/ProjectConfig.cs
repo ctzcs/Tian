@@ -18,6 +18,8 @@ public class ProjectConfig
     public string EditorName;
     public string BuildOutputDir;
     public string ContentAssetsDir;
+    public string PublishedAssetsDir;
+    public string PublishedAssetsZip;
     public static string ProjectConfigFile => "ProjectConfig.json";
 }
 
@@ -50,42 +52,29 @@ public static class ProjectConfigUtils
     /// 这里是直接寻找文件夹的方式不打zip包，目前这里默认文件夹应该是Game文件夹，
     /// 解析资源根目录。优先获取ProjectConfig中的ContentAssetsDir，其次从运行目录向上探测 Assets 或 Content/Assets。
     /// </summary>
-    public static string ResolveAssetsRootPath()
+    public static string ResolveEditorAssetsRootPath()
     {
-        var projectConfigPath = ResolveProjectConfigPath();
-        if (!string.IsNullOrWhiteSpace(projectConfigPath))
-        {
-            var projectDir = GetProjectDirectory(projectConfigPath);
-            var config = LoadProjectConfig(projectConfigPath);
-            var contentAssetsDir = string.IsNullOrWhiteSpace(config?.ContentAssetsDir)
-                ? Path.Combine("Content", "Assets")
-                : config.ContentAssetsDir;
+        if (TryResolveProjectAssetsRootPath(out var path))
+            return path;
+        if (TryResolvePublishedAssetsRootPath(out path))
+            return path;
+        throw new DirectoryNotFoundException("Cannot resolve editor assets root path.");
+    }
 
-            var normalizedAssetsDir = contentAssetsDir.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
-            var assetsRoot = Path.IsPathRooted(normalizedAssetsDir)
-                ? normalizedAssetsDir
-                : Path.Combine(projectDir, normalizedAssetsDir);
-            var fullAssetsRoot = Path.GetFullPath(assetsRoot);
-            if (Directory.Exists(fullAssetsRoot))
-                return fullAssetsRoot;
-        }
+    public static string ResolveContentAssetsRootPath()
+    {
+        if (TryResolvePublishedAssetsRootPath(out var path))
+            return path;
+        if (TryResolveProjectAssetsRootPath(out path))
+            return path;
+        throw new DirectoryNotFoundException("Cannot resolve content assets root path.");
+    }
 
-        var baseDir = AppContext.BaseDirectory;
-        var up = "";
-        for (int i = 0; i < 12; i++)
-        {
-            var candidate = Path.GetFullPath(Path.Combine(baseDir, up, "Assets"));
-            if (Directory.Exists(candidate))
-                return candidate;
-
-            var contentCandidate = Path.GetFullPath(Path.Combine(baseDir, up, "Content", "Assets"));
-            if (Directory.Exists(contentCandidate))
-                return contentCandidate;
-
-            up = Path.Combine(up, "..");
-        }
-
-        throw new DirectoryNotFoundException("Cannot resolve assets root path.");
+    public static string? ResolveContentAssetsPackagePath()
+    {
+        var config = GetResolvedProjectConfig();
+        var relativePath = string.IsNullOrWhiteSpace(config?.PublishedAssetsZip) ? "pack.zip" : config.PublishedAssetsZip;
+        return TryResolveFromSearchRoots(relativePath, File.Exists, out var path) ? path : null;
     }
     
     
@@ -207,6 +196,57 @@ public static class ProjectConfigUtils
     }
 
     #region Private
+
+    private static ProjectConfig? GetResolvedProjectConfig()
+    {
+        var configPath = ResolveProjectConfigPath();
+        return string.IsNullOrWhiteSpace(configPath) ? null : LoadProjectConfig(configPath);
+    }
+
+    private static bool TryResolveProjectAssetsRootPath(out string resolved)
+    {
+        resolved = string.Empty;
+        var configPath = ResolveProjectConfigPath();
+        if (string.IsNullOrWhiteSpace(configPath))
+            return false;
+
+        var config = LoadProjectConfig(configPath);
+        var projectDir = GetProjectDirectory(configPath);
+        var relativePath = string.IsNullOrWhiteSpace(config?.ContentAssetsDir) ? Path.Combine("Content", "Assets") : config.ContentAssetsDir;
+        return TryResolveFromRoot(projectDir, relativePath, Directory.Exists, out resolved);
+    }
+
+    private static bool TryResolvePublishedAssetsRootPath(out string resolved)
+    {
+        var config = GetResolvedProjectConfig();
+        var relativePath = string.IsNullOrWhiteSpace(config?.PublishedAssetsDir) ? "Assets" : config.PublishedAssetsDir;
+        return TryResolveFromSearchRoots(relativePath, Directory.Exists, out resolved);
+    }
+
+    private static bool TryResolveFromSearchRoots(string relativePath, Func<string, bool> exists, out string resolved)
+    {
+        if (TryResolveFromRoot(AppContext.BaseDirectory, relativePath, exists, out resolved))
+            return true;
+        if (TryResolveFromRoot(Environment.CurrentDirectory, relativePath, exists, out resolved))
+            return true;
+        resolved = string.Empty;
+        return false;
+    }
+
+    private static bool TryResolveFromRoot(string rootPath, string relativePath, Func<string, bool> exists, out string resolved)
+    {
+        resolved = string.Empty;
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return false;
+
+        var normalized = relativePath.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+        var candidate = Path.IsPathRooted(normalized) ? Path.GetFullPath(normalized) : Path.GetFullPath(Path.Combine(rootPath, normalized));
+        if (!exists(candidate))
+            return false;
+
+        resolved = candidate;
+        return true;
+    }
 
     /// <summary>
     /// 验证候选 ProjectConfig 路径是否可用，并输出规范化后的绝对路径。

@@ -21,10 +21,18 @@ public static partial class Assets
 		Font = font; 
 	}
 	
-	/// <summary>
-	/// 打包资源
-	/// </summary>
-	/// <param name="gfx"></param>
+	public static void LoadRuntime(GraphicsDevice gfx, string spriteSubDirectory = "Sprites")
+	{
+		if (HasContentAssetsPackage)
+		{
+			AssetsV1.LazyInitializeCache(ContentAssetsPackagePath!);
+			LoadSpritesFromGz(gfx, spriteSubDirectory);
+			return;
+		}
+
+		Load(gfx);
+	}
+
 	public static void Load(GraphicsDevice gfx)
 	{
         DeleteCache();
