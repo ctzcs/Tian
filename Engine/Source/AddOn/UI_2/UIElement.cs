@@ -317,9 +317,17 @@ public class UIElement
         }
         else
         {
+            var pos = new Vector2(rect.X, rect.Y);
+            var size = new Vector2(rect.Width, rect.Height);
+            posTween.SetValue(pos, pos, 0f, Transition.None, Vector2Lerp);
+            sizeTween.SetValue(size, size, 0f, Transition.None, Vector2Lerp);
+            posTween.SetDuration(0f);
+            sizeTween.SetDuration(0f);
+            TargetRect = rect;
             LayoutRect = rect;
             ApplyContentRect(LayoutRect);
             OnLayoutRectChanged(LayoutRect);
+            targetDirty = false;
         }
     }
 }
