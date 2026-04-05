@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Engine.Asset;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -24,6 +25,7 @@ public interface IContent : ILifetime
 public abstract class GameContent : IContent
 {
     public App Ctx { get; set; }
+    public AssetManager AssetManager { get; } = new();
     public Target Target { get; set; }
     public EntityStore World { get; set; }
     public Vector2Int OutputResolution { get; set; }

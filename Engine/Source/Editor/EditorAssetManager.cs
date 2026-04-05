@@ -6,6 +6,7 @@ using System.Text.Json;
 using Engine.Asset;
 using Engine.Asset.Pipeline;
 using Engine.Asset.Source;
+using Engine.Core;
 
 namespace Engine.Editor;
 
@@ -22,6 +23,11 @@ public sealed class EditorAssetManager
 
         AssetsRootPath = Path.GetFullPath(assetsRootPath);
         Source = new DirectoryAssetSource(AssetsRootPath);
+    }
+
+    public void InitializeFromProjectConfig()
+    {
+        Initialize(ProjectConfigUtils.ResolveEditorAssetsRootPath());
     }
 
     public void Refresh()
@@ -113,10 +119,31 @@ public sealed class EditorAssetManager
         return Catalog.Load(AssetsRootPath);
     }
 
+    public bool TryGetEntry(AssetId assetId, out AssetCatalogEntry? entry)
+    {
+        if (!Catalog.IsLoaded)
+            LoadCatalog();
+
+        return Catalog.TryGetEntry(assetId, out entry);
+    }
+
+    public bool TryGetPath(AssetId assetId, out string path)
+    {
+        if (!Catalog.IsLoaded)
+            LoadCatalog();
+
+        return Catalog.TryGetPath(assetId, out path);
+    }
+
+    public void RefreshCatalog()
+    {
+        GenerateCatalog();
+    }
+
     void EnsureInitialized()
     {
         if (string.IsNullOrWhiteSpace(AssetsRootPath))
-            Initialize(Assets.EditorAssetsPath);
+            InitializeFromProjectConfig();
     }
 
     static string Normalize(string relativePath)

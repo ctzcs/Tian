@@ -146,7 +146,7 @@ public class UICanvas
             rect.Height / from.Height * to.Height);
     }
 
-    public void Render(Batcher batcher, Rect viewport, Rect outputViewport)
+    public void Render(Batcher batcher, Rect viewport, Rect outputViewport, SpriteFont? defaultFont)
     {
         var commands = new List<Ui2DrawCommand>();
 
@@ -177,7 +177,7 @@ public class UICanvas
                     break;
 
                 case Ui2DrawCommandType.Text:
-                    Ui2RenderUtils.RenderText(batcher, cmd);
+                    Ui2RenderUtils.RenderText(batcher, cmd, defaultFont);
                     break;
 
                 case Ui2DrawCommandType.Image:

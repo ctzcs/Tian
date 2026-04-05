@@ -20,7 +20,15 @@ public class ProjectConfig
     public string ContentAssetsDir;
     public string PublishedAssetsDir;
     public string PublishedAssetsZip;
+    public string RuntimeAssetMode;
     public static string ProjectConfigFile => "ProjectConfig.json";
+}
+
+public enum RuntimeAssetMode
+{
+    ZipOnly,
+    ZipPreferred,
+    DirectoryOnly
 }
 
 ///
@@ -75,6 +83,14 @@ public static class ProjectConfigUtils
         var config = GetResolvedProjectConfig();
         var relativePath = string.IsNullOrWhiteSpace(config?.PublishedAssetsZip) ? "pack.zip" : config.PublishedAssetsZip;
         return TryResolveFromSearchRoots(relativePath, File.Exists, out var path) ? path : null;
+    }
+
+    public static RuntimeAssetMode ResolveRuntimeAssetMode()
+    {
+        var mode = GetResolvedProjectConfig()?.RuntimeAssetMode;
+        return Enum.TryParse<RuntimeAssetMode>(mode, true, out var resolved)
+            ? resolved
+            : RuntimeAssetMode.ZipPreferred;
     }
     
     

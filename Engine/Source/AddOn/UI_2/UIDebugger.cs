@@ -1,5 +1,4 @@
 using System.Numerics;
-using Engine.Asset;
 using Engine.UI_2;
 using Foster.Framework;
 
@@ -17,7 +16,7 @@ public class UIDebugger
 
     private UIElement? lastLoggedHovered;
 
-    public void Render(Batcher batcher, UICanvas canvas)
+    public void Render(Batcher batcher, UICanvas canvas, SpriteFont? font)
     {
         if (!Enabled)
             return;
@@ -29,11 +28,11 @@ public class UIDebugger
         {
             LogHovered(hovered);
             if (ShowInfoPanel)
-                RenderInfoPanel(batcher, hovered, hovered.GetWorldRect());
+                RenderInfoPanel(batcher, hovered, hovered.GetWorldRect(), font);
         }
     }
 
-    public void Render(Batcher batcher, UICanvas canvas, Rect viewport, Rect outputViewport)
+    public void Render(Batcher batcher, UICanvas canvas, Rect viewport, Rect outputViewport, SpriteFont? font)
     {
         if (!Enabled)
             return;
@@ -62,7 +61,7 @@ public class UIDebugger
         {
             LogHovered(hovered);
             if (ShowInfoPanel)
-                RenderInfoPanel(batcher, hovered, TransformRect(hovered.GetWorldRect(), viewport, outputViewport));
+                RenderInfoPanel(batcher, hovered, TransformRect(hovered.GetWorldRect(), viewport, outputViewport), font);
         }
     }
 
@@ -98,12 +97,12 @@ public class UIDebugger
             $"Interactable:{interactable}");
     }
 
-    void RenderInfoPanel(Batcher batcher, UIElement element, Rect displayRect)
+    void RenderInfoPanel(Batcher batcher, UIElement element, Rect displayRect, SpriteFont? font)
     {
-        if (Assets.Font == null)
+        if (font == null)
             return;
 
-        float lineH = Assets.Font.Height + Assets.Font.LineGap;
+        float lineH = font.Height + font.LineGap;
         var start = new Vector2(10, 10);
         var p = start;
 
@@ -120,17 +119,17 @@ public class UIDebugger
         if (info4.Length > maxText.Length)
             maxText = info4;
 
-        var size = Assets.Font.SizeOf(maxText.AsSpan());
+        var size = font.SizeOf(maxText.AsSpan());
         var panelRect = new Rect(start.X - 4, start.Y - 4, size.X + 8, lineH * 4 + 4);
         batcher.Quad(new Quad(panelRect), PanelBgColor);
 
-        batcher.Text(Assets.Font, info1.AsSpan(), p, new Vector2(0, 0), TextColor);
+        batcher.Text(font, info1.AsSpan(), p, new Vector2(0, 0), TextColor);
         p.Y += lineH;
-        batcher.Text(Assets.Font, info2.AsSpan(), p, new Vector2(0, 0), TextColor);
+        batcher.Text(font, info2.AsSpan(), p, new Vector2(0, 0), TextColor);
         p.Y += lineH;
-        batcher.Text(Assets.Font, info3.AsSpan(), p, new Vector2(0, 0), TextColor);
+        batcher.Text(font, info3.AsSpan(), p, new Vector2(0, 0), TextColor);
         p.Y += lineH;
-        batcher.Text(Assets.Font, info4.AsSpan(), p, new Vector2(0, 0), TextColor);
+        batcher.Text(font, info4.AsSpan(), p, new Vector2(0, 0), TextColor);
 
         DrawRectOutline(batcher, wr, HighlightColor, Thickness + 1f);
     }

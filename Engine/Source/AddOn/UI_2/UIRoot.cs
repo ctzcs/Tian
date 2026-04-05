@@ -25,6 +25,7 @@ public class UIRoot
 
     float scale = 1f;
 
+    public SpriteFont? DefaultFont { get; set; }
     public bool Enabled { get; set; } = true;
     public float Scale
     {
@@ -210,7 +211,7 @@ public class UIRoot
                 continue;
 
             var canvasViewport = canvas.ClipRect ?? viewport;
-            canvas.Render(batcher, canvasViewport, outputViewport);
+            canvas.Render(batcher, canvasViewport, outputViewport, DefaultFont);
         }
     }
 
@@ -228,7 +229,7 @@ public class UIRoot
                 continue;
 
             var canvasViewport = canvas.ClipRect ?? viewport;
-            debugger.Render(batcher, canvas, canvasViewport, outputViewport);
+            debugger.Render(batcher, canvas, canvasViewport, outputViewport, DefaultFont);
         }
     }
 
