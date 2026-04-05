@@ -61,6 +61,8 @@ public class UIRoot
         if (!canvases.Contains(canvas))
             canvases.Add(canvas);
 
+        canvas.InputState ??= new UICanvasInputState();
+
         if (!string.IsNullOrEmpty(canvas.Id))
             canvasById[canvas.Id] = canvas;
     }
@@ -68,6 +70,7 @@ public class UIRoot
     public void RemoveCanvas(UICanvas canvas)
     {
         canvases.Remove(canvas);
+        canvas.InputState = null;
 
         if (!string.IsNullOrEmpty(canvas.Id) &&
             canvasById.TryGetValue(canvas.Id, out var existing) &&
@@ -153,7 +156,7 @@ public class UIRoot
         {
             if (!canvases[i].Visible)
                 continue;
-            if (!canvases[i].HasPointerCapture)
+            if (!canvases[i].RequireInputState().HasPointerCapture)
                 continue;
             captureCanvasIndex = i;
             break;
@@ -161,12 +164,14 @@ public class UIRoot
 
         if (captureCanvasIndex >= 0)
         {
-            canvases[captureCanvasIndex].UpdateInput(pointer, mouse.LeftPressed, mouse.LeftReleased);
+            var captureCanvas = canvases[captureCanvasIndex];
+            var captureInput = captureCanvas.RequireInputState();
+            captureInput.Update(captureCanvas.Root, captureCanvas.ClipRect, pointer, mouse.LeftPressed, mouse.LeftReleased);
             for (int i = 0; i < canvases.Count; i++)
             {
                 if (i == captureCanvasIndex || !canvases[i].Visible)
                     continue;
-                canvases[i].BlockInput(pointer);
+                canvases[i].RequireInputState().Block(pointer);
             }
         }
         else
@@ -178,13 +183,15 @@ public class UIRoot
                 if (!canvas.Visible)
                     continue;
 
+                var input = canvas.RequireInputState();
+
                 if (blocked)
                 {
-                    canvas.BlockInput(pointer);
+                    input.Block(pointer);
                     continue;
                 }
 
-                blocked = canvas.UpdateInput(pointer, mouse.LeftPressed, mouse.LeftReleased);
+                blocked = input.Update(canvas.Root, canvas.ClipRect, pointer, mouse.LeftPressed, mouse.LeftReleased);
             }
         }
     }
