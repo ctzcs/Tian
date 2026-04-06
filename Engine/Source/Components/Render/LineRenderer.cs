@@ -58,7 +58,7 @@ public struct LineRenderer:IComponent
 
         var st = subtexture;
         if (st.IsEmpty && !string.IsNullOrEmpty(subTextureName))
-            st = subtexture = Assets.GetSubtexture(subTextureName);
+            st = subtexture = AssetManager.Current?.GetSubtexture(subTextureName) ?? new Subtexture();
 
         if (!st.IsEmpty)
             MeshGenerator.DrawRibbon(batcher, st, renderPoint, lineWidth, color, isLoop, Cap, tileLength: textureTileLength);

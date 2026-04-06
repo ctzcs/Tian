@@ -31,7 +31,7 @@ public static class AnimatorExtensions
 {
     public static Subtexture GetSubtexture(this ref Animator animator)
     {
-        var sprite = animator.sprite ??= Assets.GetSprite(animator.animSpriteName);
+        var sprite = animator.sprite ??= AssetManager.Current?.GetSprite(animator.animSpriteName);
         if (sprite == null) return Subtexture.Empty;
         if (!animator.animation.HasValue || animator.animation.Value.Name != animator.animName)
         {

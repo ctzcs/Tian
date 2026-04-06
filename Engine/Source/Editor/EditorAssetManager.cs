@@ -10,6 +10,15 @@ using Engine.Core;
 
 namespace Engine.Editor;
 
+/// <summary>
+/// 编辑器侧资源入口。
+/// 用于基于 ProjectConfig 定位编辑器 Assets 目录，并执行文件枚举、meta 读写、catalog 生成与查询。
+/// 常见用法：
+/// 1. 编辑器启动后调用 InitializeFromProjectConfig() 或 Refresh()。
+/// 2. 需要生成 .meta / AssetMetaBank 时调用 GenerateMeta() / GenerateCatalog()。
+/// 3. 需要通过 AssetId 反查资源路径时调用 TryGetEntry() / TryGetPath()。
+/// 不负责运行时图集、字体、纹理流读取；这些能力应使用 GameContent.AssetManager。
+/// </summary>
 public sealed class EditorAssetManager
 {
     public string AssetsRootPath { get; private set; } = string.Empty;
@@ -33,7 +42,7 @@ public sealed class EditorAssetManager
     public void Refresh()
     {
         if (string.IsNullOrWhiteSpace(AssetsRootPath))
-            Initialize(Assets.EditorAssetsPath);
+            InitializeFromProjectConfig();
         else
             Source = new DirectoryAssetSource(AssetsRootPath);
     }

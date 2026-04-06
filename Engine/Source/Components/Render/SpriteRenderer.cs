@@ -40,7 +40,7 @@ public static class SpriteRendererExtensions
             var st = spriteRenderer.subtexture;
             if (st.IsEmpty && !string.IsNullOrEmpty(spriteRenderer.subTextureName))
             {
-                spriteRenderer.subtexture = spriteRenderer.subtexture = Assets.GetSubtexture(spriteRenderer.subTextureName);
+                spriteRenderer.subtexture = AssetManager.Current?.GetSubtexture(spriteRenderer.subTextureName) ?? new Subtexture();
             }
         }
 

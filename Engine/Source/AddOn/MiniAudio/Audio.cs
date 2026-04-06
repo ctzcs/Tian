@@ -5,6 +5,7 @@ using System.IO.Compression;
 using Engine.Asset;
 using Engine.Asset.Pipeline;
 using Engine.Asset.v1;
+using Engine.Core;
 using Foster.Audio;
 using Foster.Framework;
 
@@ -20,7 +21,7 @@ public class Audio
 
     public static void AudioTest()
     {
-        AssetsV1.Pack(Assets.ContentAssetsPath,"pack.zip");
+        AssetsV1.Pack(ProjectConfigUtils.ResolveContentAssetsRootPath(),"pack.zip");
         Asset.v1.AssetsV1.LazyInitializeCache("pack.zip");
 
         var indexFile = AssetDatabase.CreateOrGetAssetMetaBankFile("Assets/AssetMetaBank.json");

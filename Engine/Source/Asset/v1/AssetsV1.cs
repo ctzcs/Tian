@@ -1,5 +1,6 @@
 
 using System.IO.Compression;
+using Engine.Core;
 using Foster.Framework;
 
 namespace Engine.Asset.v1;
@@ -171,7 +172,7 @@ public static class Test
 {
     public static void Main()
     {
-        AssetsV1.Pack(Assets.EditorAssetsPath,"pack.zip");
+        AssetsV1.Pack(ProjectConfigUtils.ResolveEditorAssetsRootPath(),"pack.zip");
         using var entryReader = ZipEntryReader.Open("pack.zip", "Level/entity-store.gz");
         if (entryReader != null) Log.Info(entryReader.Entry.FullName);
     }

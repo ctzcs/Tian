@@ -1,5 +1,5 @@
 using System.Numerics;
-using Engine.Asset;
+using Engine.Core;
 using ImGuiNET;
 
 namespace Editor;
@@ -9,10 +9,11 @@ public static class EditorStyle
 	public static string GetEditorFontPath(int index)
 	{
 		var fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+		var editorAssetsPath = ProjectConfigUtils.ResolveEditorAssetsRootPath();
 		var candidates = new[]
 		{
-            Path.Combine(Assets.EditorAssetsPath,"Fonts", "JetBrainsMono-Regular.ttf"),
-            Path.Combine(Assets.EditorAssetsPath,"Fonts","monogram.ttf"),
+            Path.Combine(editorAssetsPath,"Fonts", "JetBrainsMono-Regular.ttf"),
+            Path.Combine(editorAssetsPath,"Fonts","monogram.ttf"),
 			Path.Combine(fontsDir, "arial.ttf"),
 			Path.Combine(fontsDir, "segoeui.ttf"),
 		};

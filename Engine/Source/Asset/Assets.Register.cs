@@ -23,7 +23,7 @@ public partial class Assets
     {
         _allAssets.Clear();
         _assetTypeGroup.Clear();
-        string assetsPath = EditorAssetsPath;
+        string assetsPath = ProjectConfigUtils.ResolveEditorAssetsRootPath();
         var directories = Directory.GetDirectories(assetsPath, "*", SearchOption.AllDirectories);
         foreach (var directory in directories)
         {

@@ -8,8 +8,20 @@ using Foster.Framework;
 
 namespace Engine.Asset;
 
+/// <summary>
+/// 内容运行时资源入口。
+/// 推荐挂在 GameContent 上使用，由每个内容实例持有自己的 AssetManager。
+/// 常见用法：
+/// 1. Start/构造阶段调用 InitializeRuntime() 或 LoadRuntime()，让资源来源按 ProjectConfig 在目录与 zip 之间切换。
+/// 2. 图集资源通过 LoadSpriteAtlas()/LoadRuntime() 建立缓存，再用 GetSubtexture()/GetSprite() 读取。
+/// 3. 单文件资源通过 CreateFont()/CreateTexture()/TryReadAllBytes() 从当前 Source 读取。
+/// 4. Prefab 查询优先结合 AttachCatalog() 后使用 TryGetPath()/LoadPrefab()。
+/// Reset()/Dispose() 会释放当前实例持有的 atlas/source；不要把它当作编辑器目录扫描工具使用，编辑器侧请使用 EditorAssetManager。
+/// </summary>
 public sealed class AssetManager : IDisposable
 {
+    public static AssetManager? Current { get; private set; }
+
     readonly Dictionary<string, Sprite> sprites = new();
     readonly Dictionary<string, Subtexture> subtextures = new();
     SpriteFont? defaultFont;
@@ -24,6 +36,8 @@ public sealed class AssetManager : IDisposable
     public string? ContentAssetsPackagePath => ProjectConfigUtils.ResolveContentAssetsPackagePath();
     public SpriteFont? DefaultFont => defaultFont;
     public Texture? Atlas => atlas;
+    public IReadOnlyDictionary<string, Sprite> Sprites => sprites;
+    public IReadOnlyDictionary<string, Subtexture> Subtextures => subtextures;
 
     public void Initialize(IAssetSource source, AssetCatalog? catalog = null)
     {
@@ -34,6 +48,7 @@ public sealed class AssetManager : IDisposable
 
         Source = source;
         Catalog = catalog;
+        Current = this;
 
         if (source is ZipAssetSource zipAssetSource)
             zipAssetSource.Initialize();
@@ -149,7 +164,6 @@ public sealed class AssetManager : IDisposable
     {
         ArgumentNullException.ThrowIfNull(font);
         defaultFont = font;
-        Assets.SetFont(font);
     }
 
     public bool ContainsSprite(string name) => sprites.ContainsKey(name);
@@ -247,6 +261,9 @@ public sealed class AssetManager : IDisposable
 
         if (Source is IDisposable disposable)
             disposable.Dispose();
+
+        if (ReferenceEquals(Current, this))
+            Current = null;
 
         Source = null;
         Catalog = null;
