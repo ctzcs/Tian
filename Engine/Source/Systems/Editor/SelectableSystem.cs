@@ -1,4 +1,5 @@
 using System;
+using Engine.Asset;
 using Engine.Components;
 using Engine.Core.Extensions;
 using Foster.Framework;
@@ -17,7 +18,7 @@ public struct Selector : IComponent
 public class SelectableSystem:QuerySystem<CTransform,CheckBox>
 {
     private App ctx;
-    private EntityStore _world;
+    private EntityStore? _world;
     private float distanceSq;
     public static readonly string Selector = nameof(Selector);
     
@@ -42,6 +43,7 @@ public class SelectableSystem:QuerySystem<CTransform,CheckBox>
 
     protected override void OnUpdate()
     {
+        if(_world == null) return;
         distanceSq = Single.MaxValue;
         if (!_world.HasUniqueEntity("Selector") || !_world.HasUniqueEntity("MainCamera"))
         {

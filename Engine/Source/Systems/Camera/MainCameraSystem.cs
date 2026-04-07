@@ -12,7 +12,7 @@ namespace Engine.Systems;
 
 public partial class MainCameraSystem : QuerySystem
 {
-    private EntityStore world;
+    private EntityStore? world;
     private App ctx;
     private Func<IDrawableTarget> getCameraViewportTarget;
     private float speed;
@@ -48,6 +48,7 @@ public partial class MainCameraSystem : QuerySystem
     
     protected override void OnUpdate()
     {
+        if (world == null) return;
         if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
         deltaTime = Tick.deltaTime;
         var query = world.Query<Camera2D, CTransform>();
@@ -105,6 +106,7 @@ public partial class MainCameraSystem : QuerySystem
 
     void OnResize()
     {
+        if (world == null) return;
         if (!world.HasUniqueEntity(Engine.Id.MainCamera)) return;
         var cameraEntity = world.GetUniqueEntity(Engine.Id.MainCamera);
         ref var c = ref cameraEntity.GetComponent<Camera2D>();

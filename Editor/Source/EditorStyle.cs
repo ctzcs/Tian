@@ -12,8 +12,11 @@ public static class EditorStyle
 		var editorAssetsPath = ProjectConfigUtils.ResolveEditorAssetsRootPath();
 		var candidates = new[]
 		{
-            Path.Combine(editorAssetsPath,"Fonts", "JetBrainsMono-Regular.ttf"),
-            Path.Combine(editorAssetsPath,"Fonts","monogram.ttf"),
+			Path.Combine(editorAssetsPath, "Fonts", "MapleMono-CN-Medium.ttf"),
+            Path.Combine(editorAssetsPath, "Fonts", "SmileySans-Oblique.ttf"),
+            Path.Combine(editorAssetsPath, "Fonts", "monogram.ttf"),
+			Path.Combine(fontsDir, "msyh.ttc"),
+			Path.Combine(fontsDir, "simhei.ttf"),
 			Path.Combine(fontsDir, "arial.ttf"),
 			Path.Combine(fontsDir, "segoeui.ttf"),
 		};

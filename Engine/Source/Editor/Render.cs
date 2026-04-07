@@ -160,7 +160,7 @@ public class Renderer : IDisposable
 		{
 			if (customFontPath != null && File.Exists(customFontPath))
 			{
-				io.Fonts.AddFontFromFileTTF(customFontPath, 64);
+				io.Fonts.AddFontFromFileTTF(customFontPath, 64, null, io.Fonts.GetGlyphRangesChineseSimplifiedCommon());
 				io.FontGlobalScale = 16.0f / 64.0f;
 			}
 			else

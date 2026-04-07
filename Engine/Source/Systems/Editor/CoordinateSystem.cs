@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Engine.Components;
 using Engine.Core;
@@ -18,12 +19,13 @@ public class CoordinateSystem : QuerySystem<Coordinate>
 {
     private App ctx;
     private Batcher _batcher;
-    private EntityStore _world;
+    private EntityStore? _world;
     private Entity coorEntity;
     public CoordinateSystem(App ctx, Batcher batcher)
     {
         this.ctx = ctx;
         this._batcher = batcher;
+    
     }
 
     protected override void OnAddStore(EntityStore store)
@@ -60,6 +62,7 @@ public class CoordinateSystem : QuerySystem<Coordinate>
 
     protected override void OnUpdate()
     {
+        if (_world == null) return;
         if(!_world.HasUniqueEntity(Engine.Id.MainCamera) 
            || !_world.HasUniqueEntity(Engine.Id.Coordinate)) return;
         var cameraEntity = _world.GetUniqueEntity(Engine.Id.MainCamera);
