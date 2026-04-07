@@ -40,6 +40,7 @@ public readonly struct Ui2DrawCommand
     public readonly float TextSize;
     public readonly Vector2 TextAlign;
     public readonly Ui2TextOverflowMode TextOverflow;
+    public readonly SpriteFont? Font;
     public readonly Subtexture? Subtexture;
     public readonly Ui2ImageFillMode ImageFillMode;
     public readonly Vector4 NineSliceBorder;
@@ -53,6 +54,7 @@ public readonly struct Ui2DrawCommand
         float textSize = 0f,
         Vector2? textAlign = null,
         Ui2TextOverflowMode textOverflow = Ui2TextOverflowMode.None,
+        SpriteFont? font = null,
         Subtexture? subtexture = null,
         Ui2ImageFillMode imageFillMode = Ui2ImageFillMode.Stretch,
         Vector4? nineSliceBorder = null,
@@ -67,6 +69,7 @@ public readonly struct Ui2DrawCommand
         TextSize = textSize;
         TextAlign = textAlign ?? Vector2.Zero;
         TextOverflow = textOverflow;
+        Font = font;
         Subtexture = subtexture;
         ImageFillMode = imageFillMode;
         NineSliceBorder = nineSliceBorder ?? Vector4.Zero;

@@ -1,11 +1,12 @@
 using System.Numerics;
+using Engine.Core.Extensions;
 using Foster.Framework;
 
 namespace Engine.UI_2;
 
 public static class Ui2RenderUtils
 {
-    public static void RenderText(Batcher batcher, Ui2DrawCommand cmd, SpriteFont? font)
+    public static void RenderText(Batcher batcher, Ui2DrawCommand cmd, SpriteFont? font, bool sharedFontScope = false)
     {
         if (string.IsNullOrEmpty(cmd.Text))
             return;
@@ -35,7 +36,7 @@ public static class Ui2RenderUtils
                 var visualHeight = MathF.Max(sizeInfo.Y, lineHeight);
                 if (boxW <= 0f || sizeInfo.X <= 0f || visualHeight <= 0f)
                 {
-                    batcher.Text(font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
+                    DrawText(batcher, font, content.AsSpan(), anchor, align, baseSize, cmd.Color, sharedFontScope);
                     return;
                 }
                 var scale = boxW / sizeInfo.X;
@@ -43,12 +44,12 @@ public static class Ui2RenderUtils
                     scale = MathF.Min(scale, boxH / visualHeight);
                 if (scale >= 1f)
                 {
-                    batcher.Text(font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
+                    DrawText(batcher, font, content.AsSpan(), anchor, align, baseSize, cmd.Color, sharedFontScope);
                     return;
                 }
                 var scaledSize = baseSize * scale;
                 if (scaledSize > 0f)
-                    batcher.Text(font, content.AsSpan(), anchor, align, scaledSize, cmd.Color);
+                    DrawText(batcher, font, content.AsSpan(), anchor, align, scaledSize, cmd.Color, sharedFontScope);
                 return;
             }
             case Ui2TextOverflowMode.Wrap:
@@ -58,10 +59,10 @@ public static class Ui2RenderUtils
                 var size = cmd.TextSize > 0f ? cmd.TextSize : font.Size;
                 if (boxW <= 0f)
                 {
-                    batcher.Text(font, cmd.Text.AsSpan(), anchor, align, size, cmd.Color);
+                    DrawText(batcher, font, cmd.Text.AsSpan(), anchor, align, size, cmd.Color, sharedFontScope);
                     return;
                 }
-                batcher.TextWrapped(font, cmd.Text.AsSpan(), boxW, anchor, align, size, cmd.Color);
+                DrawWrappedText(batcher, font, cmd.Text.AsSpan(), boxW, anchor, align, size, cmd.Color, sharedFontScope);
                 return;
             }
             case Ui2TextOverflowMode.ShrinkAndWrap:
@@ -73,34 +74,50 @@ public static class Ui2RenderUtils
                 var sizeScale = baseSize / font.Size;
                 if (boxW <= 0f || boxH <= 0f)
                 {
-                    batcher.Text(font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
+                    DrawText(batcher, font, content.AsSpan(), anchor, align, baseSize, cmd.Color, sharedFontScope);
                     return;
                 }
                 var lines = font.WrapText(content.AsSpan(), boxW, baseSize);
                 var lineCount = lines.Count;
                 if (lineCount == 0)
                 {
-                    batcher.Text(font, content.AsSpan(), anchor, align, baseSize, cmd.Color);
+                    DrawText(batcher, font, content.AsSpan(), anchor, align, baseSize, cmd.Color, sharedFontScope);
                     return;
                 }
                 var totalHeight = font.Height * sizeScale * lineCount + font.LineGap * sizeScale * (lineCount - 1);
                 if (totalHeight <= boxH)
                 {
-                    batcher.TextWrapped(font, content.AsSpan(), boxW, anchor, align, baseSize, cmd.Color);
+                    DrawWrappedText(batcher, font, content.AsSpan(), boxW, anchor, align, baseSize, cmd.Color, sharedFontScope);
                     return;
                 }
                 var scaledSize = baseSize * (boxH / totalHeight);
                 if (scaledSize > 0f)
-                    batcher.TextWrapped(font, content.AsSpan(), boxW, anchor, align, scaledSize, cmd.Color);
+                    DrawWrappedText(batcher, font, content.AsSpan(), boxW, anchor, align, scaledSize, cmd.Color, sharedFontScope);
                 return;
             }
             default:
             {
                 var baseSize = cmd.TextSize > 0f ? cmd.TextSize : font.Size;
-                batcher.Text(font, cmd.Text.AsSpan(), anchor, align, baseSize, cmd.Color);
+                DrawText(batcher, font, cmd.Text.AsSpan(), anchor, align, baseSize, cmd.Color, sharedFontScope);
                 return;
             }
         }
+    }
+
+    static void DrawText(Batcher batcher, SpriteFont font, ReadOnlySpan<char> text, Vector2 position, Vector2 justify, float size, Color color, bool sharedFontScope)
+    {
+        if (sharedFontScope)
+            font.DrawShared(batcher, text, position, justify, size, color);
+        else
+            batcher.Text(font, text, position, justify, size, color);
+    }
+
+    static void DrawWrappedText(Batcher batcher, SpriteFont font, ReadOnlySpan<char> text, float maxLineWidth, Vector2 position, Vector2 justify, float size, Color color, bool sharedFontScope)
+    {
+        if (sharedFontScope)
+            font.DrawWrappedShared(batcher, text, maxLineWidth, position, justify, size, color);
+        else
+            batcher.TextWrapped(font, text, maxLineWidth, position, justify, size, color);
     }
 
     static float GetSingleLineHeight(SpriteFont font, float size)

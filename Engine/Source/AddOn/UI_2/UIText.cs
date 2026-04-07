@@ -11,6 +11,7 @@ public class UIText : UIElement
     public float TextSize { get; set; } = 16f;
     public Vector2 Align { get; set; } = Vector2.Zero;
     public Ui2TextOverflowMode OverflowMode { get; set; } = Ui2TextOverflowMode.None;
+    public SpriteFont? Font { get; set; }
 
     public override void CollectDrawCommands(List<Ui2DrawCommand> commands, int depth)
     {
@@ -33,6 +34,7 @@ public class UIText : UIElement
                 TextSize,
                 Align,
                 OverflowMode,
+                font: Font,
                 matrix: matrix));
 
         int nextDepth = depth + 1;
@@ -70,6 +72,12 @@ public static class UITextExtensions
     public static UIText WithTextOverflow(this UIText textElement, Ui2TextOverflowMode overflowMode)
     {
         textElement.OverflowMode = overflowMode;
+        return textElement;
+    }
+
+    public static UIText WithFont(this UIText textElement, SpriteFont? font)
+    {
+        textElement.Font = font;
         return textElement;
     }
 }
