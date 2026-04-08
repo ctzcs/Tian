@@ -9,20 +9,18 @@ public class GraphicsUtils
     {
         var ext = device.Driver.GetShaderExtension();
         return new Material(
-            vertexShader: new(device, new(
-                    Stage: ShaderStage.Vertex,
-                    Code: Calc.ReadEmbeddedBytes(assembly,$"{name}.vertex.{ext}"),
-                    SamplerCount: vertSamplers,
-                    UniformBufferCount: vertUniformBuffers,
-                    EntryPoint: "vertex_main"
-                ), $"{name}Vertex"),
-            fragmentShader: new(device, new(
-                    Stage: ShaderStage.Fragment,
-                    Code: Calc.ReadEmbeddedBytes(assembly,$"{name}.fragment.{ext}"),
-                    SamplerCount: fragSamplers,
-                    UniformBufferCount: fragUniformBuffers,
-                    EntryPoint: "fragment_main"
-                ), $"{name}Fragment")
+            vertexShader: new(device, ShaderStage.Vertex,
+                code: Calc.ReadEmbeddedBytes(assembly, $"{name}.vertex.{ext}"),
+                samplerCount: vertSamplers,
+                uniformBufferCount: vertUniformBuffers,
+                entryPoint: "vertex_main",
+                name: $"{name}Vertex"),
+            fragmentShader: new(device, ShaderStage.Fragment,
+                code: Calc.ReadEmbeddedBytes(assembly, $"{name}.fragment.{ext}"),
+                samplerCount: fragSamplers,
+                uniformBufferCount: fragUniformBuffers,
+                entryPoint: "fragment_main",
+                name: $"{name}Fragment")
         );
     }
 }

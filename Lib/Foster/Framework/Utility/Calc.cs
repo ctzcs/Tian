@@ -115,6 +115,21 @@ public static class Calc
 		=> v * v;
 
 	/// <summary>
+	/// Get the difference between the closest multiple of <paramref name="interval"/> and the <paramref name="value"/>
+	/// </summary>
+	public static float DifferenceFromInterval(float value, float interval)
+	{
+		var val = value % interval;
+		if (val < 0)
+			val += interval;
+
+		if (val < interval / 2)
+			return -val;
+		else
+			return interval - val;
+	}
+
+	/// <summary>
 	/// Get the area of a triangle
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -222,8 +237,8 @@ public static class Calc
 		if (list.Length == 0)
 			return -1;
 
-		int index = 0;
-		T val = list[0];
+		var index = 0;
+		var val = list[0];
 
 		for (int i = 1; i < list.Length; i++)
 			if (list[i].CompareTo(val) < 0)
@@ -243,11 +258,11 @@ public static class Calc
 		if (list.Length == 0)
 			return -1;
 
-		int index = 0;
-		T val = list[0];
+		var index = 0;
+		var val = list[0];
 
 		for (int i = 1; i < list.Length; i++)
-			if (list[i].CompareTo(val) < 0)
+			if (list[i].CompareTo(val) > 0)
 			{
 				index = i;
 				val = list[i];
@@ -260,23 +275,23 @@ public static class Calc
 	/// Move toward a target value without passing it
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static float Approach(float from, float target, float amount)
-		=> from > target ? Math.Max(from - amount, target) : Math.Min(from + amount, target);
+	public static float Approach(float from, float target, float maxDelta)
+		=> from > target ? Math.Max(from - maxDelta, target) : Math.Min(from + maxDelta, target);
 
 	/// <summary>
 	/// Move toward a target value without passing it
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static float Approach(ref float from, float target, float amount)
-		=> from > target ? from = Math.Max(from - amount, target) : from = Math.Min(from + amount, target);
+	public static float Approach(ref float from, float target, float maxDelta)
+		=> from > target ? from = Math.Max(from - maxDelta, target) : from = Math.Min(from + maxDelta, target);
 
 	/// <summary>
 	/// Move toward a target value without passing it, and only if we have the opposite sign or lower magnitude
 	/// </summary>
-	public static float ApproachIfLower(float from, float target, float amount)
+	public static float ApproachIfLower(float from, float target, float maxDelta)
 	{
 		if (Math.Sign(from) != Math.Sign(target) || Math.Abs(from) < Math.Abs(target))
-			return Approach(from, target, amount);
+			return Approach(from, target, maxDelta);
 		else
 			return from;
 	}
@@ -284,27 +299,38 @@ public static class Calc
 	/// <summary>
 	/// Move toward a target value without passing it, and only if we have the opposite sign or lower magnitude
 	/// </summary>
-	public static float ApproachIfLower(ref float from, float target, float amount)
+	public static float ApproachIfLower(ref float from, float target, float maxDelta)
 	{
 		if (Math.Sign(from) != Math.Sign(target) || Math.Abs(from) < Math.Abs(target))
-			return Approach(ref from, target, amount);
+			return Approach(ref from, target, maxDelta);
 		else
 			return from;
 	}
 
-	public static Vector2 Approach(Vector2 from, Vector2 target, float amount)
+	public static Vector2 Approach(Vector2 from, Vector2 target, float maxDelta)
 	{
 		if (from == target)
 			return target;
 		else
 		{
 			var diff = target - from;
-			if (diff.LengthSquared() <= amount * amount)
+			if (diff.LengthSquared() <= maxDelta * maxDelta)
 				return target;
 			else
-				return from + diff.Normalized() * amount;
+				return from + diff.Normalized() * maxDelta;
 		}
 	}
+
+	/// <summary>
+	/// Move toward a target position by a up to a maximum amount, but only allow movement along an arbitrary axis
+	/// </summary>
+	/// <param name="from">Starting point</param>
+	/// <param name="target">Target point to move towards</param>
+	/// <param name="axisNormal">The axis we're allowed to move along</param>
+	/// <param name="maxDelta">The max travel distance</param>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector2 ApproachAlongAxis(Vector2 from, Vector2 target, Vector2 axisNormal, float maxDelta)
+		=> Approach(from, from + axisNormal * Vector2.Dot(target - from, axisNormal), maxDelta);
 
 	public static Vector3 Approach(Vector3 from, Vector3 target, float amount)
 	{
@@ -386,22 +412,40 @@ public static class Calc
 	public static float Clamp(ref float value) => value = MathF.Min(MathF.Max(value, 0), 1);
 
 	/// <summary>
-	/// Shorthand to MathF.Round but returns an Integer
+	/// Shorthand to <see cref="MathF.Round(float)"/> but returns an Integer
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Round(float v) => (int)MathF.Round(v);
 
 	/// <summary>
-	/// Shorthand to MathF.Floor but returns an Integer
+	/// Shorthand to <see cref="Math.Round(double)"/> but returns an Integer
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Round(double v) => (int)Math.Round(v);
+
+	/// <summary>
+	/// Shorthand to <see cref="MathF.Floor(float)"/> but returns an Integer
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Floor(float v) => (int)MathF.Floor(v);
 
 	/// <summary>
-	/// Shorthand to MathF.Ceiling but returns an Integer
+	/// Shorthand to <see cref="Math.Floor(double)"/> but returns an Integer
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Floor(double v) => (int)Math.Floor(v);
+
+	/// <summary>
+	/// Shorthand to <see cref="MathF.Ceiling(float)"/> but returns an Integer
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Ceil(float v) => (int)MathF.Ceiling(v);
+
+	/// <summary>
+	/// Shorthand to <see cref="Math.Ceiling(double)"/> but returns an Integer
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Ceil(double v) => (int)Math.Ceiling(v);
 
 	/// <summary>
 	/// Converts a value from 0 to 1, to 0 to 1 to 0
@@ -503,6 +547,17 @@ public static class Calc
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool BetweenInterval(double time, double interval, double offset = 0)
 		=> (time - offset) % (interval * 2) >= interval;
+
+	/// <summary>
+	/// Returns true when the elapsed <paramref name="time"/> is between the given <paramref name="falseInterval"/> and <paramref name="trueInterval"/>. Ex: with a <paramref name="falseInterval"/> of 0.1 and <paramref name="trueInterval"/> of 0.2, this will be false for 0.1 seconds, then true for 0.2 seconds, and then repeat.
+	/// </summary>
+	/// <param name="time">Elapsed time</param>
+	/// <param name="falseInterval">Time to be false for</param>
+	/// <param name="trueInterval">Time to be true for</param>
+	/// <param name="offset">Offset to the interval (so we can, in effect, start partway through an interval)</param>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool BetweenInterval(double time, double falseInterval, double trueInterval, double offset)
+		=> (time - offset) % (falseInterval + trueInterval) >= falseInterval;
 
 	public static int NextPowerOfTwo(int x)
 	{
@@ -1416,19 +1471,53 @@ public static class Calc
 		unchecked
 		{
 			int hash = 5381;
-			for (int i = 0; i < value.Length; i++)
-				hash = ((hash << 5) + hash) + value[i];
+			foreach (var t in value)
+				hash = (hash << 5) + hash + t;
 			return hash;
 		}
 	}
 
+	/// <summary>
+	/// .NET Core doesn't always hash string values the same (it can seed it based on the running instance)
+	/// So this is to get a static value for every same string
+	/// </summary>
 	public static int StaticStringHash(ReadOnlySpan<byte> value)
 	{
 		unchecked
 		{
 			int hash = 5381;
-			for (int i = 0; i < value.Length; i++)
-				hash = ((hash << 5) + hash) + value[i];
+			foreach (var t in value)
+				hash = (hash << 5) + hash + t;
+			return hash;
+		}
+	}
+
+	/// <summary>
+	/// .NET Core doesn't always hash string values the same (it can seed it based on the running instance)
+	/// So this is to get a static value for every same string
+	/// </summary>
+	public static ulong StaticStringHashUInt64(ReadOnlySpan<char> value)
+	{
+		unchecked
+		{
+			ulong hash = 104729U;
+			foreach (var t in value)
+				hash = (hash << 7) + hash + t;
+			return hash;
+		}
+	}
+
+	/// <summary>
+	/// .NET Core doesn't always hash string values the same (it can seed it based on the running instance)
+	/// So this is to get a static value for every same string
+	/// </summary>
+	public static ulong StaticStringHashUInt64(ReadOnlySpan<byte> value)
+	{
+		unchecked
+		{
+			ulong hash = 104729U;
+			foreach (var t in value)
+				hash = (hash << 7) + hash + t;
 			return hash;
 		}
 	}

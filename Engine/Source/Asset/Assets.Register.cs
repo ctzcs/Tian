@@ -2,7 +2,6 @@ using System.Numerics;
 using System.Text.Json;
 using Engine.Core;
 using Engine.Core.Extensions;
-using Engine.Tilemap;
 using Engine.Asset.Pipeline;
 using Engine.Components;
 using Foster.Framework;
@@ -76,17 +75,6 @@ public static class AssetTest
     {
         Assets.RegisterAll();
     }
-
-
-
-    public static void TestWrite()
-    {
-        TilemapAsset map = new TilemapAsset();
-        map.Path = "Tilemap.asset";
-        map.SetTile(0,new Vector2Int(0,0),new Rect(1,1),Color.Blue,true);
-        SerializeExtensions.SaveFile("Tilemap.asset",map,false);
-    }
-    
 
     public static void TestPrefabTwoStageInstantiate()
     {

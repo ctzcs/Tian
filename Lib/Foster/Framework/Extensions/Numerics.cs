@@ -89,7 +89,7 @@ public static partial class Extensions
 		/// Floors the individual components of a <see cref="Vector2"/>
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public Vector2 Floor() => Vector2.Truncate(vector);
+		public Vector2 Floor() => new(float.Floor(vector.X), float.Floor(vector.Y));
 
 		/// <summary>
 		/// Rounds the individual components of a <see cref="Vector2"/> to the nearest even number.
@@ -229,6 +229,22 @@ public static partial class Extensions
 		public Vector2 ZeroX() => vector with { X = 0 };
 
 		/// <summary>
+		/// Returns a <see cref="Vector2"/> with zero'd out along a given axis
+		/// </summary>
+		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+		public Vector2 Zero(Vector2 axis)
+		{
+			if (axis == Vector2.Zero)
+				return vector; // no axis to project onto
+
+			var dot = Vector2.Dot(vector, axis);
+			var axisLengthSquared = Vector2.Dot(axis, axis);
+			var projection = axis * (dot / axisLengthSquared);
+
+			return vector - projection;
+		}
+
+		/// <summary>
 		/// Returns a <see cref="Vector2"/> with the absolute value of both its components
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,6 +294,22 @@ public static partial class Extensions
 		public Vector3 WithXY(in Vector2 xy) => new(xy.X, xy.Y, vector.Z);
 
 		/// <summary>
+		/// Returns a <see cref="Vector3"/> with zero'd out along a given axis
+		/// </summary>
+		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+		public Vector3 Zero(Vector3 axis)
+		{
+			if (axis == Vector3.Zero)
+				return vector; // no axis to project onto
+
+			var dot = Vector3.Dot(vector, axis);
+			var axisLengthSquared = Vector3.Dot(axis, axis);
+			var projection = axis * (dot / axisLengthSquared);
+
+			return vector - projection;
+		}
+
+		/// <summary>
 		/// Rounds the individual components of a <see cref="Vector3"/> to the nearest even number.
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -287,7 +319,7 @@ public static partial class Extensions
 		/// Floors the individual components of a <see cref="Vector3"/>
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public Vector3 Floor() => Vector3.Truncate(vector);
+		public Vector3 Floor() => new(float.Floor(vector.X), float.Floor(vector.Y), float.Floor(vector.Z));
 
 		/// <summary>
 		/// Ceilings the individual components of a <see cref="Vector3"/>
@@ -333,7 +365,7 @@ public static partial class Extensions
 		/// Floors the individual components of a <see cref="Vector4"/>
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public Vector4 Floor() => Vector4.Truncate(vector);
+		public Vector4 Floor() => new(float.Floor(vector.X), float.Floor(vector.Y), float.Floor(vector.Z), float.Floor(vector.W));
 
 		/// <summary>
 		/// Ceilings the individual components of a <see cref="Vector4"/>

@@ -36,6 +36,22 @@ public class Batcher : IDisposable
 	}
 
 	/// <summary>
+	/// Stencil State for the Sprite Batcher
+	/// </summary>
+	/// <param name="Enabled">If the Stencil Tests should be enabled</param>
+	/// <param name="State">Stencil State</param>
+	/// <param name="ReferenceValue">The value to reference in the stencil test</param>
+	/// <param name="WriteMask">The bits of the stencil values to be updated by the stencil test</param>
+	/// <param name="CompareMask">The bits of the stencil values to be used in the stencil test</param>
+	public readonly record struct Stencil(
+		bool Enabled,
+		StencilState State = default,
+		byte ReferenceValue = 0,
+		byte CompareMask = 0xFF,
+		byte WriteMask = 0xFF
+	);
+
+	/// <summary>
 	/// The GraphicsDevice this Batcher was created with
 	/// </summary>
 	public readonly GraphicsDevice GraphicsDevice;
@@ -49,13 +65,13 @@ public class Batcher : IDisposable
 	/// Optional Vertex Storage Buffers to pass to the Draw Command.<br/>
 	/// Calling <see cref="Clear"/> will also clear these.
 	/// </summary>
-	public StackList4<StorageBuffer> VertexStorageBuffers;
+	public StackList4<StorageBuffer?> VertexStorageBuffers;
 
 	/// <summary>
 	/// Optional Fragment Storage Buffers to pass to the Draw Command.<br/>
 	/// Calling <see cref="Clear"/> will also clear these.
 	/// </summary>
-	public StackList4<StorageBuffer> FragmentStorageBuffers;
+	public StackList4<StorageBuffer?> FragmentStorageBuffers;
 
 	/// <summary>
 	/// The current Scissor Value of the Batcher
@@ -93,6 +109,7 @@ public class Batcher : IDisposable
 	private readonly List<Material> materialsUsed = [];
 	private readonly Queue<Material> materialsPool = [];
 	private readonly Mesh<BatcherVertex, int> mesh;
+	private readonly Stack<Stencil?> stencilStack = [];
 
 	private Material? defaultMaterial;
 	private Color mode = new(255, 0, 0, 0);
@@ -116,6 +133,7 @@ public class Batcher : IDisposable
 		public Texture? Texture = texture;
 		public RectInt? Scissor = null;
 		public TextureSampler Sampler = sampler;
+		public Stencil? Stencil = null;
 		public int Offset = offset;
 		public int Elements = elements;
 	}
@@ -164,6 +182,7 @@ public class Batcher : IDisposable
 		layerStack.Clear();
 		samplerStack.Clear();
 		modeStack.Clear();
+		stencilStack.Clear();
 		FragmentStorageBuffers.Clear();
 		VertexStorageBuffers.Clear();
 
@@ -255,6 +274,7 @@ public class Batcher : IDisposable
 
 		var texture = batch.Texture != null && !batch.Texture.IsDisposed ? batch.Texture : null;
 		var mat = batch.Material ?? defaultMaterial ?? throw new Exception("Default Material has not been instantiated");
+		var stencil = batch.Stencil ?? new(Enabled: false);
 
 		// set Fragment Sampler 0 to the texture to be drawn
 		mat.Fragment.Samplers[0] = new(texture, batch.Sampler);
@@ -271,9 +291,15 @@ public class Batcher : IDisposable
 			IndexCount = batch.Elements * 3,
 			DepthWriteEnabled = false,
 			DepthTestEnabled = false,
+			StencilTestEnabled = stencil.Enabled,
+			BackStencilState = stencil.State,
+			FrontStencilState = stencil.State,
+			StencilWriteMask = stencil.WriteMask,
+			StencilCompareMask = stencil.CompareMask,
+			StencilReferenceValue = stencil.ReferenceValue,
 			CullMode = CullMode.None,
 			VertexStorageBuffers = VertexStorageBuffers,
-			FragmentStorageBuffers = FragmentStorageBuffers
+			FragmentStorageBuffers = FragmentStorageBuffers,
 		});
 	}
 
@@ -286,6 +312,7 @@ public class Batcher : IDisposable
 		if (currentBatch.Texture == null || currentBatch.Elements == 0)
 		{
 			currentBatch.Texture = texture;
+			TryToMergeBatch();
 		}
 		else if (currentBatch.Texture != texture)
 		{
@@ -303,6 +330,7 @@ public class Batcher : IDisposable
 		if (currentBatch.Sampler == sampler || currentBatch.Elements == 0)
 		{
 			currentBatch.Sampler = sampler;
+			TryToMergeBatch();
 		}
 		else if (currentBatch.Sampler != sampler)
 		{
@@ -335,6 +363,7 @@ public class Batcher : IDisposable
 
 		currentBatch.Layer = layer;
 		currentBatchInsert = insert;
+		TryToMergeBatch();
 	}
 
 	private void SetMaterial(Material? material)
@@ -342,6 +371,7 @@ public class Batcher : IDisposable
 		if (currentBatch.Elements == 0)
 		{
 			currentBatch.Material = material;
+			TryToMergeBatch();
 		}
 		else if (currentBatch.Material != material)
 		{
@@ -359,6 +389,7 @@ public class Batcher : IDisposable
 		if (currentBatch.Elements == 0)
 		{
 			currentBatch.Blend = blend;
+			TryToMergeBatch();
 		}
 		else if (currentBatch.Blend != blend)
 		{
@@ -376,6 +407,7 @@ public class Batcher : IDisposable
 		if (currentBatch.Elements == 0)
 		{
 			currentBatch.Scissor = scissor;
+			TryToMergeBatch();
 		}
 		else if (currentBatch.Scissor != scissor)
 		{
@@ -385,6 +417,50 @@ public class Batcher : IDisposable
 			currentBatch.Offset += currentBatch.Elements;
 			currentBatch.Elements = 0;
 			currentBatchInsert++;
+		}
+	}
+
+	private void SetStencil(Stencil? stencil)
+	{
+		if (currentBatch.Elements == 0)
+		{
+			currentBatch.Stencil = stencil;
+			TryToMergeBatch();
+		}
+		else if (currentBatch.Stencil != stencil)
+		{
+			batches.Insert(currentBatchInsert, currentBatch);
+
+			currentBatch.Stencil = stencil;
+			currentBatch.Offset += currentBatch.Elements;
+			currentBatch.Elements = 0;
+			currentBatchInsert++;
+		}
+	}
+
+	/// <summary>
+	/// If we popped some state, and then pushed on the same state, we want to
+	/// merge those draw calls back into one, instead of splitting them.
+	/// </summary>
+	private void TryToMergeBatch()
+	{
+		var index = currentBatchInsert - 1;
+		if (index >= 0 && index < batches.Count && currentBatch.Elements <= 0)
+		{
+			var prev = batches[index];
+			var curr = currentBatch;
+
+			if (prev.Texture == curr.Texture &&
+				prev.Blend == curr.Blend &&
+				prev.Scissor == curr.Scissor &&
+				prev.Sampler == curr.Sampler &&
+				prev.Stencil == curr.Stencil &&
+				(prev.Material == curr.Material || (prev.Material != null && curr.Material != null && prev.Material.EqualTo(curr.Material))))
+			{
+				currentBatch = prev;
+				currentBatchInsert--;
+				batches.RemoveAt(index);
+			}
 		}
 	}
 
@@ -495,6 +571,23 @@ public class Batcher : IDisposable
 	public void PopScissor()
 	{
 		SetScissor(scissorStack.Pop());
+	}
+
+	/// <summary>
+	/// Pushes a Stencil state to draw with.
+	/// </summary>
+	public void PushStencil(Stencil? stencil)
+	{
+		stencilStack.Push(currentBatch.Stencil);
+		SetStencil(stencil);
+	}
+
+	/// <summary>
+	/// Pops the current Stencil state
+	/// </summary>
+	public void PopStencil()
+	{
+		SetStencil(stencilStack.Pop());
 	}
 
 	/// <summary>
@@ -875,21 +968,24 @@ public class Batcher : IDisposable
 		if (lineWeight <= 0)
 			return;
 
-		// TODO:
-		// Detect if the thickness of the line fills the entire shape
-		// (in which case, draw a triangle instead)
-
 		var len_ab = (a - b).Length();
 		var len_bc = (b - c).Length();
 		var len_ca = (c - a).Length();
+		var incenter = ((len_bc * a) + (len_ca * b) + (len_ab * c)) / (len_bc + len_ca + len_ab);
 
-		var off_ab = ((b - a) / len_ab).TurnLeft() * lineWeight;
-		var off_bc = ((c - b) / len_bc).TurnLeft() * lineWeight;
-		var off_ca = ((a - c) / len_ca).TurnLeft() * lineWeight;
+		var project = new Line(a, b).ClosestPoint(incenter);
+		var dist = (project - incenter).Length();
+		var scale = 1 - Calc.Clamp(lineWeight / dist);
 
-		var aa = Intersection(c + off_ca, a + off_ca, a + off_ab, b + off_ab);
-		var bb = Intersection(a + off_ab, b + off_ab, b + off_bc, c + off_bc);
-		var cc = Intersection(b + off_bc, c + off_bc, c + off_ca, a + off_ca);
+		if (scale == 0)
+		{
+			Triangle(a, b, c, color);
+			return;
+		}
+
+		var aa = ((a - incenter) * scale) + incenter;
+		var bb = ((b - incenter) * scale) + incenter;
+		var cc = ((c - incenter) * scale) + incenter;
 
 		Quad(aa, a, b, bb, color);
 		Quad(bb, b, c, cc, color);
@@ -980,6 +1076,10 @@ public class Batcher : IDisposable
 			Rect(rect.Right - lineWeight, rect.Y + lineWeight, lineWeight, rect.Height - lineWeight * 2, color);
 		}
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void RectLine(in Vector2 position, in Vector2 size, float lineWeight, Color color)
+		=> RectLine(new Rect(position, size), lineWeight, color);
 
 	public void RectDashed(Rect rect, float lineWeight, in Color color, float dashLength, float dashOffset)
 	{
@@ -1527,6 +1627,18 @@ public class Batcher : IDisposable
 			color);
 	}
 
+	public void ImageJustified(in Subtexture subtex, in Rect clip, in Vector2 position, in Vector2 justify, float scale, in Color color)
+	{
+		var (source, frame) = subtex.GetClip(clip);
+		var tex = new Subtexture(subtex.Texture, source, frame);
+
+		var pos = position - tex.Size * scale * justify;
+		Quad(tex.Texture,
+			pos + tex.DrawCoords[0] * scale, pos + tex.DrawCoords[1] * scale, pos + tex.DrawCoords[2] * scale, pos + tex.DrawCoords[3] * scale,
+			tex.TexCoords[0], tex.TexCoords[1], tex.TexCoords[2], tex.TexCoords[3],
+			color);
+	}
+
 	public void ImageStretch(in Subtexture subtex, in Rect rect, Color color)
 	{
 		Quad(subtex.Texture,
@@ -1639,23 +1751,39 @@ public class Batcher : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// Appends a list of vertices with indices to the Batcher.
+	/// </summary>
+	public void Vertices(ReadOnlySpan<BatcherVertex> vertices, ReadOnlySpan<int> indices, bool applyMatrix = true)
+	{
+		Request(vertices.Length, indices.Length, out var dstVertices, out var dstIndices, out int vertexOffset);
+
+		if (Matrix != Matrix3x2.Identity && applyMatrix)
+		{
+			for (int i = 0; i < vertices.Length; i ++)
+				dstVertices[i] = vertices[i] with { Pos = Vector2.Transform(vertices[i].Pos, Matrix) };
+		}
+		else
+		{
+			vertices.CopyTo(dstVertices);
+		}
+		
+		for (int i = 0; i < indices.Length; i ++)
+			dstIndices[i] = indices[i] + vertexOffset;
+	}
+
+	/// <summary>
+	/// Appends a list of vertices with indices to the Batcher.
+	/// </summary>
+	public void Vertices(Texture? texture, ReadOnlySpan<BatcherVertex> vertices, ReadOnlySpan<int> indices)
+	{
+		SetTexture(texture);
+		Vertices(vertices, indices);
+	}
+
 	#endregion
 
 	#region Internal Utils
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	private void Append(in ReadOnlySpan<BatcherVertex> vertices, in ReadOnlySpan<int> indices)
-	{
-		// get spans to insert data
-		Request(vertices.Length, indices.Length, out var vertexDest, out var indexDest, out var vertexStart);
-
-		// copy vertices over
-		vertices.CopyTo(vertexDest);
-
-		// copy indices over but update them from relative offsets to the offsets in the buffer
-		for (int i = 0; i < indices.Length; i ++)
-			indexDest[i] = vertexStart + indices[i];
-	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Request(int vertexAppendCount, int indexAppendCount, out Span<BatcherVertex> vertices, out Span<int> indices, out int vertexOffset)

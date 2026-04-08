@@ -5,7 +5,7 @@ using static SDL3.SDL;
 
 namespace Foster.Framework;
 
-internal unsafe class GraphicsDeviceSDL : GraphicsDevice
+internal unsafe class GraphicsDeviceSDL(App app, GraphicsDriver preferred) : GraphicsDevice(app)
 {
 	private class Resource(GraphicsDeviceSDL graphicsDevice)
 	{
@@ -58,17 +58,36 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		public readonly ConcurrentBag<int> Pipelines = [];
 	}
 
+	private class ComputeResource(GraphicsDeviceSDL graphicsDevice, nint pipeline)
+		: Resource(graphicsDevice)
+	{
+		public readonly nint Pipeline = pipeline;
+	}
+
+	private class WindowState(uint id, nint handle)
+	{
+		public readonly uint ID = id;
+		public readonly nint Handle = handle;
+		public bool ReclaimPending;
+		public bool Claimed;
+		public Target? Backbuffer;
+		public Point2 BackbufferSize;
+		public bool SupportsMailboxPresentMode;
+		public bool SupportsImmediatePresentMode;
+		public SDL_GPUPresentMode? PresentMode;
+	}
+
 	private record struct ClearInfo(StackList8<Color>? Color, float? Depth, int? Stencil);
 
 	private const int MaxFramesInFlight = 3;
 	private const uint TransferBufferSize = 16 * 1024 * 1024; // 16MB
 	private const uint MaxUploadCycleCount = 4;
 	private const int MaxColorAttachments = 8;
-	private (TextureFormat Format, SampleCount SampleCount)[] backbufferFormat;
+	private const string BackbufferName = "Foster Backbuffer";
+	private (TextureFormat Format, TextureFlags Flags, SampleCount SampleCount)[] backbufferFormat = [(TextureFormat.Color, TextureFlags.None, SampleCount.One)];
 
 	// object pointers
 	private nint device;
-	private nint window;
 	private nint cmdUpload;
 	private nint cmdRender;
 	private nint renderPass;
@@ -83,22 +102,19 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 	private RectInt? renderPassScissor;
 	private RectInt? renderPassViewport;
 
-	// supported feature set
-	private bool supportsMailbox;
-
 	// state
 	private GraphicsDriver driver;
 	private bool vsyncEnabled;
-
-	// render buffer, drawn to before being applied to the swapchain
-	private Target? backbuffer;
-	private Point2 backbufferSize;
+	private bool inBackground;
+	private readonly Dictionary<uint, WindowState> windows = [];
 
 	// tracked / allocated resources
 	private readonly Dictionary<TextureSampler, nint> samplers = [];
 	private readonly ConcurrentDictionary<int, nint> pipelines = [];
 	private readonly ConcurrentDictionary<nint, Resource> resources = [];
 	private ResourceHandle emptyDefaultTexture;
+	private ResourceHandle emptyDefaultComputeStorageTexture;
+	private ResourceHandle emptyDefaultBuffer;
 	private long nextResourceId;
 
 	// texture/mesh transfer buffers
@@ -116,12 +132,10 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 	private readonly Exception deviceNotCreated = new("GPU Device has not been created");
 	private readonly Exception deviceWasDestroyed = new("This Resource was created with a previous GPU Device which has been destroyed");
 
-	private readonly GraphicsDriver preferred;
-	private readonly Version version;
+	private readonly GraphicsDriver preferred = preferred;
+	private AppFlags flags;
 
 	public override GraphicsDriver Driver => driver;
-
-	public override bool OriginBottomLeft => false;
 
 	public override bool VSync
 	{
@@ -131,36 +145,22 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			if (device == nint.Zero)
 				throw deviceNotCreated;
 
-			SDL_SetGPUSwapchainParameters(device, window,
-				swapchain_composition: SDL_GPUSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
-				present_mode: (value, supportsMailbox) switch
-				{
-					(true, true) => SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX,
-					(true, false) => SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_VSYNC,
-					(false, _) => SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE
-				}
-			);
-
 			vsyncEnabled = value;
+			foreach (var state in windows.Values)
+				UpdateWindowPresentMode(state, value);
 		}
 	}
 
 	public override bool Disposed => device == nint.Zero;
-
-	public GraphicsDeviceSDL(App app, GraphicsDriver preferred) : base(app)
-	{
-		this.preferred = preferred;
-		var sdlv = SDL_GetVersion();
-		version = new(sdlv / 1000000, (sdlv / 1000) % 1000, sdlv % 1000);
-		backbufferFormat = [( TextureFormat.Color, SampleCount.One )];
-	}
 
 	internal override void CreateDevice(in AppFlags flags)
 	{
 		if (device != nint.Zero)
 			throw new Exception("GPU Device is already created");
 
-		string? driverName = preferred switch
+		this.flags = flags;
+
+		string? requestedDriverName = preferred switch
 		{
 			GraphicsDriver.None => null,
 			GraphicsDriver.Private => "private",
@@ -176,33 +176,11 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_DXIL |
 				SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_MSL,
 			debug_mode: flags.Has(AppFlags.GraphicsDebugging),
-			name: driverName!);
+			name: requestedDriverName!);
 
 		if (device == IntPtr.Zero)
 			throw App.CreateExceptionFromSDL(nameof(SDL_CreateGPUDevice));
-		
-		if (flags.Has(AppFlags.MultiSampledBackBuffer))
-		{
-			if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Eight))
-				backbufferFormat = [( TextureFormat.Color, SampleCount.Eight )];
-			else if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Four))
-				backbufferFormat = [( TextureFormat.Color, SampleCount.Four )];
-			else if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Two))
-				backbufferFormat = [( TextureFormat.Color, SampleCount.Two )];
-		}
-	}
 
-	internal override void DestroyDevice()
-	{
-		SDL_DestroyGPUDevice(device);
-		device = nint.Zero;
-	}
-
-	internal override void Startup(nint window)
-	{
-		this.window = window;
-
-		// provider user what driver is being used
 		var driverName = SDL_GetGPUDeviceDriver(device);
 		driver = driverName switch
 		{
@@ -213,13 +191,18 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			_ => GraphicsDriver.None
 		};
 
-		Log.Info($"Graphics Driver: SDL_GPU [{driverName}]");
+		if (flags.Has(AppFlags.MultiSampledBackBuffer))
+		{
+			if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Eight))
+				backbufferFormat = [( TextureFormat.Color, TextureFlags.None, SampleCount.Eight )];
+			else if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Four))
+				backbufferFormat = [( TextureFormat.Color, TextureFlags.None, SampleCount.Four )];
+			else if (IsTextureMultiSampleSupported(TextureFormat.Color, SampleCount.Two))
+				backbufferFormat = [( TextureFormat.Color, TextureFlags.None, SampleCount.Two )];
+		}
 
-		if (!SDL_ClaimWindowForGPUDevice(device, window))
-			throw App.CreateExceptionFromSDL(nameof(SDL_ClaimWindowForGPUDevice));
-
-		supportsMailbox = SDL_WindowSupportsGPUPresentMode(device, window,
-			SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX);
+		if (!flags.Has(AppFlags.NoHeaderLog))
+			Log.Info($"Graphics Driver: SDL_GPU [{driverName}]");
 
 		// we always have a command buffer ready
 		ResetCommandBufferState();
@@ -248,21 +231,90 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 
 		// default texture we fall back to rendering if passed a material with a missing texture
 		{
-			emptyDefaultTexture = CreateTexture("Fallback", 1, 1, TextureFormat.R8G8B8A8, SampleCount.One, null);
 			var data = stackalloc Color[1] { 0xe82979 };
-			SetTextureData(emptyDefaultTexture, new nint(data), 4);
+			emptyDefaultTexture = CreateTexture("Fallback", 1, 1, TextureFormat.R8G8B8A8, default, SampleCount.One, null);
+			emptyDefaultComputeStorageTexture = CreateTexture("StorageFallback", 1, 1, TextureFormat.R8G8B8A8, TextureFlags.ComputeRead | TextureFlags.ComputeWrite, SampleCount.One, null);
+			SetTextureData(emptyDefaultTexture, new nint(data), 4, RectInt.Identity);
+			SetTextureData(emptyDefaultComputeStorageTexture, new nint(data), 4, RectInt.Identity);
 		}
 
-		// get backbuffer
-		SDL_GetWindowSizeInPixels(window, out backbufferSize.X, out backbufferSize.Y);
-		backbufferSize = Point2.Max(Point2.One, backbufferSize);
-		backbuffer = new(this, backbufferSize.X, backbufferSize.Y, backbufferFormat);
+		// default buffer we fall back to rendering if shader expects buffers the user didn't supply
+		{
+			var data = stackalloc byte[1] { 0 };
+			emptyDefaultBuffer = CreateBuffer("Fallback", BufferType.Storage, default);
+			UploadBufferData(emptyDefaultBuffer, new nint(data), 1, 0);
+		}
 
 		// default to 3 frames in flight
 		SDL_SetGPUAllowedFramesInFlight(device, 3);
+	}
 
-		// default to vsync on
-		VSync = true;
+	internal override void DestroyDevice()
+	{
+		SDL_DestroyGPUDevice(device);
+		device = nint.Zero;
+	}
+
+	internal override void WindowCreated(Window window)
+	{
+		var state = windows[window.ID] = new WindowState(window.ID, window.Handle);
+
+		if (!SDL_ClaimWindowForGPUDevice(device, window.Handle))
+			throw App.CreateExceptionFromSDL(nameof(SDL_ClaimWindowForGPUDevice));
+
+		state.Claimed = true;
+		state.ReclaimPending = false;
+
+		// query supported present modes
+		state.SupportsImmediatePresentMode =
+			SDL_WindowSupportsGPUPresentMode(device, state.Handle, SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE);
+		state.SupportsMailboxPresentMode =
+			SDL_WindowSupportsGPUPresentMode(device, state.Handle, SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX);
+
+		// get backbuffer
+		SDL_GetWindowSizeInPixels(state.Handle, out state.BackbufferSize.X, out state.BackbufferSize.Y);
+		state.BackbufferSize = Point2.Max(Point2.One, state.BackbufferSize);
+		state.Backbuffer = new(this, state.BackbufferSize.X, state.BackbufferSize.Y, backbufferFormat, BackbufferName);
+
+		// setup v-sync for this window
+		UpdateWindowPresentMode(state, vsyncEnabled);
+	}
+
+	internal override void WindowDestroyed(Window window)
+	{
+		if (windows.Remove(window.ID, out var state))
+		{
+			if (state.Claimed)
+			{
+				SDL_ReleaseWindowFromGPUDevice(device, window.Handle);
+				state.Claimed = false;
+			}
+		}
+	}
+
+	private void UpdateWindowPresentMode(WindowState state, bool vsyncEnabled)
+	{
+		// get desired mode
+		var desired = vsyncEnabled
+			? SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_VSYNC
+			: SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE;
+
+		// desired mode isn't supported ... fallback, eventually to v-sync, as it's the only always supported mode
+		// https://wiki.libsdl.org/SDL3/SDL_GPUPresentMode#remarks
+		if (desired == SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE && !state.SupportsImmediatePresentMode)
+			desired = SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX;
+		if (desired == SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX && !state.SupportsMailboxPresentMode)
+			desired = SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
+
+		// this operation is slow, so only do it if we have a change to perform
+		if (state.PresentMode != desired)
+		{
+			SDL_SetGPUSwapchainParameters(device, state.Handle,
+				swapchain_composition: SDL_GPUSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+				present_mode: desired
+			);
+			state.PresentMode = desired;
+		}
 	}
 
 	internal override void Shutdown()
@@ -275,7 +327,11 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 
 		// destroy default texture
 		DestroyResource(emptyDefaultTexture);
+		DestroyResource(emptyDefaultComputeStorageTexture);
+		DestroyResource(emptyDefaultBuffer);
 		emptyDefaultTexture = nint.Zero;
+		emptyDefaultComputeStorageTexture = nint.Zero;
+		emptyDefaultBuffer = nint.Zero;
 
 		// destroy resources
 		while (!resources.IsEmpty)
@@ -313,10 +369,11 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			samplers.Clear();
 		}
 
-		SDL_ReleaseWindowFromGPUDevice(device, window);
+		// all windows should be destroyed by this point
+		if (windows.Count > 0)
+			throw new Exception("Windows were not gracefully destroyed");
 
 		// clear state
-		window = nint.Zero;
 		cmdUpload = nint.Zero;
 		cmdRender = nint.Zero;
 		renderPass = nint.Zero;
@@ -330,68 +387,144 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		EndCopyPass();
 		EndRenderPass();
 
-		// copy buffer to swap chain
-		if (SDL_WaitAndAcquireGPUSwapchainTexture(cmdRender, window, out var scTex, out var scW, out var scH))
+		// don't present to the screen if we're not visible
+		if (inBackground)
 		{
-			if (scTex != nint.Zero && scW > 0 && scH > 0 && backbufferSize.X > 0 && backbufferSize.Y > 0 && backbuffer != null)
+			FlushCommands(stall: false);
+			return;
+		}
+
+		// present each window
+		foreach (var state in windows.Values)
+			PresentWindow(state);
+
+		// submit and present to screen
+		FlushCommands(stall: false);
+
+		// reclaim any pending windows
+		foreach (var state in windows.Values)
+		{
+			if (state.ReclaimPending)
+				ReclaimWindow(state);
+		}
+	}
+
+	internal override void OnEvent(SDL_EventType type)
+	{
+		if (type == SDL_EventType.SDL_EVENT_WILL_ENTER_BACKGROUND)
+		{
+			// free window's backbuffers while they are hidden
+			foreach (var state in windows.Values)
 			{
-				SDL_GPUBlitInfo blit = new()
-				{
-					source = new()
-					{
-						texture = RequireResource<TextureResource>(backbuffer.Attachments[0].Resource).SamplerTexture,
-						mip_level = 0,
-						layer_or_depth_plane = 0,
-						x = 0,
-						y = 0,
-						w = Math.Min(scW, (uint)backbuffer.Width),
-						h = Math.Min(scH, (uint)backbuffer.Height)
-					},
-					destination = new()
-					{
-						texture = scTex,
-						mip_level = 0,
-						layer_or_depth_plane = 0,
-						x = 0,
-						y = 0,
-						w = Math.Min(scW, (uint)backbuffer.Width),
-						h = Math.Min(scH, (uint)backbuffer.Height)
-					},
-					load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_DONT_CARE,
-					flip_mode = SDL_FlipMode.SDL_FLIP_NONE,
-					filter = SDL_GPUFilter.SDL_GPU_FILTER_NEAREST,
-					cycle = false
-				};
-
-				SDL_BlitGPUTexture(cmdRender, blit);
+				state.Backbuffer?.Dispose();
+				state.Backbuffer = null;
+				state.ReclaimPending = true;
 			}
+			inBackground = true;
+		}
 
-			// update buffer size (if non-zero)
-			if (scW > 0 && scH > 0)
+		if (type == SDL_EventType.SDL_EVENT_DID_ENTER_FOREGROUND)
+		{
+			inBackground = false;
+		}
+	}
+
+	private void PresentWindow(WindowState state)
+	{
+		// on some platforms, like Android, it's possible to lose the underlying surface when
+		// we move the app to the background. Account for that, and reclaim the window when we resume.
+		if (state.ReclaimPending)
+			return;
+
+		// if the window is hidden, we do not draw to it
+		if ((SDL_GetWindowFlags(state.Handle) & SDL_WindowFlags.SDL_WINDOW_HIDDEN) != 0)
+			return;
+
+		// get the swapchain for this window
+		if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdRender, state.Handle, out var scTex, out var scW, out var scH))
+		{
+			Log.Warning(App.CreateErrorMessageFromSDL(nameof(SDL_WaitAndAcquireGPUSwapchainTexture)));
+			return;
+		}
+
+		// blit backbuffer to swapchain
+		if (scTex != nint.Zero && scW > 0 && scH > 0 && state.BackbufferSize.X > 0 && state.BackbufferSize.Y > 0 && state.Backbuffer != null)
+		{
+			SDL_GPUBlitInfo blit = new()
 			{
-				backbufferSize = new Point2((int)scW, (int)scH);
+				source = new()
+				{
+					texture = RequireResource<TextureResource>(state.Backbuffer.Attachments[0].Resource).SamplerTexture,
+					mip_level = 0,
+					layer_or_depth_plane = 0,
+					x = 0,
+					y = 0,
+					w = Math.Min(scW, (uint)state.Backbuffer.Width),
+					h = Math.Min(scH, (uint)state.Backbuffer.Height)
+				},
+				destination = new()
+				{
+					texture = scTex,
+					mip_level = 0,
+					layer_or_depth_plane = 0,
+					x = 0,
+					y = 0,
+					w = Math.Min(scW, (uint)state.Backbuffer.Width),
+					h = Math.Min(scH, (uint)state.Backbuffer.Height)
+				},
+				load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_DONT_CARE,
+				flip_mode = SDL_FlipMode.SDL_FLIP_NONE,
+				filter = SDL_GPUFilter.SDL_GPU_FILTER_NEAREST,
+				cycle = false
+			};
 
-				// intentionally resizing the buffer a bit larger so we're not
-				// constantly recreating buffers as the window is dragged/scaled
-				if (backbuffer == null || backbuffer.Width < backbufferSize.X || backbuffer.Height < backbufferSize.Y)
-				{
-					backbuffer?.Dispose();
-					backbuffer = new(this, backbufferSize.X + 64, backbufferSize.Y + 64, backbufferFormat);
-				}
-				// resize buffer if it's too large
-				else if (backbuffer.Width > backbufferSize.X + 128 || backbuffer.Height > backbufferSize.Y + 128)
-				{
-					backbuffer?.Dispose();
-					backbuffer = new(this, backbufferSize.X, backbufferSize.Y, backbufferFormat);
-				}
+			SDL_BlitGPUTexture(cmdRender, blit);
+		}
+
+		// update buffer size (if non-zero swapchain size)
+		if (scW > 0 && scH > 0)
+		{
+			state.BackbufferSize = new Point2((int)scW, (int)scH);
+
+			// intentionally resizing the buffer a bit larger so we're not
+			// constantly recreating buffers as the window is dragged/scaled
+			if (state.Backbuffer == null || state.Backbuffer.Width < state.BackbufferSize.X || state.Backbuffer.Height < state.BackbufferSize.Y)
+			{
+				state.Backbuffer?.Dispose();
+				state.Backbuffer = new(this, state.BackbufferSize.X + 64, state.BackbufferSize.Y + 64, backbufferFormat, BackbufferName);
 			}
+			// resize buffer if it's too large
+			else if (state.Backbuffer.Width > state.BackbufferSize.X + 128 || state.Backbuffer.Height > state.BackbufferSize.Y + 128)
+			{
+				state.Backbuffer?.Dispose();
+				state.Backbuffer = new(this, state.BackbufferSize.X, state.BackbufferSize.Y, backbufferFormat, BackbufferName);
+			}
+		}
+	}
+
+	/// <summary>
+	/// TODO: Remove when SDL updates
+	/// This is required due to a bug in the Android SDL backend.
+	/// It has been fixed, but waiting for an SDL release:
+	/// https://github.com/libsdl-org/SDL/issues/15322
+	/// </summary>
+	private void ReclaimWindow(WindowState state)
+	{
+		SDL_WaitForGPUIdle(device);
+
+		if (state.Claimed)
+		{
+			state.Claimed = false;
+			SDL_ReleaseWindowFromGPUDevice(device, state.Handle);
+		}
+
+		if (SDL_ClaimWindowForGPUDevice(device, state.Handle))
+		{
+			state.Claimed = true;
+			state.ReclaimPending = false;
 		}
 		else
-		{
-			throw App.CreateExceptionFromSDL(nameof(SDL_WaitAndAcquireGPUSwapchainTexture));
-		}
-
-		FlushCommands(stall: false);
+			Log.Warning(App.CreateErrorMessageFromSDL(nameof(SDL_ClaimWindowForGPUDevice)));
 	}
 
 	public override bool IsTextureFormatSupported(TextureFormat format)
@@ -412,7 +545,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		return SDL_GPUTextureSupportsSampleCount(device, GetTextureFormat(format), GetSampleCount(sampleCount));
 	}
 
-	internal override ResourceHandle CreateTexture(string? name, int width, int height, TextureFormat format, SampleCount sampleCount, nint? targetBinding)
+	internal override ResourceHandle CreateTexture(string? name, int width, int height, TextureFormat format, TextureFlags flags, SampleCount sampleCount, nint? targetBinding)
 	{
 		if (device == nint.Zero)
 			throw deviceNotCreated;
@@ -451,6 +584,12 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				info.usage |= SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
 		}
 
+		// compute flags
+		if (flags.Has(TextureFlags.ComputeRead))
+			info.usage |= SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ;
+		if (flags.Has(TextureFlags.ComputeWrite))
+			info.usage |= SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE;
+
 		// try to create texture on GPU
 		nint texture = SDL_CreateGPUTexture(device, info);
 		if (props != 0)
@@ -463,7 +602,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		if (sampleCount != SampleCount.One)
 		{
 			var resolveName = name != null ? $"Resolve-{name}" : null;
-			resolveTexture = CreateTexture(resolveName, width, height, format, SampleCount.One, targetBinding);
+			resolveTexture = CreateTexture(resolveName, width, height, format, flags, SampleCount.One, targetBinding);
 		}
 
 		// create resulting texture resource
@@ -486,7 +625,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		return handle;
 	}
 
-	internal override void SetTextureData(ResourceHandle handle, nint data, int length)
+	internal override void SetTextureData(ResourceHandle handle, nint data, int length, RectInt destRegion)
 	{
 		static uint RoundToAlignment(uint value, uint alignment)
 			=> alignment * ((value + alignment - 1) / alignment);
@@ -495,11 +634,11 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			throw deviceNotCreated;
 
 		var res = RequireResource<TextureResource>(handle);
-		
+
 		// search up for resolve texture if we're multisampled
 		if (res.MultiSampleResolve)
 		{
-			SetTextureData(res.MultiSampleResolve, data, length);
+			SetTextureData(res.MultiSampleResolve, data, length, destRegion);
 			return;
 		}
 
@@ -566,19 +705,21 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				{
 					transfer_buffer = transferBuffer,
 					offset = transferOffset,
-					pixels_per_row = (uint)res.Width, // TODO: FNA3D uses 0?
-					rows_per_layer = (uint)res.Height, // TODO: FNA3D uses 0?
+					// if 0 is passed here, width & height of destination region are used as default values
+					// see: https://wiki.libsdl.org/SDL3/SDL_GPUTextureTransferInfo
+					pixels_per_row = 0,
+					rows_per_layer = 0,
 				},
 				destination: new()
 				{
 					texture = res.Texture,
 					layer = 0,
 					mip_level = 0,
-					x = 0,
-					y = 0,
+					x = (uint)destRegion.X,
+					y = (uint)destRegion.Y,
 					z = 0,
-					w = (uint)res.Width,
-					h = (uint)res.Height,
+					w = (uint)destRegion.Width,
+					h = (uint)destRegion.Height,
 					d = 1
 				},
 				cycle: false
@@ -592,7 +733,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			textureUploadBufferOffset += (uint)length;
 	}
 
-	internal override void GetTextureData(ResourceHandle handle, nint data, int length)
+	internal override void GetTextureData(ResourceHandle handle, nint data, int length, RectInt sourceRegion)
 	{
 		if (device == nint.Zero)
 			throw deviceNotCreated;
@@ -603,7 +744,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		// search up for the resolve texture
 		if (res.MultiSampleResolve)
 		{
-			GetTextureData(res.MultiSampleResolve, data, length);
+			GetTextureData(res.MultiSampleResolve, data, length, sourceRegion);
 			return;
 		}
 
@@ -641,19 +782,21 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 						texture = res.Texture,
 						layer = 0,
 						mip_level = 0,
-						x = 0,
-						y = 0,
+						x = (uint)sourceRegion.X,
+						y = (uint)sourceRegion.Y,
 						z = 0,
-						w = (uint)res.Width,
-						h = (uint)res.Height,
+						w = (uint)sourceRegion.Width,
+						h = (uint)sourceRegion.Height,
 						d = 1
 					},
 					destination: new()
 					{
 						transfer_buffer = textureDownloadBuffer,
 						offset = 0,
-						pixels_per_row = (uint)res.Width, // TODO: FNA3D uses 0?
-						rows_per_layer = (uint)res.Height, // TODO: FNA3D uses 0?
+						// if 0 is passed here, width & height of source region are used as default values
+						// see: https://wiki.libsdl.org/SDL3/SDL_GPUTextureTransferInfo
+						pixels_per_row = 0,
+						rows_per_layer = 0,
 					}
 				);
 			}
@@ -670,6 +813,48 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		}
 	}
 
+	internal override void BlitTexture(ResourceHandle sourceTexture, RectInt sourceRegion, ResourceHandle destTexture, RectInt destRegion, TextureFilter filter)
+	{
+		// TODO:
+		// Without this, the texture won't necessarily fully upload?
+		FlushCommands(stall: false);
+
+		var src = RequireResource<TextureResource>(sourceTexture);
+		var dst = RequireResource<TextureResource>(destTexture);
+
+		// validate texture regions; don't let them go out of bounds since we cast to uint
+		sourceRegion = sourceRegion.GetIntersection(new RectInt(0, 0, src.Width, src.Height));
+		destRegion = destRegion.GetIntersection(new RectInt(0, 0, dst.Width, dst.Height));
+
+		SDL_BlitGPUTexture(cmdRender, new()
+		{
+			source = new()
+			{
+				texture = src.SamplerTexture,
+				mip_level = 0,
+				layer_or_depth_plane = 0,
+				x = (uint)sourceRegion.X,
+				y = (uint)sourceRegion.Y,
+				w = (uint)sourceRegion.Width,
+				h = (uint)sourceRegion.Height
+			},
+			destination = new()
+			{
+				texture = dst.Texture,
+				mip_level = 0,
+				layer_or_depth_plane = 0,
+				x = (uint)destRegion.X,
+				y = (uint)destRegion.Y,
+				w = (uint)destRegion.Width,
+				h = (uint)destRegion.Height
+			},
+			load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_DONT_CARE,
+			flip_mode = SDL_FlipMode.SDL_FLIP_NONE,
+			filter = GetFilter(filter),
+			cycle = true
+		});
+	}
+
 	internal override ResourceHandle CreateTarget(int width, int height)
 	{
 		return RegisterResource(new TargetResource(this));
@@ -682,6 +867,10 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			BufferType.Vertex => SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_VERTEX,
 			BufferType.Index => SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_INDEX,
 			BufferType.Storage => SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+			BufferType.Compute =>
+				SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ |
+				SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE |
+				SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
 			_ => throw new NotImplementedException()
 		}, format);
 
@@ -825,7 +1014,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		}
 	}
 
-	internal override ResourceHandle CreateShader(string? name, in ShaderCreateInfo shaderInfo)
+	internal override ResourceHandle CreateShader(Shader shader, byte[] shaderCode, string entryPoint)
 	{
 		if (device == nint.Zero)
 			throw deviceNotCreated;
@@ -838,37 +1027,95 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			_ => SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV,
 		};
 
-		var entryPoint = Encoding.UTF8.GetBytes(shaderInfo.EntryPoint);
-		nint program;
+		var entryPointUtf8 = Encoding.UTF8.GetBytes(entryPoint);
 
-		// create shader program
-		fixed (byte* entryPointPtr = entryPoint)
-		fixed (byte* code = shaderInfo.Code)
+		if (shader.Stage == ShaderStage.Compute)
 		{
-			SDL_GPUShaderCreateInfo info = new()
+			nint pipeline;
+
+			fixed (byte* entryPointPtr = entryPointUtf8)
+			fixed (byte* code = shaderCode)
 			{
-				code_size = (nuint)shaderInfo.Code.Length,
-				code = code,
-				entrypoint = entryPointPtr,
-				format = format,
-				stage = shaderInfo.Stage switch
+				uint props = 0;
+				if (!string.IsNullOrEmpty(shader.Name))
 				{
-					ShaderStage.Vertex => SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX,
-					ShaderStage.Fragment => SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT,
-					_ => throw new NotImplementedException()
-				},
-				num_samplers = (uint)shaderInfo.SamplerCount,
-				num_storage_textures = 0,
-				num_storage_buffers = (uint)shaderInfo.StorageBufferCount,
-				num_uniform_buffers = (uint)shaderInfo.UniformBufferCount,
-			};
+					props = SDL_CreateProperties();
+					SDL_SetStringProperty(props, SDL_PROP_GPU_COMPUTEPIPELINE_CREATE_NAME_STRING, shader.Name);
+				}
 
-			program = SDL_CreateGPUShader(device, info);
-			if (program == nint.Zero)
-				throw App.CreateExceptionFromSDL(nameof(SDL_CreateGPUShader), $"Failed to create {shaderInfo.Stage} Shader");
+				SDL_GPUComputePipelineCreateInfo info = new()
+				{
+					code_size = (nuint)shaderCode.Length,
+					code = code,
+					entrypoint = entryPointPtr,
+					format = format,
+					num_samplers = (uint)shader.SamplerCount,
+					num_readonly_storage_textures = (uint)shader.ReadOnlyStorageTextureCount,
+					num_readonly_storage_buffers = (uint)shader.ReadOnlyStorageBufferCount,
+					num_readwrite_storage_textures = (uint)shader.ReadWriteStorageTextureCount,
+					num_readwrite_storage_buffers = (uint)shader.ReadWriteStorageBufferCount,
+					num_uniform_buffers = (uint)shader.UniformBufferCount,
+					threadcount_x = (uint)shader.ThreadCountX,
+					threadcount_y = (uint)shader.ThreadCountY,
+					threadcount_z = (uint)shader.ThreadCountZ,
+					props = props
+				};
+
+				pipeline = SDL_CreateGPUComputePipeline(device, info);
+
+				if (props != 0)
+					SDL_DestroyProperties(props);
+
+				if (pipeline == nint.Zero)
+					throw App.CreateExceptionFromSDL(nameof(SDL_CreateGPUComputePipeline), "Failed to create Compute Shader");
+			}
+
+			return RegisterResource(new ComputeResource(this, pipeline));
 		}
+		else
+		{
+			nint program;
 
-		return RegisterResource(new ShaderResource(this, program));
+			fixed (byte* entryPointPtr = entryPointUtf8)
+			fixed (byte* code = shaderCode)
+			{
+				uint props = 0;
+				if (!string.IsNullOrEmpty(shader.Name))
+				{
+					props = SDL_CreateProperties();
+					SDL_SetStringProperty(props, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, shader.Name);
+				}
+
+				SDL_GPUShaderCreateInfo info = new()
+				{
+					code_size = (nuint)shaderCode.Length,
+					code = code,
+					entrypoint = entryPointPtr,
+					format = format,
+					stage = shader.Stage switch
+					{
+						ShaderStage.Vertex => SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX,
+						ShaderStage.Fragment => SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT,
+						_ => throw new NotImplementedException()
+					},
+					num_samplers = (uint)shader.SamplerCount,
+					num_storage_textures = 0,
+					num_storage_buffers = (uint)shader.StorageBufferCount,
+					num_uniform_buffers = (uint)shader.UniformBufferCount,
+					props = props
+				};
+
+				program = SDL_CreateGPUShader(device, info);
+
+				if (props != 0)
+					SDL_DestroyProperties(props);
+
+				if (program == nint.Zero)
+					throw App.CreateExceptionFromSDL(nameof(SDL_CreateGPUShader), $"Failed to create {shader.Stage} Shader");
+			}
+
+			return RegisterResource(new ShaderResource(this, program));
+		}
 	}
 
 	private ResourceHandle RegisterResource(Resource it)
@@ -903,6 +1150,10 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				ReleaseGraphicsPipelinesAssociatedWith(sha);
 				SDL_ReleaseGPUShader(device, sha.Shader);
 			}
+			else if (it is ComputeResource comp)
+			{
+				SDL_ReleaseGPUComputePipeline(device, comp.Pipeline);
+			}
 		}
 	}
 
@@ -927,14 +1178,13 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		if (device == nint.Zero)
 			throw deviceNotCreated;
 
-		var mat = command.Material;
-		var vertexShader = mat.Vertex.Shader!;
-		var fragmentShader = mat.Fragment.Shader!;
-		var target = command.Target;
-
 		// try to start a render pass
+		var target = command.Target;
 		if (!BeginRenderPass(target, default))
 			return;
+
+		var vertexShader = command.VertexShader!;
+		var fragmentShader = command.FragmentShader!;
 
 		// set viewport
 		var nextViewport = command.Viewport ?? new RectInt(0, 0, renderPassTargetSize.X, renderPassTargetSize.Y);
@@ -1007,7 +1257,7 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			}
 		}
 
-		// bind buffers
+		// bind vertex buffers
 		if (rebindVertexBuffers)
 		{
 			renderPassVertexBuffers.Clear();
@@ -1038,76 +1288,99 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 			}
 		}
 
-		var vertexInfo = vertexShader.CreateInfo;
-		var fragmentInfo = fragmentShader.CreateInfo;
-
 		// bind vertex samplers
-		// TODO: only do this if Samplers change
-		if (vertexInfo.SamplerCount > 0)
+		// TODO: only do this if Samplers change?
+		if (vertexShader.SamplerCount > 0)
 		{
-			Span<SDL_GPUTextureSamplerBinding> samplers = stackalloc SDL_GPUTextureSamplerBinding[vertexInfo.SamplerCount];
+			Span<SDL_GPUTextureSamplerBinding> samplers = stackalloc SDL_GPUTextureSamplerBinding[vertexShader.SamplerCount];
 
-			for (int i = 0; i < vertexInfo.SamplerCount; i++)
+			for (int i = 0; i < vertexShader.SamplerCount; i++)
 			{
-				samplers[i].texture = 
-					(FindResource<TextureResource>(mat.Vertex.Samplers[i].Texture?.Resource) ??
-					RequireResource<TextureResource>(emptyDefaultTexture)).SamplerTexture;
-				samplers[i].sampler = GetSampler(mat.Vertex.Samplers[i].Sampler);
+				var value = i < command.VertexSamplers.Count ? command.VertexSamplers[i] : default;
+				samplers[i].texture =
+					FindResource<TextureResource>(value.Texture?.Resource)?.SamplerTexture ??
+					RequireResource<TextureResource>(emptyDefaultTexture).SamplerTexture;
+				samplers[i].sampler = GetSampler(value.Sampler);
 			}
 
-			SDL_BindGPUVertexSamplers(renderPass, 0, samplers, (uint)vertexInfo.SamplerCount);
+			SDL_BindGPUVertexSamplers(renderPass, 0, samplers, (uint)vertexShader.SamplerCount);
 		}
 
 		// bind fragment samplers
-		// TODO: only do this if Samplers change
-		if (fragmentInfo.SamplerCount > 0)
+		// TODO: only do this if Samplers change?
+		if (fragmentShader.SamplerCount > 0)
 		{
-			Span<SDL_GPUTextureSamplerBinding> samplers = stackalloc SDL_GPUTextureSamplerBinding[fragmentInfo.SamplerCount];
+			Span<SDL_GPUTextureSamplerBinding> samplers = stackalloc SDL_GPUTextureSamplerBinding[fragmentShader.SamplerCount];
 
-			for (int i = 0; i < fragmentInfo.SamplerCount; i++)
+			for (int i = 0; i < fragmentShader.SamplerCount; i++)
 			{
-				samplers[i].texture = 
-					(FindResource<TextureResource>(mat.Fragment.Samplers[i].Texture?.Resource) ??
-					RequireResource<TextureResource>(emptyDefaultTexture)).SamplerTexture;
-				samplers[i].sampler = GetSampler(mat.Fragment.Samplers[i].Sampler);
+				var value = i < command.FragmentSamplers.Count ? command.FragmentSamplers[i] : default;
+				samplers[i].texture =
+					FindResource<TextureResource>(value.Texture?.Resource)?.SamplerTexture ??
+					RequireResource<TextureResource>(emptyDefaultTexture).SamplerTexture;
+				samplers[i].sampler = GetSampler(value.Sampler);
 			}
 
-			SDL_BindGPUFragmentSamplers(renderPass, 0, samplers, (uint)fragmentInfo.SamplerCount);
+			SDL_BindGPUFragmentSamplers(renderPass, 0, samplers, (uint)fragmentShader.SamplerCount);
 		}
 
+		// TODO: only do this if Uniforms change?
 		// Upload Vertex Uniforms
-		// TODO: only do this if Uniforms change
-		for (int i = 0; i < vertexInfo.UniformBufferCount; i ++)
+		for (int i = 0; i < vertexShader.UniformBufferCount; i ++)
 		{
-			fixed (byte* ptr = mat.Vertex.UniformBuffers[i])
-				SDL_PushGPUVertexUniformData(cmdRender, (uint)i, new nint(ptr), (uint)mat.Vertex.UniformBuffers[i].Length);
+			if (i >= command.VertexUniformBuffers.Count || command.VertexUniformBuffers[i] is not {} unibuf)
+				continue;
+
+			var buf = unibuf.Get();
+			fixed (byte* ptr = buf)
+				SDL_PushGPUVertexUniformData(cmdRender, (uint)i, new nint(ptr), (uint)buf.Length);
 		}
 
+		// TODO: only do this if Uniforms change?
 		// Upload Fragment Uniforms
-		// TODO: only do this if Uniforms change
-		for (int i = 0; i < fragmentInfo.UniformBufferCount; i ++)
+		for (int i = 0; i < fragmentShader.UniformBufferCount; i ++)
 		{
-			fixed (byte* ptr = mat.Fragment.UniformBuffers[i])
-				SDL_PushGPUFragmentUniformData(cmdRender, (uint)i, new nint(ptr), (uint)mat.Fragment.UniformBuffers[i].Length);
+			if (i >= command.FragmentUniformBuffers.Count || command.FragmentUniformBuffers[i] is not {} unibuf)
+				continue;
+
+			var buf = unibuf.Get();
+			fixed (byte* ptr = buf)
+				SDL_PushGPUFragmentUniformData(cmdRender, (uint)i, new nint(ptr), (uint)buf.Length);
 		}
 
+		// TODO: if the user doesn't supply enough storage buffers, should we throw?
 		// bind vertex storage buffers
-		if (command.VertexStorageBuffers.Count > 0)
+		if (vertexShader.StorageBufferCount > 0)
 		{
-			Span<nint> buffers = stackalloc nint[command.VertexStorageBuffers.Count];
-			for (int i = 0; i < command.VertexStorageBuffers.Count; i ++)
-				buffers[i] = RequireResource<BufferResource>(command.VertexStorageBuffers[i].Resource).Buffer;
+			Span<nint> buffers = stackalloc nint[vertexShader.StorageBufferCount];
+			for (int i = 0; i < vertexShader.StorageBufferCount; i ++)
+			{
+				if (i < command.VertexStorageBuffers.Count && command.VertexStorageBuffers[i] is {} buf)
+					buffers[i] = RequireResource<BufferResource>(buf.Resource).Buffer;
+				else
+					buffers[i] = RequireResource<BufferResource>(emptyDefaultBuffer).Buffer;
+			}
 			SDL_BindGPUVertexStorageBuffers(renderPass, 0, buffers, (uint)buffers.Length);
 		}
 
+		// TODO: if the user doesn't supply enough storage buffers, should we throw?
 		// bind fragment storage buffers
-		if (command.FragmentStorageBuffers.Count > 0)
+		if (fragmentShader.StorageBufferCount > 0)
 		{
-			Span<nint> buffers = stackalloc nint[command.FragmentStorageBuffers.Count];
-			for (int i = 0; i < command.FragmentStorageBuffers.Count; i ++)
-				buffers[i] = RequireResource<BufferResource>(command.FragmentStorageBuffers[i].Resource).Buffer;
+			Span<nint> buffers = stackalloc nint[fragmentShader.StorageBufferCount];
+			for (int i = 0; i < fragmentShader.StorageBufferCount; i ++)
+			{
+				if (i < command.FragmentStorageBuffers.Count && command.FragmentStorageBuffers[i] is {} buf)
+					buffers[i] = RequireResource<BufferResource>(buf.Resource).Buffer;
+				else
+					buffers[i] = RequireResource<BufferResource>(emptyDefaultBuffer).Buffer;
+			}
 			SDL_BindGPUFragmentStorageBuffers(renderPass, 0, buffers, (uint)buffers.Length);
 		}
+
+		// update stencil reference value
+		if (command.StencilTestEnabled)
+			SDL_SetGPUStencilReference(renderPass, command.StencilReferenceValue);
 
 		// perform draw
 		if (command.IndexBuffer != null)
@@ -1131,6 +1404,140 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				first_instance: 0
 			);
 		}
+	}
+
+	internal override void PerformDispatch(ComputeCommand command)
+	{
+		if (device == nint.Zero)
+			throw deviceNotCreated;
+
+		// end any existing renderpass
+		EndRenderPass();
+
+		var shader = command.Shader!;
+		var computePipeline = RequireResource<ComputeResource>(shader.Resource);
+		var computePass = nint.Zero;
+
+		// TODO: can this be cached? so as to not have to restart it every compute dispatch?
+		// begin compute pass with read-write storage buffer bindings
+		{
+			Span<SDL_GPUStorageTextureReadWriteBinding> rwTextureBindings = stackalloc SDL_GPUStorageTextureReadWriteBinding[shader.ReadWriteStorageTextureCount];
+			Span<SDL_GPUStorageBufferReadWriteBinding> rwBufferBindings = stackalloc SDL_GPUStorageBufferReadWriteBinding[shader.ReadWriteStorageBufferCount];
+
+			for (int i = 0; i < shader.ReadWriteStorageTextureCount; i++)
+			{
+				if (i >= command.ReadWriteStorageTextures.Count || command.ReadWriteStorageTextures[i] is not {} buf)
+				{
+					rwTextureBindings[i] = new() { texture = nint.Zero };
+					continue;
+				}
+
+				rwTextureBindings[i] = new()
+				{
+					texture = RequireResource<TextureResource>(buf.Resource).SamplerTexture,
+					cycle = true
+				};
+			}
+
+			for (int i = 0; i < shader.ReadWriteStorageBufferCount; i++)
+			{
+				if (i >= command.ReadWriteStorageBuffers.Count || command.ReadWriteStorageBuffers[i] is not {} buf)
+				{
+					rwBufferBindings[i] = new() { buffer = nint.Zero };
+					continue;
+				}
+
+				rwBufferBindings[i] = new()
+				{
+					buffer = RequireResource<BufferResource>(buf.Resource).Buffer,
+					cycle = true
+				};
+			}
+
+			computePass = SDL_BeginGPUComputePass(
+				cmdRender,
+				rwTextureBindings,
+				(uint)shader.ReadWriteStorageTextureCount,
+				rwBufferBindings,
+				(uint)shader.ReadWriteStorageBufferCount
+			);
+
+			if (computePass == nint.Zero)
+			{
+				Log.Warning("Failed to begin GPU compute pass");
+				return;
+			}
+		}
+
+		// bind compute pipeline
+		SDL_BindGPUComputePipeline(computePass, computePipeline.Pipeline);
+
+		// bind samplers
+		if (shader.SamplerCount > 0)
+		{
+			Span<SDL_GPUTextureSamplerBinding> samplers = stackalloc SDL_GPUTextureSamplerBinding[shader.SamplerCount];
+
+			for (int i = 0; i < shader.SamplerCount; i++)
+			{
+				var value = i < command.Samplers.Count ? command.Samplers[i] : default;
+				samplers[i].texture =
+					FindResource<TextureResource>(value.Texture?.Resource)?.SamplerTexture ??
+					RequireResource<TextureResource>(emptyDefaultTexture).SamplerTexture;
+				samplers[i].sampler = GetSampler(value.Sampler);
+			}
+
+			SDL_BindGPUComputeSamplers(computePass, 0, samplers, (uint)shader.SamplerCount);
+		}
+
+		// push uniform data
+		for (int i = 0; i < shader.UniformBufferCount; i ++)
+		{
+			if (i >= command.UniformBuffers.Count || command.UniformBuffers[i] is not {} unibuf)
+				continue;
+
+			var buf = unibuf.Get();
+			fixed (byte* ptr = buf)
+				SDL_PushGPUComputeUniformData(cmdRender, (uint)i, new nint(ptr), (uint)buf.Length);
+		}
+
+		// bind storage textures
+		if (shader.ReadOnlyStorageTextureCount > 0)
+		{
+			Span<nint> textures = stackalloc nint[shader.ReadOnlyStorageTextureCount];
+			for (int i = 0; i < shader.ReadOnlyStorageTextureCount; i ++)
+			{
+				if (i < command.ReadOnlyStorageTextures.Count && command.ReadOnlyStorageTextures[i] is {} tex)
+					textures[i] = RequireResource<TextureResource>(tex.Resource).SamplerTexture;
+				else
+					textures[i] = RequireResource<TextureResource>(emptyDefaultComputeStorageTexture).SamplerTexture;
+			}
+			SDL_BindGPUComputeStorageBuffers(computePass, 0, textures, (uint)textures.Length);
+		}
+
+		// TODO: if the user doesn't supply enough storage buffers, should we throw?
+		// bind storage buffers
+		if (shader.ReadOnlyStorageBufferCount > 0)
+		{
+			Span<nint> buffers = stackalloc nint[shader.ReadOnlyStorageBufferCount];
+			for (int i = 0; i < shader.ReadOnlyStorageBufferCount; i ++)
+			{
+				if (i < command.ReadOnlyStorageBuffers.Count && command.ReadOnlyStorageBuffers[i] is {} buf)
+					buffers[i] = RequireResource<BufferResource>(buf.Resource).Buffer;
+				else
+					buffers[i] = RequireResource<BufferResource>(emptyDefaultBuffer).Buffer;
+			}
+			SDL_BindGPUComputeStorageBuffers(computePass, 0, buffers, (uint)buffers.Length);
+		}
+
+		// dispatch
+		SDL_DispatchGPUCompute(
+			computePass,
+			(uint)command.GroupCountX,
+			(uint)command.GroupCountY,
+			(uint)command.GroupCountZ
+		);
+
+		SDL_EndGPUComputePass(computePass);
 	}
 
 	internal override void Clear(IDrawableTarget target, ReadOnlySpan<Color> color, float depth, int stencil, ClearMask mask)
@@ -1334,14 +1741,24 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 	{
 		// build a big hashcode of everything in use
 		var hash = HashCode.Combine(
-			command.Material.Vertex.Shader!.Resource,
-			command.Material.Fragment.Shader!.Resource,
+			command.VertexShader!.Resource,
+			command.FragmentShader!.Resource,
 			command.CullMode,
 			command.DepthCompare,
 			command.DepthTestEnabled,
 			command.DepthWriteEnabled,
+			command.StencilTestEnabled,
 			command.BlendMode
 		);
+
+		if (command.StencilTestEnabled)
+			hash = HashCode.Combine(
+				hash,
+				command.StencilCompareMask,
+				command.StencilWriteMask,
+				command.BackStencilState,
+				command.FrontStencilState
+			);
 
 		if (command.IndexBuffer != null)
 			hash = HashCode.Combine(hash, command.IndexBuffer.Format);
@@ -1358,8 +1775,8 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		{
 			var self = args.Item1;
 			var command = args.Item2;
-			var vertRes = self.RequireResource<ShaderResource>(command.Material.Vertex.Shader!.Resource);
-			var fragRes = self.RequireResource<ShaderResource>(command.Material.Fragment.Shader!.Resource);
+			var vertRes = self.RequireResource<ShaderResource>(command.VertexShader!.Resource);
+			var fragRes = self.RequireResource<ShaderResource>(command.FragmentShader!.Resource);
 			var vertexAttributeCount = 0;
 			foreach (var vb in command.VertexBuffers)
 				vertexAttributeCount += vb.Buffer.Format.Elements.Count;
@@ -1460,25 +1877,24 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 				},
 				depth_stencil_state = new()
 				{
-					compare_op = command.DepthCompare switch
-					{
-						DepthCompare.Always => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS,
-						DepthCompare.Never => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NEVER,
-						DepthCompare.Less => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_LESS,
-						DepthCompare.Equal => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_EQUAL,
-						DepthCompare.LessOrEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_LESS_OR_EQUAL,
-						DepthCompare.Greater => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_GREATER,
-						DepthCompare.NotEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NOT_EQUAL,
-						DepthCompare.GreatorOrEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_GREATER_OR_EQUAL,
-						_ => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NEVER
+					compare_op = GetCompareOp(command.DepthCompare),
+					back_stencil_state = new() {
+						fail_op = GetStencilOp(command.BackStencilState.FailOp),
+						pass_op = GetStencilOp(command.BackStencilState.PassOp),
+						depth_fail_op = GetStencilOp(command.BackStencilState.DepthFailOp),
+						compare_op = GetCompareOp(command.BackStencilState.CompareOp),
 					},
-					back_stencil_state = default,
-					front_stencil_state = default,
-					compare_mask = 0xFF,
-					write_mask = 0xFF,
+					front_stencil_state = new() {
+						fail_op = GetStencilOp(command.FrontStencilState.FailOp),
+						pass_op = GetStencilOp(command.FrontStencilState.PassOp),
+						depth_fail_op = GetStencilOp(command.FrontStencilState.DepthFailOp),
+						compare_op = GetCompareOp(command.FrontStencilState.CompareOp),
+					},
+					compare_mask = command.StencilCompareMask,
+					write_mask = command.StencilWriteMask,
 					enable_depth_test = command.DepthTestEnabled,
 					enable_depth_write = command.DepthWriteEnabled,
-					enable_stencil_test = false, // TODO: allow this
+					enable_stencil_test = command.StencilTestEnabled,
 				},
 				target_info = new()
 				{
@@ -1514,9 +1930,12 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		}
 
 		// get backbuffer target
-		if (drawableTarget.Surface is Window && backbuffer != null)
+		if (drawableTarget.Surface is Window window &&
+			!window.IsDestroyed &&
+			windows.TryGetValue(window.ID, out var state) &&
+			state.Backbuffer is {} backbuffer)
 		{
-			size = backbufferSize;
+			size = state.BackbufferSize;
 			return backbuffer;
 		}
 
@@ -1609,17 +2028,10 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 
 		if (!samplers.TryGetValue(sampler, out var result))
 		{
-			var filter = sampler.Filter switch
-			{
-				TextureFilter.Nearest => SDL_GPUFilter.SDL_GPU_FILTER_NEAREST,
-				TextureFilter.Linear => SDL_GPUFilter.SDL_GPU_FILTER_LINEAR,
-				_ => throw new ArgumentException("Invalid Texture Filter", nameof(sampler)),
-			};
-
 			SDL_GPUSamplerCreateInfo info = new()
 			{
-				min_filter = filter,
-				mag_filter = filter,
+				min_filter = GetFilter(sampler.Filter),
+				mag_filter = GetFilter(sampler.Filter),
 				address_mode_u = GetWrapMode(sampler.WrapX),
 				address_mode_v = GetWrapMode(sampler.WrapY),
 				address_mode_w = SDL_GPUSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
@@ -1634,6 +2046,13 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 
 		return result;
 	}
+
+	private static SDL_GPUFilter GetFilter(TextureFilter filter) => filter switch
+	{
+		TextureFilter.Nearest => SDL_GPUFilter.SDL_GPU_FILTER_NEAREST,
+		TextureFilter.Linear => SDL_GPUFilter.SDL_GPU_FILTER_LINEAR,
+		_ => throw new ArgumentException("Invalid Texture Filter", nameof(filter)),
+	};
 
 	private static SDL_GPUVertexElementFormat GetVertexFormat(VertexType type, bool normalized)
 	{
@@ -1690,6 +2109,34 @@ internal unsafe class GraphicsDeviceSDL : GraphicsDevice
 		SDL_GPUTextureFormat.SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT => true,
 		SDL_GPUTextureFormat.SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT => true,
 		_ => false
+	};
+
+	private static SDL_GPUStencilOp GetStencilOp(StencilOp op) => op switch
+	{
+		StencilOp.Invalid => SDL_GPUStencilOp.SDL_GPU_STENCILOP_INVALID,
+		StencilOp.Keep => SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP,
+		StencilOp.Zero => SDL_GPUStencilOp.SDL_GPU_STENCILOP_ZERO,
+		StencilOp.Replace => SDL_GPUStencilOp.SDL_GPU_STENCILOP_REPLACE,
+		StencilOp.IncrementAndClamp => SDL_GPUStencilOp.SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP,
+		StencilOp.DecrementAndClamp => SDL_GPUStencilOp.SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP,
+		StencilOp.Invert => SDL_GPUStencilOp.SDL_GPU_STENCILOP_INVERT,
+		StencilOp.IncrementAndWrap => SDL_GPUStencilOp.SDL_GPU_STENCILOP_INCREMENT_AND_WRAP,
+		StencilOp.DecrementAndWrap => SDL_GPUStencilOp.SDL_GPU_STENCILOP_DECREMENT_AND_WRAP,
+		_ => throw new ArgumentException("Invalid Stencil Operation", nameof(op)),
+
+	};
+
+	private static SDL_GPUCompareOp GetCompareOp(DepthCompare op) => op switch
+	{
+		DepthCompare.Always => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS,
+		DepthCompare.Never => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NEVER,
+		DepthCompare.Less => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_LESS,
+		DepthCompare.Equal => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_EQUAL,
+		DepthCompare.LessOrEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_LESS_OR_EQUAL,
+		DepthCompare.Greater => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_GREATER,
+		DepthCompare.NotEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NOT_EQUAL,
+		DepthCompare.GreaterOrEqual => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_GREATER_OR_EQUAL,
+		_ => SDL_GPUCompareOp.SDL_GPU_COMPAREOP_NEVER
 	};
 
 	private static SDL_FColor GetColor(Color color)

@@ -338,7 +338,10 @@ public sealed class Input
 		{
 			var it = virtualInputs[i];
 			if (it.TryGetTarget(out var target))
-				target.Update(time);
+			{
+				if (target.Active)
+					target.Update(time);
+			}
 			else
 				virtualInputs.RemoveAt(i);
 		}
@@ -380,5 +383,20 @@ public sealed class Input
 				return true;
 
 		return false;
+	}
+
+	/// <summary>
+	/// Returns whether a controller has received any input more recently than the keyboard has
+	/// </summary>
+	public bool IsControllerInUse
+	{
+		get
+		{
+			var keyboard = Keyboard.InputTimestamp;
+			foreach (var c in Controllers)
+				if (c.InputTimestamp > keyboard)
+					return true;
+			return false;
+		}
 	}
 }

@@ -1,20 +1,10 @@
-using System.Numerics;
-using System.Runtime.InteropServices;
-
 namespace Foster.Framework;
 
 /// <summary>
-/// A Material holds state for a Shader to be used during rendering, including bound Texture Samplers and Uniform Buffer data.<br/>
-/// <br/>
-/// This way, you can have a single Shader in memory but many different states.
+/// A Material holds state for a Shader to be used during rendering, including bound Texture Samplers and Uniform Buffer data.
 /// </summary>
 public class Material
 {
-	/// <summary>
-	/// Combination of Texture and Sampler bound to a Slot in the Material
-	/// </summary>
-	public readonly record struct BoundSampler(Texture? Texture, TextureSampler Sampler);
-
 	/// <summary>
 	/// Stores state data for Shader Stages
 	/// </summary>
@@ -44,7 +34,7 @@ public class Material
 		/// <summary>
 		/// Uniform Buffer Data bound to this Shader Stage
 		/// </summary>
-		internal readonly byte[][] UniformBuffers = [..Enumerable.Range(0, MaxUniformBuffers).Select(it => Array.Empty<byte>())];
+		public readonly UniformBuffer[] UniformBuffers = [..Enumerable.Range(0, MaxUniformBuffers).Select(it => new UniformBuffer())];
 
 		private Shader? shader = null;
 		private readonly ShaderStage stage;
@@ -55,48 +45,32 @@ public class Material
 		/// <summary>
 		/// Sets the Data stored in a Uniform Buffer
 		/// </summary>
-		public unsafe void SetUniformBuffer<T>(in T data, int slot = 0) where T : unmanaged
-		{
-			fixed (T* ptr = &data)
-				SetUniformBuffer(new ReadOnlySpan<byte>((byte*)ptr, Marshal.SizeOf<T>()), slot);
-		}
+		public void SetUniformBuffer<T>(in T data, int slot = 0) where T : unmanaged
+			=> UniformBuffers[slot].Set(data);
 
 		/// <summary>
 		/// Sets the Data stored in a Uniform Buffer
 		/// </summary>
 		public void SetUniformBuffer(in ReadOnlySpan<byte> data, int slot = 0)
-		{
-			if (data.Length > UniformBuffers[slot].Length)
-				Array.Resize(ref UniformBuffers[slot], data.Length);
-			data.CopyTo(UniformBuffers[slot]);
-		}
+			=> UniformBuffers[slot].Set(data);
 
 		/// <summary>
 		/// Sets the Data stored in a Uniform Buffer
 		/// </summary>
-		public unsafe void SetUniformBuffer(in ReadOnlySpan<float> data, int slot = 0)
-		{
-			fixed (void* ptr = data)
-				SetUniformBuffer(new ReadOnlySpan<byte>(ptr, data.Length * sizeof(float)), slot);
-		}
+		public void SetUniformBuffer(in ReadOnlySpan<float> data, int slot = 0)
+			=> UniformBuffers[slot].Set(data);
 
 		/// <summary>
 		/// Gets the data stored in a Uniform Buffer, converted to a given Type
 		/// </summary>
-		public unsafe T GetUniformBuffer<T>(int slot = 0) where T : unmanaged
-		{
-			var data = GetUniformBuffer(slot);
-			if (data.Length < Marshal.SizeOf<T>())
-				return new();
-			fixed (byte* ptr = data)
-				return *(T*)ptr;
-		}
+		public T GetUniformBuffer<T>(int slot = 0) where T : unmanaged
+			=> UniformBuffers[slot].Get<T>();
 
 		/// <summary>
 		/// Gets the data stored in a Uniform Buffer
 		/// </summary>
 		public ReadOnlySpan<byte> GetUniformBuffer(int slot = 0)
-			=> new(UniformBuffers[slot]);
+			=> UniformBuffers[slot].Get();
 
 		/// <summary>
 		/// Copies the Data from this Stage to another
@@ -106,11 +80,22 @@ public class Material
 			to.Shader = Shader;
 			Array.Copy(Samplers, to.Samplers, Samplers.Length);
 			for (int i = 0; i < MaxUniformBuffers; i ++)
-			{
-				if (to.UniformBuffers[i].Length < UniformBuffers[i].Length)
-					Array.Resize(ref to.UniformBuffers[i], UniformBuffers[i].Length);
-				Array.Copy(UniformBuffers[i], to.UniformBuffers[i], UniformBuffers[i].Length);
-			}
+				UniformBuffers[i].CopyTo(to.UniformBuffers[i]);
+		}
+
+		public bool EqualTo(Stage other)
+		{
+			if (Shader != other.Shader)
+				return false;
+
+			if (!Samplers.SequenceEqual(other.Samplers))
+				return false;
+
+			for (int i = 0; i < UniformBuffers.Length; i ++)
+				if (!UniformBuffers[i].EqualTo(other.UniformBuffers[i]))
+					return false;
+
+			return true;
 		}
 	}
 
@@ -160,5 +145,13 @@ public class Material
 		var clone = new Material();
 		CopyTo(clone);
 		return clone;	
+	}
+
+	public bool EqualTo(Material other)
+	{
+		if (this == other)
+			return true;
+
+		return Vertex.EqualTo(other.Vertex) && Fragment.EqualTo(other.Fragment);		
 	}
 }

@@ -52,6 +52,7 @@ public sealed class Storage : StorageContainer
 		public readonly nint StorageHandle = handle;
 		public readonly Regex? SearchPattern = searchPattern;
 		public string CurrentPath = path;
+		public string SearchPath = path;
 		public bool Recursive = recursive;
 	}
 
@@ -95,8 +96,13 @@ public sealed class Storage : StorageContainer
 				data.SubFolders.Add(path);
 
 			// doesn't pattern match
-			if (data.SearchPattern != null && !data.SearchPattern.IsMatch(path))
-				return SDL_EnumerationResult.SDL_ENUM_CONTINUE;
+			if (data.SearchPattern != null)
+			{
+				// path relative to the root path
+				var relativeToSearch = Calc.NormalizePath(Path.GetRelativePath(data.SearchPath, path));
+				if (!data.SearchPattern.IsMatch(relativeToSearch))
+					return SDL_EnumerationResult.SDL_ENUM_CONTINUE;
+			}
 
 			data.Entries.Add(path);
 			return SDL_EnumerationResult.SDL_ENUM_CONTINUE;
@@ -164,7 +170,7 @@ public sealed class Storage : StorageContainer
 	public override bool Remove(string path)
 	{
 		if (!writable)
-			throw new Exception($"{nameof(CreateDirectory)} Failed: the storage can not be written to");
+			throw new Exception($"{nameof(Remove)} Failed: the storage can not be written to");
 		path = Calc.NormalizePath(path);
 		return handle != nint.Zero && SDL_RemoveStoragePath(handle, path);
 	}
@@ -172,7 +178,7 @@ public sealed class Storage : StorageContainer
 	public override Stream Create(string path)
 	{
 		if (!writable)
-			throw new Exception($"{nameof(CreateDirectory)} Failed: the storage can not be written to");
+			throw new Exception($"{nameof(Create)} Failed: the storage can not be written to");
 		path = Calc.NormalizePath(path);
 		return new UserStream(path, handle);
 	}

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using static SDL3.SDL;
 
@@ -7,6 +9,7 @@ namespace Foster.Framework;
 
 /// <summary>
 /// Application Information struct, to be provided to <seealso cref="App(in AppConfig)"/>
+/// </summary>
 /// <param name="ApplicationName">Application Name used for storing data and representing the Application</param>
 /// <param name="WindowTitle">What to display in the Window Title</param>
 /// <param name="Width">The Window Width</param>
@@ -16,7 +19,6 @@ namespace Foster.Framework;
 /// <param name="UpdateMode">An optional default Update Mode to initialize the App with</param>
 /// <param name="PreferredGraphicsDriver">The preferred graphics driver, or None to use the platform-default</param>
 /// <param name="Flags">Optional App Initialization Flags</param>
-/// </summary>
 public readonly record struct AppConfig
 (
 	string ApplicationName,
@@ -29,6 +31,22 @@ public readonly record struct AppConfig
 	GraphicsDriver PreferredGraphicsDriver = GraphicsDriver.None,
 	AppFlags Flags = AppFlags.None
 );
+
+/// <summary>
+/// Application-level events that will be notified through <see cref="App.OnEvent"/>
+/// </summary>
+public enum AppEvents
+{
+	/// <summary>
+	/// When the Application enters the Background (usually on mobile devices)
+	/// </summary>
+	EnterBackground,
+
+	/// <summary>
+	/// When the Application enters the Foreground (usually on mobile devices)
+	/// </summary>
+	EnterForeground
+}
 
 /// <summary>
 /// App Initialization Flags
@@ -47,6 +65,11 @@ public enum AppFlags
 	/// Enables MultiSampling of the BackBuffer
 	/// </summary>
 	MultiSampledBackBuffer = 1 << 1,
+
+	/// <summary>
+	/// Doesn't log Foster's header (version number, gpu, SDL version, etc)
+	/// </summary>
+	NoHeaderLog = 1 << 2,
 }
 
 /// <summary>
@@ -82,9 +105,14 @@ public abstract class App : IDisposable
 	public UpdateMode UpdateMode;
 
 	/// <summary>
-	/// The Application Window
+	/// The Main Application Window
 	/// </summary>
 	public readonly Window Window;
+
+	/// <summary>
+	/// All Windows open in the Application
+	/// </summary>
+	public readonly ReadOnlyCollection<Window> Windows;
 
 	/// <summary>
 	/// The Input Module
@@ -115,6 +143,12 @@ public abstract class App : IDisposable
 	/// If the Application is Disposed
 	/// </summary>
 	public bool Disposed { get; private set; } = false;
+
+	/// <summary>
+	/// When an Application Event is called.
+	/// Note that these are not necessarilyc called from the main thread.
+	/// </summary>
+	public event Action<AppEvents>? OnEvent;
 
 	/// <summary>
 	/// Gets the path to the User Directory, which is the location where you should
@@ -158,6 +192,10 @@ public abstract class App : IDisposable
 	private readonly ConcurrentQueue<Action> mainThreadQueue = [];
 	private readonly InputProviderSDL inputProvider;
 	private string? userPath = null;
+	private readonly SDL_EventFilter eventFilter;
+	private readonly List<Window> windows = [];
+	private readonly Queue<Window> windowDestroyingQueue = [];
+	private Cursor? currentCursor;
 
 	internal readonly Exception NotRunningException = new("The Application is not Running");
 	internal readonly Exception DisposedException = new("The Application is Disposed");
@@ -168,13 +206,13 @@ public abstract class App : IDisposable
 	public unsafe App(in AppConfig config)
 	{
 		this.config = config;
+		Windows = new(windows);
 
-		if (config.Width <= 0 || config.Height <= 0)
-			throw new Exception("Width or height is <= 0");
 		if (string.IsNullOrEmpty(config.ApplicationName) || string.IsNullOrWhiteSpace(config.ApplicationName))
 			throw new Exception("Invalid Application Name");
 
 		// log info
+		if (!config.Flags.Has(AppFlags.NoHeaderLog))
 		{
 			var sdlv = SDL_GetVersion();
 			Log.Info($"Foster: v{FosterVersion.Major}.{FosterVersion.Minor}.{FosterVersion.Build}");
@@ -199,8 +237,12 @@ public abstract class App : IDisposable
 				SDL_InitFlags.SDL_INIT_JOYSTICK | SDL_InitFlags.SDL_INIT_GAMEPAD;
 
 			if (!SDL_Init(initFlags))
-				throw App.CreateExceptionFromSDL(nameof(SDL_Init));
+				throw CreateExceptionFromSDL(nameof(SDL_Init));
 		}
+
+		// setup event watcher
+		eventFilter = EventWatcher;
+		SDL_AddEventWatch(eventFilter, nint.Zero);
 
 		// Create Modules
 		UpdateMode = config.UpdateMode ?? UpdateMode.FixedStep(60);
@@ -209,8 +251,7 @@ public abstract class App : IDisposable
 		FileSystem = new(this);
 		GraphicsDevice = new GraphicsDeviceSDL(this, config.PreferredGraphicsDriver);
 		GraphicsDevice.CreateDevice(config.Flags);
-		Window = new Window(this, GraphicsDevice, config);
-		GraphicsDevice.Startup(Window.Handle);
+		Window = new Window(this, config.WindowTitle, config.Width, config.Height, config.Fullscreen, config.Resizable);
 
 		// try to load default SDL gamepad mappings
 		Input.AddDefaultSDLGamepadMappings(AppContext.BaseDirectory);
@@ -218,6 +259,10 @@ public abstract class App : IDisposable
 
 	~App() => Dispose(false);
 
+	/// <summary>
+	/// Disposes the Application resources. May be called after <see cref="Run"/>,
+	/// but not during any <see cref="App"/> callbacks (<see cref="Startup"/>, <see cref="Update"/>, <see cref="Render"/>, <see cref="Shutdown"/>)
+	/// </summary>
 	public void Dispose()
 	{
 		Dispose(true);
@@ -233,8 +278,11 @@ public abstract class App : IDisposable
 
 			if (disposing)
 			{
+				for (int i = windows.Count - 1; i >= 0; i --)
+					windows[i].Destroy();
+				DestroyWaitingWindows();
+
 				GraphicsDevice.Shutdown();
-				Window.Close();
 				GraphicsDevice.DestroyDevice();
 				inputProvider.CloseDevices();
 				mainThreadQueue.Clear();
@@ -283,26 +331,36 @@ public abstract class App : IDisposable
 		fixedAccumulator = TimeSpan.Zero;
 		timer.Restart();
 
-		// poll events once, so input has controller state before Startup
-		PollEvents();
-		inputProvider.Update(Time);
-		Window.Show();
-		Startup();
+		// wrap in a try/finally so if anything here throws, Dispose
+		// won't then also throw due to the Application still "Running"
+		try
+		{
+			// poll events once, so input has controller state before Startup
+			PollEvents();
+			inputProvider.Update(Time);
+			foreach (var window in windows)
+				window.Show();
+			Startup();
 
-		// begin normal game loop
-		while (!Exiting)
-			Tick();
+			// begin normal game loop
+			while (!Exiting)
+				Tick();
 
-		// make sure all queued main thread actions have been run
-		while (mainThreadQueue.TryDequeue(out var action))
-			action.Invoke();
+			// make sure all queued main thread actions have been run
+			while (mainThreadQueue.TryDequeue(out var action))
+				action.Invoke();
 
-		// shutdown
-		Shutdown();
-		Window.Hide();
-		inputProvider.CloseDevices();
-		Running = false;
-		Exiting = false;
+			// shutdown
+			Shutdown();
+			foreach (var window in windows)
+				window.Hide();
+			inputProvider.CloseDevices();
+		}
+		finally
+		{
+			Running = false;
+			Exiting = false;
+		}
 	}
 
 	/// <summary>
@@ -331,6 +389,69 @@ public abstract class App : IDisposable
 			action();
 		else
 			mainThreadQueue.Enqueue(action);
+	}
+
+	/// <summary>
+	/// Sets whether the Mouse Cursor should be visible while over any of the Windows
+	/// </summary>
+	public void SetMouseVisible(bool enabled)
+	{
+		if (enabled == SDL_CursorVisible())
+			return;
+
+		var result = enabled ? SDL_ShowCursor() : SDL_HideCursor();
+		if (!result)
+			Log.Warning($"Failed to set Mouse visibility: {SDL_GetError()}");
+	}
+
+	/// <summary>
+	/// Sets the Mouse Cursor. If null, resets the Cursor to the default OS cursor.
+	/// </summary>
+	public void SetMouseCursor(Cursor? cursor)
+	{
+		if (currentCursor == cursor)
+			return;
+
+		if (cursor == null)
+		{
+			currentCursor = null;
+			SDL_SetCursor(SDL_GetDefaultCursor());
+			return;
+		}
+
+		if (cursor.Disposed)
+			throw new Exception("Using an invalid cursor!");
+
+		if (SDL_SetCursor(cursor.Handle))
+			currentCursor = cursor;
+		else
+			Log.Warning($"Failed to set Mouse Cursor: {SDL_GetError()}");
+	}
+
+	internal void WindowCreated(Window window)
+	{
+		windows.Add(window);
+		GraphicsDevice.WindowCreated(window);
+	}
+
+	internal void WindowMarkedForDestruction(Window window)
+	{
+		if (!window.IsDestroyed)
+		{
+			if (!windowDestroyingQueue.Contains(window))
+				windowDestroyingQueue.Enqueue(window);
+			windows.Remove(window);
+		}
+	}
+
+	internal void DestroyWaitingWindows()
+	{
+		while (windowDestroyingQueue.TryDequeue(out var window))
+		{
+			GraphicsDevice.WindowDestroyed(window);
+			SDL_DestroyWindow(window.Handle);
+			window.Destroyed();
+		}
 	}
 
 	private void Tick()
@@ -381,7 +502,7 @@ public abstract class App : IDisposable
 			// Do not allow any update to take longer than our maximum.
 			if (fixedAccumulator > update.FixedMaxTime)
 			{
-				Time.Advance(fixedAccumulator - update.FixedMaxTime);
+				Time = Time.Advance(fixedAccumulator - update.FixedMaxTime);
 				fixedAccumulator = update.FixedMaxTime;
 			}
 
@@ -401,11 +522,35 @@ public abstract class App : IDisposable
 		}
 
 		// render
+		// TODO: should rendering be up to the user to check?
+		// should they be allowed to render while in the background?
 		{
 			Time = Time.AdvanceRenderFrame();
 			Render();
 			GraphicsDevice.Present();
 		}
+
+		// destroy any queued windows
+		DestroyWaitingWindows();
+	}
+
+	private unsafe bool EventWatcher(nint userdata, SDL_Event* eventPtr)
+	{
+		var type = (SDL_EventType)eventPtr->type;
+
+		if (type == SDL_EventType.SDL_EVENT_DID_ENTER_FOREGROUND ||
+			type == SDL_EventType.SDL_EVENT_WILL_ENTER_FOREGROUND ||
+			type == SDL_EventType.SDL_EVENT_DID_ENTER_BACKGROUND ||
+			type == SDL_EventType.SDL_EVENT_WILL_ENTER_BACKGROUND)
+			GraphicsDevice.OnEvent(type);
+
+		if (type == SDL_EventType.SDL_EVENT_DID_ENTER_FOREGROUND)
+			OnEvent?.Invoke(AppEvents.EnterForeground);
+
+		if (type == SDL_EventType.SDL_EVENT_WILL_ENTER_BACKGROUND)
+			OnEvent?.Invoke(AppEvents.EnterBackground);
+
+		return true;
 	}
 
 	private void PollEvents()
@@ -459,8 +604,12 @@ public abstract class App : IDisposable
 			case SDL_EventType.SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
 			case SDL_EventType.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
 			case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-				if (ev.window.windowID == Window.ID)
-					Window.OnEvent((SDL_EventType)ev.type);
+				foreach (var window in windows)
+					if (window.ID == ev.window.windowID)
+					{
+						window.OnEvent((SDL_EventType)ev.type);
+						break;
+					}
 				break;
 
 			default:
@@ -473,7 +622,13 @@ public abstract class App : IDisposable
 	/// Creates an Exception with information from SDL_GetError()
 	/// </summary>
 	internal static Exception CreateExceptionFromSDL(string sdlMethod, string? fosterInfo = null)
-		=> new($"{(fosterInfo != null ? $"{fosterInfo}. " : "")}{sdlMethod} failed: {SDL_GetError()}");
+		=> new(CreateErrorMessageFromSDL(sdlMethod, fosterInfo));
+
+	/// <summary>
+	/// Creates an error string with information from SDL_GetError()
+	/// </summary>
+	internal static string CreateErrorMessageFromSDL(string sdlMethod, string? fosterInfo = null)
+		=> $"{(fosterInfo != null ? $"{fosterInfo}. " : "")}{sdlMethod} failed: {SDL_GetError()}";
 
 	// [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
 	internal static unsafe void HandleLogFromSDL(IntPtr userdata, int category, SDL_LogPriority priority, byte* message)
