@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Engine.Core.Extensions;
 using Foster.Framework;
 
 namespace Engine.UI_2;
@@ -167,33 +166,6 @@ public class UICanvas
 
         for (int i = 0; i < commands.Count; i++)
         {
-            if (commands[i].Type == Ui2DrawCommandType.Text)
-            {
-                var textFont = commands[i].Font ?? defaultFont;
-                if (textFont != null)
-                {
-                    using var scope = textFont.BeginSharedDraw(batcher);
-                    for (; i < commands.Count && commands[i].Type == Ui2DrawCommandType.Text; i++)
-                    {
-                        var textCmd = commands[i];
-                        var runFont = textCmd.Font ?? defaultFont;
-                        if (!ReferenceEquals(runFont, textFont))
-                            break;
-
-                        var pushedTextMatrix = textCmd.Matrix != Matrix3x2.Identity;
-                        if (pushedTextMatrix)
-                            batcher.PushMatrix(textCmd.Matrix, true);
-
-                        Ui2RenderUtils.RenderText(batcher, textCmd, textFont, true);
-
-                        if (pushedTextMatrix)
-                            batcher.PopMatrix();
-                    }
-                    i--;
-                    continue;
-                }
-            }
-
             var cmd = commands[i];
             var pushedMatrix = cmd.Matrix != Matrix3x2.Identity;
             if (pushedMatrix)
