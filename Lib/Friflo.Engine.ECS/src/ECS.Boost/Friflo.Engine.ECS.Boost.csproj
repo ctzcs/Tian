@@ -24,8 +24,6 @@
     <PackageProjectUrl>https://github.com/friflo/Friflo.Engine.ECS</PackageProjectUrl>
     <RepositoryUrl>https://github.com/friflo/Friflo.Engine.ECS</RepositoryUrl>
     <PackageTags>ecs, entity-component-system, gamedev, game-engine, unity, godot, monogame, fna, stride, flax, dots, entt, flecs</PackageTags>
-    <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageIconUrl></PackageIconUrl>
     <RepositoryType>git</RepositoryType>
     <PackageIcon>package-icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>

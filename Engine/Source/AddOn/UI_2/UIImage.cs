@@ -59,6 +59,11 @@ public static class UIImageExtensions
         return imageElement;
     }
 
+    /// <summary>
+    /// 设置九宫格边框，参数顺序为 (left, top, right, bottom)，单位是源贴图像素。
+    /// 例如：new Vector4(7f, 7f, 7f, 7f) 表示四边各保留 7 像素不拉伸。
+    /// 仅在 FillMode 为 <see cref="Ui2ImageFillMode.NineSlice"/> 时生效。
+    /// </summary>
     public static UIImage WithNineSliceBorder(this UIImage imageElement, Vector4 border)
     {
         imageElement.NineSliceBorder = border;

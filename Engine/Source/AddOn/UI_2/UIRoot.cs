@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using Engine.Components;
 using Engine.Core;
@@ -129,6 +127,16 @@ public class UIRoot
         return true;
     }
 
+    void SyncCanvas(UICanvas canvas, Rect viewport, float time)
+    {
+        if (!canvas.Visible)
+            return;
+
+        var canvasViewport = canvas.ClipRect ?? viewport;
+        canvas.Layout(canvasViewport);
+        canvas.Update(time);
+    }
+
     public void Update()
     {
         if (!Enabled)
@@ -136,18 +144,6 @@ public class UIRoot
 
         var viewport = GetLayoutViewport();
         float time = (float)app.Time.Seconds;
-
-        foreach (var canvas in canvases)
-        {
-            if (!canvas.Visible)
-                continue;
-
-            var canvasViewport = canvas.ClipRect ?? viewport;
-            canvas.Layout(canvasViewport);
-            canvas.Update(time);
-        }
-
-        OnUpdateLayout?.Invoke();
 
         var mouse = app.Input.Mouse;
         var pointer = GetPointerPosition();
@@ -195,6 +191,11 @@ public class UIRoot
                 blocked = input.Update(canvas.Root, canvas.ClipRect, pointer, mouse.LeftPressed, mouse.LeftReleased);
             }
         }
+
+        foreach (var canvas in canvases)
+            SyncCanvas(canvas, viewport, time);
+
+        OnUpdateLayout?.Invoke();
     }
 
     public void Render(Batcher batcher)
