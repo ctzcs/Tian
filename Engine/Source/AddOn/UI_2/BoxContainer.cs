@@ -141,6 +141,9 @@ public class BoxContainer : UIElement
             }
 
             var childRect = new Rect(x, y, width, height);
+            // 这里必须走正常 Arrange，而不是直接 ForceLayoutRect。
+            // 如果 child 本身还是容器，ForceLayoutRect 只会定位它自己，
+            // 不会继续把它的子节点排下去，容易出现首帧子内容跑到错误位置。
             child.Arrange(childRect);
 
             contentAssigned = true;

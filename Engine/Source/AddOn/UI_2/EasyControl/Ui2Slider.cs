@@ -24,6 +24,30 @@ public class Ui2Slider : UIElement
     public Color FillColor { get; set; } = new Color(80, 120, 220, 255);
     public Color ThumbColor { get; set; } = new Color(230, 230, 230, 255);
 
+    public Subtexture? TrackSubtexture { get; set; }
+    public Subtexture? FillSubtexture { get; set; }
+    public Subtexture? ThumbSubtexture { get; set; }
+
+    public Ui2ImageFillMode TrackFillMode { get; set; } = Ui2ImageFillMode.Stretch;
+    public Ui2ImageFillMode FillFillMode { get; set; } = Ui2ImageFillMode.Stretch;
+    public Ui2ImageFillMode ThumbFillMode { get; set; } = Ui2ImageFillMode.Stretch;
+
+    public Vector4 TrackNineSliceBorder { get; set; }
+    public Vector4 FillNineSliceBorder { get; set; }
+    public Vector4 ThumbNineSliceBorder { get; set; }
+
+    // left, top, right, bottom: legacy inner padding (used as fallback)
+    public Vector4 TrackPadding { get; set; }
+
+    // left, top, right, bottom: fill rendering area inside track
+    public Vector4 FillAreaPadding { get; set; }
+
+    // left, top, right, bottom: handle movement area inside track
+    public Vector4 HandleSlideAreaPadding { get; set; }
+
+    // Keep NineSlice fill stable when progress is very small.
+    public bool ClampNineSliceFillMinSize { get; set; } = true;
+
     public event Action<Ui2Slider, float>? ValueChanged;
 
     bool dragging;
@@ -61,18 +85,21 @@ public class Ui2Slider : UIElement
     void SetFromLocal(Vector2 local, bool notify)
     {
         var size = new Vector2(LayoutRect.Width, LayoutRect.Height);
+        var handlePad = IsZeroPadding(HandleSlideAreaPadding) ? TrackPadding : HandleSlideAreaPadding;
+        var handleRect = ResolveInnerRect(size, handlePad);
+
         float length;
         float pos;
 
         if (Direction == Ui2SliderDirection.Horizontal)
         {
-            length = size.X;
-            pos = local.X;
+            length = handleRect.Width;
+            pos = local.X - handleRect.X;
         }
         else
         {
-            length = size.Y;
-            pos = local.Y;
+            length = handleRect.Height;
+            pos = local.Y - handleRect.Y;
         }
 
         if (length <= 0f)
@@ -105,6 +132,83 @@ public class Ui2Slider : UIElement
         dragging = false;
     }
 
+    void AddSkinOrColor(List<Ui2DrawCommand> commands, Rect rect, Color color, int depth, Matrix3x2 matrix,
+        Subtexture? subtexture, Ui2ImageFillMode fillMode, Vector4 nineSliceBorder)
+    {
+        if (rect.Width <= 0f || rect.Height <= 0f)
+            return;
+
+        if (subtexture.HasValue)
+        {
+            if (fillMode == Ui2ImageFillMode.NineSlice)
+            {
+                float halfW = rect.Width * 0.5f;
+                float halfH = rect.Height * 0.5f;
+                float left = MathF.Min(nineSliceBorder.X, halfW);
+                float right = MathF.Min(nineSliceBorder.Z, halfW);
+                float top = MathF.Min(nineSliceBorder.Y, halfH);
+                float bottom = MathF.Min(nineSliceBorder.W, halfH);
+                nineSliceBorder = new Vector4(left, top, right, bottom);
+            }
+
+            commands.Add(new Ui2DrawCommand(
+                Ui2DrawCommandType.Image,
+                rect,
+                color,
+                depth,
+                subtexture: subtexture,
+                imageFillMode: fillMode,
+                nineSliceBorder: nineSliceBorder,
+                matrix: matrix));
+        }
+        else
+        {
+            commands.Add(new Ui2DrawCommand(
+                Ui2DrawCommandType.Background,
+                rect,
+                color,
+                depth,
+                matrix: matrix));
+        }
+    }
+
+    bool IsZeroPadding(Vector4 p)
+        => p.X == 0f && p.Y == 0f && p.Z == 0f && p.W == 0f;
+
+    Rect ResolveInnerRect(Vector2 size, Vector4 padding)
+    {
+        float x = padding.X;
+        float y = padding.Y;
+        float w = size.X - padding.X - padding.Z;
+        float h = size.Y - padding.Y - padding.W;
+        if (w < 0f) w = 0f;
+        if (h < 0f) h = 0f;
+        return new Rect(x, y, w, h);
+    }
+
+    Vector4 ResolveAreaPadding(Vector4 specificPadding)
+        => IsZeroPadding(specificPadding) ? TrackPadding : specificPadding;
+
+    float ComputeFillLength(float areaLength, float normalized, bool nineSlice, float borderStart, float borderEnd)
+    {
+        var t = Mathf.Clamp(normalized, 0f, 1f);
+
+        // t==1 is full; for 0<=t<1 we allow NineSlice minimum-size clamp.
+        if (t >= 1f)
+            return areaLength;
+
+        var length = areaLength * t;
+        if (!ClampNineSliceFillMinSize || !nineSlice)
+            return length;
+
+        var minLength = MathF.Max(0f, borderStart + borderEnd);
+        if (length < minLength)
+            length = minLength;
+        if (length > areaLength)
+            length = areaLength;
+        return length;
+    }
+
     public override void CollectDrawCommands(List<Ui2DrawCommand> commands, int depth)
     {
         if (!Visible || !Display)
@@ -117,77 +221,66 @@ public class Ui2Slider : UIElement
         var rect = new Rect(0f, 0f, size.X, size.Y);
         var matrix = WorldMatrix;
 
-        commands.Add(new Ui2DrawCommand(
-            Ui2DrawCommandType.Background,
-            rect,
-            TrackColor,
-            depth,
-            matrix: matrix));
+        AddSkinOrColor(commands, rect, TrackColor, depth, matrix, TrackSubtexture, TrackFillMode, TrackNineSliceBorder);
 
         var t = GetNormalized();
         Rect fillRect;
         Rect thumbRect;
 
+        var fillArea = ResolveInnerRect(size, ResolveAreaPadding(FillAreaPadding));
+        var handleArea = ResolveInnerRect(size, ResolveAreaPadding(HandleSlideAreaPadding));
+
         if (Direction == Ui2SliderDirection.Horizontal)
         {
-            var fillWidth = size.X * t;
-            if (fillWidth < 0f)
-                fillWidth = 0f;
-            if (fillWidth > size.X)
-                fillWidth = size.X;
+            var fillWidth = ComputeFillLength(
+                fillArea.Width,
+                t,
+                FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice,
+                FillNineSliceBorder.X,
+                FillNineSliceBorder.Z);
 
-            fillRect = new Rect(0f, 0f, fillWidth, size.Y);
+            fillRect = new Rect(fillArea.X, fillArea.Y, fillWidth, fillArea.Height);
 
-            var thumbWidth = MathF.Min(ThumbSize, size.X);
+            var thumbWidth = MathF.Min(ThumbSize, handleArea.Width);
             if (thumbWidth < 0f)
                 thumbWidth = 0f;
 
-            var thumbCenter = size.X * t;
+            var thumbCenter = handleArea.X + handleArea.Width * t;
             var thumbX = thumbCenter - thumbWidth * 0.5f;
-            if (thumbX < 0f)
-                thumbX = 0f;
-            if (thumbX + thumbWidth > size.X)
-                thumbX = size.X - thumbWidth;
+            if (thumbX < handleArea.X)
+                thumbX = handleArea.X;
+            if (thumbX + thumbWidth > handleArea.X + handleArea.Width)
+                thumbX = handleArea.X + handleArea.Width - thumbWidth;
 
-            thumbRect = new Rect(thumbX, 0f, thumbWidth, size.Y);
+            thumbRect = new Rect(thumbX, handleArea.Y, thumbWidth, handleArea.Height);
         }
         else
         {
-            var fillHeight = size.Y * t;
-            if (fillHeight < 0f)
-                fillHeight = 0f;
-            if (fillHeight > size.Y)
-                fillHeight = size.Y;
+            var fillHeight = ComputeFillLength(
+                fillArea.Height,
+                t,
+                FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice,
+                FillNineSliceBorder.Y,
+                FillNineSliceBorder.W);
 
-            fillRect = new Rect(0f, 0f, size.X, fillHeight);
+            fillRect = new Rect(fillArea.X, fillArea.Y, fillArea.Width, fillHeight);
 
-            var thumbHeight = MathF.Min(ThumbSize, size.Y);
+            var thumbHeight = MathF.Min(ThumbSize, handleArea.Height);
             if (thumbHeight < 0f)
                 thumbHeight = 0f;
 
-            var thumbCenter = size.Y * t;
+            var thumbCenter = handleArea.Y + handleArea.Height * t;
             var thumbY = thumbCenter - thumbHeight * 0.5f;
-            if (thumbY < 0f)
-                thumbY = 0f;
-            if (thumbY + thumbHeight > size.Y)
-                thumbY = size.Y - thumbHeight;
+            if (thumbY < handleArea.Y)
+                thumbY = handleArea.Y;
+            if (thumbY + thumbHeight > handleArea.Y + handleArea.Height)
+                thumbY = handleArea.Y + handleArea.Height - thumbHeight;
 
-            thumbRect = new Rect(0f, thumbY, size.X, thumbHeight);
+            thumbRect = new Rect(handleArea.X, thumbY, handleArea.Width, thumbHeight);
         }
 
-        commands.Add(new Ui2DrawCommand(
-            Ui2DrawCommandType.Background,
-            fillRect,
-            FillColor,
-            depth,
-            matrix: matrix));
-
-        commands.Add(new Ui2DrawCommand(
-            Ui2DrawCommandType.Background,
-            thumbRect,
-            ThumbColor,
-            depth,
-            matrix: matrix));
+        AddSkinOrColor(commands, fillRect, FillColor, depth, matrix, FillSubtexture, FillFillMode, FillNineSliceBorder);
+        AddSkinOrColor(commands, thumbRect, ThumbColor, depth, matrix, ThumbSubtexture, ThumbFillMode, ThumbNineSliceBorder);
 
         int nextDepth = depth + 1;
         foreach (var child in Children)

@@ -174,6 +174,24 @@ public static class Ui2RenderUtils
         var sw = src.Width;
         var sh = src.Height;
 
+        if (w <= 0f || h <= 0f || sw <= 0f || sh <= 0f)
+            return;
+
+        left = MathF.Max(0f, left);
+        top = MathF.Max(0f, top);
+        right = MathF.Max(0f, right);
+        bottom = MathF.Max(0f, bottom);
+
+        var halfW = w * 0.5f;
+        var halfH = h * 0.5f;
+        var srcHalfW = sw * 0.5f;
+        var srcHalfH = sh * 0.5f;
+
+        left = MathF.Min(left, MathF.Min(halfW, srcHalfW));
+        right = MathF.Min(right, MathF.Min(halfW, srcHalfW));
+        top = MathF.Min(top, MathF.Min(halfH, srcHalfH));
+        bottom = MathF.Min(bottom, MathF.Min(halfH, srcHalfH));
+
         var il = (int)left;
         var it = (int)top;
         var ir = (int)right;

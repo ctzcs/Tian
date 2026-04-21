@@ -145,6 +145,9 @@ public class UIRoot
         var viewport = GetLayoutViewport();
         float time = (float)app.Time.Seconds;
 
+        // 先处理输入，再统一布局/更新。
+        // 这样点击回调里 AddChild/RemoveChild 的节点也能在同一帧进入布局链，
+        // 避免新增 UI 先以默认矩形闪到错误位置。
         var mouse = app.Input.Mouse;
         var pointer = GetPointerPosition();
 

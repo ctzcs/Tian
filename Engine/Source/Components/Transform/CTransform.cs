@@ -116,26 +116,17 @@ public struct CTransform : IComponent
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetDirty(EDirtyType dirtyFlagType)
     {
-        if ((hierarchyDirty & dirtyFlagType) == 0)
-        {
-            hierarchyDirty |= dirtyFlagType;
+        var newDirty = dirtyFlagType & ~hierarchyDirty;
+        if (newDirty == EDirtyType.Clean)
+            return;
 
-            switch (dirtyFlagType)
+        hierarchyDirty |= newDirty;
+
+        for (int i = 0; i < children.Count; i++)
+        {
+            if (!children[i].IsNull)
             {
-                case EDirtyType.PositionDirty:
-                    break;
-                case EDirtyType.RotationDirty:
-                    break;
-                case EDirtyType.ScaleDirty:
-                    break;
-            }
-            
-            for (int i = 0; i < children.Count; i++)
-            {
-                if (!children[i].IsNull)
-                {
-                    children[i].GetComponent<CTransform>().SetDirty(dirtyFlagType);
-                }
+                children[i].GetComponent<CTransform>().SetDirty(newDirty);
             }
         }
     }

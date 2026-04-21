@@ -103,6 +103,81 @@ public class UIElement
         ContentRect = new Rect(innerX, innerY, innerW, innerH);
     }
 
+    void ArrangeChildrenDefault()
+    {
+        if (Parent == null || Layout.LayoutType != LayoutType.None)
+            return;
+
+        float innerX = Layout.PaddingLeft;
+        float innerY = Layout.PaddingTop;
+        float innerW = LayoutRect.Width - Layout.PaddingLeft - Layout.PaddingRight;
+        float innerH = LayoutRect.Height - Layout.PaddingTop - Layout.PaddingBottom;
+        if (innerW < 0f) innerW = 0f;
+        if (innerH < 0f) innerH = 0f;
+
+        foreach (var child in Children)
+        {
+            if (!child.Display || !child.Visible)
+                continue;
+
+            var style = child.Layout;
+            float marginLeft = style.MarginLeft;
+            float marginRight = style.MarginRight;
+            float marginTop = style.MarginTop;
+            float marginBottom = style.MarginBottom;
+
+            float availableW = innerW - marginLeft - marginRight;
+            float availableH = innerH - marginTop - marginBottom;
+            if (availableW < 0f) availableW = 0f;
+            if (availableH < 0f) availableH = 0f;
+
+            float width = style.Width > 0f ? style.Width : availableW;
+            float height = style.Height > 0f ? style.Height : availableH;
+
+            if (style.MinWidth > 0f && width < style.MinWidth) width = style.MinWidth;
+            if (style.MaxWidth > 0f && width > style.MaxWidth) width = style.MaxWidth;
+            if (style.MinHeight > 0f && height < style.MinHeight) height = style.MinHeight;
+            if (style.MaxHeight > 0f && height > style.MaxHeight) height = style.MaxHeight;
+
+            if (width > availableW) width = availableW;
+            if (height > availableH) height = availableH;
+
+            float x;
+            switch (style.AlignX)
+            {
+                case HorizontalAlignment.End:
+                    x = innerX + innerW - marginRight - width;
+                    break;
+                case HorizontalAlignment.Center:
+                    x = innerX + marginLeft + (availableW - width) * 0.5f;
+                    break;
+                case HorizontalAlignment.Stretch:
+                case HorizontalAlignment.Start:
+                default:
+                    x = innerX + marginLeft;
+                    break;
+            }
+
+            float y;
+            switch (style.AlignY)
+            {
+                case VerticalAlignment.End:
+                    y = innerY + innerH - marginBottom - height;
+                    break;
+                case VerticalAlignment.Center:
+                    y = innerY + marginTop + (availableH - height) * 0.5f;
+                    break;
+                case VerticalAlignment.Stretch:
+                case VerticalAlignment.Start:
+                default:
+                    y = innerY + marginTop;
+                    break;
+            }
+
+            child.Arrange(new Rect(x, y, width, height));
+        }
+    }
+
     // 布局矩形改变时调用
     protected virtual void OnLayoutRectChanged(Rect rect)
     {
@@ -155,6 +230,7 @@ public class UIElement
                 {
                     LayoutRect = TargetRect;
                     ApplyContentRect(LayoutRect);
+                    ArrangeChildrenDefault();
                     OnLayoutRectChanged(LayoutRect);
                 }
                 else
@@ -174,12 +250,14 @@ public class UIElement
                 var size = sizeTween.GetValue(time);
                 LayoutRect = new Rect(pos.X, pos.Y, size.X, size.Y);
                 ApplyContentRect(LayoutRect);
+                ArrangeChildrenDefault();
                 OnLayoutRectChanged(LayoutRect);
             }
             else
             {
                 LayoutRect = TargetRect;
                 ApplyContentRect(LayoutRect);
+                ArrangeChildrenDefault();
                 OnLayoutRectChanged(LayoutRect);
             }
         }
@@ -311,6 +389,7 @@ public class UIElement
             TargetRect = rect;
             LayoutRect = rect;
             ApplyContentRect(LayoutRect);
+            ArrangeChildrenDefault();
             OnLayoutRectChanged(LayoutRect);
             initialized = true;
             targetDirty = false;
@@ -326,6 +405,7 @@ public class UIElement
             TargetRect = rect;
             LayoutRect = rect;
             ApplyContentRect(LayoutRect);
+            ArrangeChildrenDefault();
             OnLayoutRectChanged(LayoutRect);
             targetDirty = false;
         }
@@ -366,6 +446,24 @@ public static class UI2FluentExtensions
         where T : UIElement
     {
         return element.WithPadding(all, all, all, all);
+    }
+
+    public static T WithMargin<T>(this T element, float left, float top, float right, float bottom)
+        where T : UIElement
+    {
+        var layout = element.Layout;
+        layout.MarginLeft = left;
+        layout.MarginTop = top;
+        layout.MarginRight = right;
+        layout.MarginBottom = bottom;
+        element.Layout = layout;
+        return element;
+    }
+
+    public static T WithMargin<T>(this T element, float all)
+        where T : UIElement
+    {
+        return element.WithMargin(all, all, all, all);
     }
 
     public static T WithGrow<T>(this T element, float grow)
