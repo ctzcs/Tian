@@ -69,7 +69,8 @@ public sealed class UI2DebugWindow : EditorWindow
                         {
                             var canvas = uiRoot.Canvases[i];
                             var title = string.IsNullOrWhiteSpace(canvas.Id) ? $"Canvas {i}" : canvas.Id!;
-                            if (!ImGui.TreeNode($"{title}##canvas-{i}"))
+                            var canvasOpened = ImGui.TreeNodeEx($"{title}##canvas-{i}", ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanAvailWidth);
+                            if (!canvasOpened)
                                 continue;
 
                             DrawElementNode(canvas.Root, canvas.DebugHovered, title, "Root", $"canvas-{i}-root");
@@ -136,9 +137,14 @@ public sealed class UI2DebugWindow : EditorWindow
         if (element == hovered)
             ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.9f, 0.2f, 1f));
 
-        var flags = element == selectedElement ? ImGuiTreeNodeFlags.Selected : ImGuiTreeNodeFlags.None;
+        var flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanAvailWidth;
+        if (element.Children.Count == 0)
+            flags |= ImGuiTreeNodeFlags.Leaf;
+        if (element == selectedElement)
+            flags |= ImGuiTreeNodeFlags.Selected;
+
         var opened = ImGui.TreeNodeEx($"{text}##{path}", flags);
-        if (ImGui.IsItemClicked())
+        if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen())
         {
             selectedElement = element;
             selectedCanvasName = canvasName;

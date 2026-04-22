@@ -8,6 +8,7 @@ namespace Engine.UI_2;
 
 public class Ui2ScrollView : UIElement
 {
+    public UIElement Viewport { get; }
     public UIElement Content { get; }
 
     public float ScrollOffset { get; private set; }
@@ -19,6 +20,7 @@ public class Ui2ScrollView : UIElement
 
     public float BarWidth { get; set; } = 8f;
     public float MinThumbSize { get; set; } = 16f;
+    public bool AlwaysShowBar { get; set; } = false;
 
     readonly Ui2Slider scrollBar;
 
@@ -28,15 +30,30 @@ public class Ui2ScrollView : UIElement
     float trackHeight;
     float thumbHeight;
     bool syncingScrollBar;
+    bool draggingContent;
+    float dragLastY;
 
     public Ui2ScrollView()
     {
         Interactable = true;
         BackgroundEnabled = false;
-        ClipChildren = true;
+        ClipChildren = false;
 
-        Content = new VContainer();
-        AddChild(Content);
+        ChildrenLayout.LayoutType = LayoutType.Absolute;
+
+        Viewport = new UIElement
+        {
+            ClipChildren = true,
+            BackgroundEnabled = false
+        };
+        Viewport.ChildrenLayout.LayoutType = LayoutType.Absolute;
+        AddChild(Viewport);
+
+        Content = new VContainer
+        {
+            AnimateLayout = false
+        };
+        Viewport.AddChild(Content);
 
         scrollBar = new Ui2Slider
         {
@@ -44,6 +61,10 @@ public class Ui2ScrollView : UIElement
         };
         scrollBar.ValueChanged += HandleScrollBarChanged;
         AddChild(scrollBar);
+
+        OnPointerDown += HandlePointerDown;
+        OnPointerMove += HandlePointerMove;
+        OnPointerUp += HandlePointerUp;
     }
 
     public override void Arrange(Rect rect)
@@ -58,17 +79,23 @@ public class Ui2ScrollView : UIElement
                 contentWidth = 0f;
         }
 
-        var contentRect = new Rect(0f, 0f, contentWidth, rect.Height);
+        var viewportRect = new Rect(0f, 0f, contentWidth, rect.Height);
+        Viewport.Arrange(viewportRect);
+
+        var contentRect = new Rect(0f, -ScrollOffset, contentWidth, rect.Height);
         Content.Arrange(contentRect);
 
-        UpdateScrollMetrics();
+        UpdateScrollMetrics(contentWidth, rect.Height);
 
-        bool showBar = BarWidth > 0f && contentHeight > viewHeight;
+        bool showBar = BarWidth > 0f && (AlwaysShowBar || contentHeight > viewHeight);
         if (!showBar && BarWidth > 0f && contentWidth != rect.Width)
         {
-            contentRect = new Rect(0f, 0f, rect.Width, rect.Height);
+            viewportRect = new Rect(0f, 0f, rect.Width, rect.Height);
+            Viewport.Arrange(viewportRect);
+
+            contentRect = new Rect(0f, -ScrollOffset, rect.Width, rect.Height);
             Content.Arrange(contentRect);
-            UpdateScrollMetrics();
+            UpdateScrollMetrics(rect.Width, rect.Height);
         }
 
         UpdateScrollBarState(rect, showBar);
@@ -87,6 +114,9 @@ public class Ui2ScrollView : UIElement
             return;
 
         ScrollOffset = clamped;
+
+        var lr = Content.LayoutRect;
+        Content.Arrange(new Rect(lr.X, -ScrollOffset, lr.Width, lr.Height));
     }
 
     public void ScrollBy(float delta)
@@ -94,23 +124,64 @@ public class Ui2ScrollView : UIElement
         SetScroll(ScrollOffset + delta);
     }
 
-    void UpdateScrollMetrics()
+    void HandlePointerDown(Ui2PointerEvent e)
     {
-        viewHeight = LayoutRect.Height;
-        contentHeight = 0f;
+        if (maxScroll <= 0f)
+            return;
 
-        for (int i = 0; i < Content.Children.Count; i++)
+        var local = Vector2.Transform(e.Position, InverseWorldMatrix);
+        if (scrollBar.Display && BarWidth > 0f && local.X >= Viewport.LayoutRect.Width)
+            return;
+
+        draggingContent = true;
+        dragLastY = local.Y;
+    }
+
+    void HandlePointerMove(Ui2PointerEvent e)
+    {
+        if (!draggingContent)
+            return;
+
+        var local = Vector2.Transform(e.Position, InverseWorldMatrix);
+        var deltaY = local.Y - dragLastY;
+        dragLastY = local.Y;
+        ScrollBy(-deltaY);
+    }
+
+    void HandlePointerUp(Ui2PointerEvent e)
+    {
+        draggingContent = false;
+    }
+
+    float MeasureArrangedContentHeight()
+    {
+        float maxBottom = Content.ChildrenLayout.PaddingTop;
+
+        foreach (var child in Content.Children)
         {
-            var child = Content.Children[i];
             if (!child.Display || !child.Visible)
                 continue;
 
-            var lr = child.LayoutRect;
-            var bottom = lr.Y + lr.Height;
-            if (bottom > contentHeight)
-                contentHeight = bottom;
+            var style = child.Layout;
+            float bottom = child.TargetRect.Y + child.TargetRect.Height + style.MarginBottom;
+            if (bottom > maxBottom)
+                maxBottom = bottom;
         }
 
+        return maxBottom + Content.ChildrenLayout.PaddingBottom;
+    }
+
+    void UpdateScrollMetrics(float contentWidth, float viewportHeight)
+    {
+        viewHeight = viewportHeight;
+        if (viewHeight < 0f)
+            viewHeight = 0f;
+
+        var measured = Content.Measure(new Vector2(contentWidth, viewportHeight));
+        var arrangedHeight = MeasureArrangedContentHeight();
+        contentHeight = measured.Y;
+        if (arrangedHeight > contentHeight)
+            contentHeight = arrangedHeight;
         if (contentHeight < viewHeight)
             contentHeight = viewHeight;
 
@@ -118,7 +189,7 @@ public class Ui2ScrollView : UIElement
         if (maxScroll < 0f)
             maxScroll = 0f;
 
-        trackHeight = LayoutRect.Height;
+        trackHeight = viewportHeight;
         if (trackHeight < 0f)
             trackHeight = 0f;
 
@@ -152,6 +223,16 @@ public class Ui2ScrollView : UIElement
         return new Rect(x, thumbY, BarWidth, thumbHeight);
     }
 
+    float GetCurrentScrollValue()
+    {
+        var value = -Content.TargetRect.Y;
+        if (value < 0f)
+            value = 0f;
+        if (value > maxScroll)
+            value = maxScroll;
+        return value;
+    }
+
     void HandleScrollBarChanged(Ui2Slider slider, float value)
     {
         if (syncingScrollBar)
@@ -159,8 +240,7 @@ public class Ui2ScrollView : UIElement
         if (maxScroll <= 0f)
             return;
 
-        var t = Mathf.Clamp(value, 0f, 1f);
-        SetScroll(maxScroll * t);
+        SetScroll(value);
     }
 
     void UpdateScrollBarState(Rect rect, bool showBar)
@@ -178,10 +258,12 @@ public class Ui2ScrollView : UIElement
         scrollBar.Interactable = true;
         scrollBar.Direction = Ui2SliderDirection.Vertical;
         scrollBar.Min = 0f;
-        scrollBar.Max = 1f;
+        scrollBar.Max = maxScroll > 0f ? maxScroll : 1f;
         scrollBar.TrackColor = ScrollBarColor;
-        scrollBar.FillColor = ScrollBarColor;
+        scrollBar.FillColor = Color.Transparent;
         scrollBar.ThumbColor = ThumbColor;
+        scrollBar.FillAreaPadding = Vector4.Zero;
+        scrollBar.HandleSlideAreaPadding = Vector4.Zero;
         scrollBar.ThumbSize = thumbHeight;
 
         float barX = rect.Width - BarWidth;
@@ -197,8 +279,7 @@ public class Ui2ScrollView : UIElement
         }
         else
         {
-            var t = ScrollOffset / maxScroll;
-            var value = Mathf.Clamp(t, 0f, 1f);
+            var value = GetCurrentScrollValue();
             scrollBar.SetValue(value, false);
         }
         syncingScrollBar = false;
@@ -213,7 +294,7 @@ public class Ui2ScrollView : UIElement
         if (size.X <= 0f || size.Y <= 0f)
             return;
 
-        UpdateScrollMetrics();
+        UpdateScrollMetrics(Viewport.TargetRect.Width, Viewport.TargetRect.Height);
 
         var matrix = WorldMatrix;
         var rect = new Rect(0f, 0f, size.X, size.Y);
@@ -225,51 +306,15 @@ public class Ui2ScrollView : UIElement
             depth,
             matrix: matrix));
 
-        if (ClipChildren)
-            commands.Add(new Ui2DrawCommand(
-                Ui2DrawCommandType.ClipPush,
-                GetWorldRect(),
-                default,
-                depth));
-
         int nextDepth = depth + 1;
         foreach (var child in Children)
             child.CollectDrawCommands(commands, nextDepth);
-
-        if (ClipChildren)
-            commands.Add(new Ui2DrawCommand(
-                Ui2DrawCommandType.ClipPop,
-                GetWorldRect(),
-                default,
-                depth));
 
     }
 
     public override void UpdateWorldMatrix(Matrix3x2 parentMatrix)
     {
-        var local = ComputeLocalMatrix();
-        WorldMatrix = parentMatrix * local;
-
-        if (!Matrix3x2.Invert(WorldMatrix, out var inv))
-            inv = Matrix3x2.Identity;
-
-        InverseWorldMatrix = inv;
-
-        var baseMatrix = WorldMatrix;
-        var contentOffset = new Matrix3x2(
-            1f, 0f,
-            0f, 1f,
-            0f, -ScrollOffset);
-
-        var contentMatrix = baseMatrix * contentOffset;
-
-        foreach (var child in Children)
-        {
-            if (child == Content)
-                child.UpdateWorldMatrix(contentMatrix);
-            else
-                child.UpdateWorldMatrix(baseMatrix);
-        }
+        base.UpdateWorldMatrix(parentMatrix);
     }
 }
 

@@ -8,17 +8,27 @@ namespace Engine.UI_2;
 
 public enum Ui2SliderDirection
 {
-    Horizontal,
-    Vertical
+    LeftToRight = 0,
+    RightToLeft = 1,
+    TopToBottom = 2,
+    BottomToTop = 3,
+
+    // 兼容旧写法
+    Horizontal = LeftToRight,
+    Vertical = TopToBottom
 }
 
 public class Ui2Slider : UIElement
 {
+    public UIImage Track { get; }
+    public UIImage Fill { get; }
+    public UIImage Thumb { get; }
+
     public float Min { get; set; } = 0f;
     public float Max { get; set; } = 1f;
     public float Value { get; private set; }
     public float ThumbSize { get; set; } = 16f;
-    public Ui2SliderDirection Direction { get; set; } = Ui2SliderDirection.Horizontal;
+    public Ui2SliderDirection Direction { get; set; } = Ui2SliderDirection.LeftToRight;
 
     public Color TrackColor { get; set; } = new Color(40, 40, 40, 255);
     public Color FillColor { get; set; } = new Color(80, 120, 220, 255);
@@ -56,6 +66,13 @@ public class Ui2Slider : UIElement
     {
         Interactable = true;
         BackgroundEnabled = false;
+        ChildrenLayout.LayoutType = LayoutType.Absolute;
+        Track = new UIImage { AnimateLayout = false };
+        Fill = new UIImage { AnimateLayout = false };
+        Thumb = new UIImage { AnimateLayout = false };
+        AddChild(Track);
+        AddChild(Fill);
+        AddChild(Thumb);
 
         OnPointerDown += HandlePointerDown;
         OnPointerMove += HandlePointerMove;
@@ -70,6 +87,7 @@ public class Ui2Slider : UIElement
             return;
 
         Value = clamped;
+        UpdateParts(LayoutRect.Width, LayoutRect.Height);
         if (notify)
             ValueChanged?.Invoke(this, Value);
     }
@@ -82,6 +100,15 @@ public class Ui2Slider : UIElement
         return (Value - Min) / range;
     }
 
+    bool IsHorizontalDirection()
+        => Direction == Ui2SliderDirection.LeftToRight ||
+           Direction == Ui2SliderDirection.RightToLeft ||
+           Direction == Ui2SliderDirection.Horizontal;
+
+    bool IsReverseDirection()
+        => Direction == Ui2SliderDirection.RightToLeft ||
+           Direction == Ui2SliderDirection.BottomToTop;
+
     void SetFromLocal(Vector2 local, bool notify)
     {
         var size = new Vector2(LayoutRect.Width, LayoutRect.Height);
@@ -91,7 +118,7 @@ public class Ui2Slider : UIElement
         float length;
         float pos;
 
-        if (Direction == Ui2SliderDirection.Horizontal)
+        if (IsHorizontalDirection())
         {
             length = handleRect.Width;
             pos = local.X - handleRect.X;
@@ -106,6 +133,9 @@ public class Ui2Slider : UIElement
             return;
 
         var t = Mathf.Clamp(pos / length, 0f, 1f);
+        if (IsReverseDirection())
+            t = 1f - t;
+
         var range = Max - Min;
         var value = Min + t * range;
         SetValue(value, notify);
@@ -209,81 +239,61 @@ public class Ui2Slider : UIElement
         return length;
     }
 
-    public override void CollectDrawCommands(List<Ui2DrawCommand> commands, int depth)
+    void SyncPartVisuals()
     {
-        if (!Visible || !Display)
-            return;
+        Track.Subtexture = TrackSubtexture; Track.Tint = TrackColor; Track.FillMode = TrackFillMode; Track.NineSliceBorder = TrackNineSliceBorder;
+        Fill.Subtexture = FillSubtexture; Fill.Tint = FillColor; Fill.FillMode = FillFillMode; Fill.NineSliceBorder = FillNineSliceBorder;
+        Thumb.Subtexture = ThumbSubtexture; Thumb.Tint = ThumbColor; Thumb.FillMode = ThumbFillMode; Thumb.NineSliceBorder = ThumbNineSliceBorder;
 
-        var size = new Vector2(LayoutRect.Width, LayoutRect.Height);
-        if (size.X <= 0f || size.Y <= 0f)
-            return;
+        Track.BackgroundEnabled = !TrackSubtexture.HasValue;
+        Track.BackgroundColor = TrackColor;
 
-        var rect = new Rect(0f, 0f, size.X, size.Y);
-        var matrix = WorldMatrix;
+        Fill.BackgroundEnabled = !FillSubtexture.HasValue;
+        Fill.BackgroundColor = FillColor;
 
-        AddSkinOrColor(commands, rect, TrackColor, depth, matrix, TrackSubtexture, TrackFillMode, TrackNineSliceBorder);
+        Thumb.BackgroundEnabled = !ThumbSubtexture.HasValue;
+        Thumb.BackgroundColor = ThumbColor;
+    }
+
+    void UpdateParts(float width, float height)
+    {
+        var size = new Vector2(width, height);
+        Track.Arrange(new Rect(0f, 0f, width, height));
+        SyncPartVisuals();
 
         var t = GetNormalized();
-        Rect fillRect;
-        Rect thumbRect;
-
         var fillArea = ResolveInnerRect(size, ResolveAreaPadding(FillAreaPadding));
         var handleArea = ResolveInnerRect(size, ResolveAreaPadding(HandleSlideAreaPadding));
 
-        if (Direction == Ui2SliderDirection.Horizontal)
+        var visualT = IsReverseDirection() ? 1f - t : t;
+
+        if (IsHorizontalDirection())
         {
-            var fillWidth = ComputeFillLength(
-                fillArea.Width,
-                t,
-                FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice,
-                FillNineSliceBorder.X,
-                FillNineSliceBorder.Z);
+            var fillWidth = ComputeFillLength(fillArea.Width, t, FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice, FillNineSliceBorder.X, FillNineSliceBorder.Z);
+            var fillX = IsReverseDirection() ? fillArea.X + fillArea.Width - fillWidth : fillArea.X;
 
-            fillRect = new Rect(fillArea.X, fillArea.Y, fillWidth, fillArea.Height);
+            var thumbWidth = MathF.Max(0f, MathF.Min(ThumbSize, handleArea.Width));
+            var thumbX = Mathf.Clamp(handleArea.X + handleArea.Width * visualT - thumbWidth * 0.5f, handleArea.X, handleArea.X + handleArea.Width - thumbWidth);
 
-            var thumbWidth = MathF.Min(ThumbSize, handleArea.Width);
-            if (thumbWidth < 0f)
-                thumbWidth = 0f;
-
-            var thumbCenter = handleArea.X + handleArea.Width * t;
-            var thumbX = thumbCenter - thumbWidth * 0.5f;
-            if (thumbX < handleArea.X)
-                thumbX = handleArea.X;
-            if (thumbX + thumbWidth > handleArea.X + handleArea.Width)
-                thumbX = handleArea.X + handleArea.Width - thumbWidth;
-
-            thumbRect = new Rect(thumbX, handleArea.Y, thumbWidth, handleArea.Height);
+            Fill.Arrange(new Rect(fillX, fillArea.Y, fillWidth, fillArea.Height));
+            Thumb.Arrange(new Rect(thumbX, handleArea.Y, thumbWidth, handleArea.Height));
         }
         else
         {
-            var fillHeight = ComputeFillLength(
-                fillArea.Height,
-                t,
-                FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice,
-                FillNineSliceBorder.Y,
-                FillNineSliceBorder.W);
+            var fillHeight = ComputeFillLength(fillArea.Height, t, FillSubtexture.HasValue && FillFillMode == Ui2ImageFillMode.NineSlice, FillNineSliceBorder.Y, FillNineSliceBorder.W);
+            var fillY = IsReverseDirection() ? fillArea.Y + fillArea.Height - fillHeight : fillArea.Y;
 
-            fillRect = new Rect(fillArea.X, fillArea.Y, fillArea.Width, fillHeight);
+            var thumbHeight = MathF.Max(0f, MathF.Min(ThumbSize, handleArea.Height));
+            var thumbY = Mathf.Clamp(handleArea.Y + handleArea.Height * visualT - thumbHeight * 0.5f, handleArea.Y, handleArea.Y + handleArea.Height - thumbHeight);
 
-            var thumbHeight = MathF.Min(ThumbSize, handleArea.Height);
-            if (thumbHeight < 0f)
-                thumbHeight = 0f;
-
-            var thumbCenter = handleArea.Y + handleArea.Height * t;
-            var thumbY = thumbCenter - thumbHeight * 0.5f;
-            if (thumbY < handleArea.Y)
-                thumbY = handleArea.Y;
-            if (thumbY + thumbHeight > handleArea.Y + handleArea.Height)
-                thumbY = handleArea.Y + handleArea.Height - thumbHeight;
-
-            thumbRect = new Rect(handleArea.X, thumbY, handleArea.Width, thumbHeight);
+            Fill.Arrange(new Rect(fillArea.X, fillY, fillArea.Width, fillHeight));
+            Thumb.Arrange(new Rect(handleArea.X, thumbY, handleArea.Width, thumbHeight));
         }
+    }
 
-        AddSkinOrColor(commands, fillRect, FillColor, depth, matrix, FillSubtexture, FillFillMode, FillNineSliceBorder);
-        AddSkinOrColor(commands, thumbRect, ThumbColor, depth, matrix, ThumbSubtexture, ThumbFillMode, ThumbNineSliceBorder);
-
-        int nextDepth = depth + 1;
-        foreach (var child in Children)
-            child.CollectDrawCommands(commands, nextDepth);
+    public override void Arrange(Rect rect)
+    {
+        base.Arrange(rect);
+        UpdateParts(rect.Width, rect.Height);
     }
 }

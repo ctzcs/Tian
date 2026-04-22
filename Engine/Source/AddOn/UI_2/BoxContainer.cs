@@ -13,11 +13,12 @@ public class BoxContainer : UIElement
     public BoxContainer()
     {
         Layout.LayoutType = LayoutType.Absolute;
+        ChildrenLayout.LayoutType = LayoutType.Absolute;
     }
     public override Vector2 Measure(Vector2 availableSize)
     {
-        float innerW = availableSize.X - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = availableSize.Y - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerW = availableSize.X - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = availableSize.Y - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         if (innerW < 0f)
             innerW = 0f;
@@ -29,11 +30,11 @@ public class BoxContainer : UIElement
 
         float width = Layout.Width > 0f
             ? Layout.Width
-            : childSize.X + Layout.PaddingLeft + Layout.PaddingRight;
+            : childSize.X + ChildrenLayout.PaddingLeft + ChildrenLayout.PaddingRight;
 
         float height = Layout.Height > 0f
             ? Layout.Height
-            : childSize.Y + Layout.PaddingTop + Layout.PaddingBottom;
+            : childSize.Y + ChildrenLayout.PaddingTop + ChildrenLayout.PaddingBottom;
 
         if (Layout.MinWidth > 0f && width < Layout.MinWidth)
             width = Layout.MinWidth;
@@ -51,10 +52,10 @@ public class BoxContainer : UIElement
     {
         base.Arrange(rect);
 
-        float innerX = Layout.PaddingLeft;
-        float innerY = Layout.PaddingTop;
-        float innerW = rect.Width - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = rect.Height - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerX = ChildrenLayout.PaddingLeft;
+        float innerY = ChildrenLayout.PaddingTop;
+        float innerW = rect.Width - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = rect.Height - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         if (innerW < 0f)
             innerW = 0f;

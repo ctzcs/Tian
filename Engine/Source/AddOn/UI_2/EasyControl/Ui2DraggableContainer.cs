@@ -54,9 +54,12 @@ public class Ui2DraggableContainer : VContainer
         var contentLayout = Content.Layout;
         contentLayout.Width = 0f;
         contentLayout.Height = 0f;
-        contentLayout.AlignX = HorizontalAlignment.Stretch;
-        contentLayout.AlignY = VerticalAlignment.Start;
         Content.Layout = contentLayout;
+
+        var contentChildrenLayout = Content.ChildrenLayout;
+        contentChildrenLayout.AlignX = HorizontalAlignment.Stretch;
+        contentChildrenLayout.AlignY = VerticalAlignment.Start;
+        Content.ChildrenLayout = contentChildrenLayout;
 
         AddChild(Header);
         AddChild(Content);

@@ -16,13 +16,13 @@ public class HContainer : UIElement
 
     public HContainer()
     {
-        Layout.LayoutType = LayoutType.Row;
+        ChildrenLayout.LayoutType = LayoutType.Row;
     }
 
     public override Vector2 Measure(Vector2 availableSize)
     {
-        float innerW = availableSize.X - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = availableSize.Y - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerW = availableSize.X - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = availableSize.Y - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         float totalBaseWidth = 0f;
         float totalMarginX = 0f;
@@ -65,8 +65,8 @@ public class HContainer : UIElement
         if (totalGrow > 0f && contentWidth < innerW)
             contentWidth = innerW;
 
-        float width = contentWidth + Layout.PaddingLeft + Layout.PaddingRight;
-        float height = maxHeight + Layout.PaddingTop + Layout.PaddingBottom;
+        float width = contentWidth + ChildrenLayout.PaddingLeft + ChildrenLayout.PaddingRight;
+        float height = maxHeight + ChildrenLayout.PaddingTop + ChildrenLayout.PaddingBottom;
 
         if (Layout.Width > 0f)
             width = Layout.Width;
@@ -89,10 +89,10 @@ public class HContainer : UIElement
     {
         base.Arrange(rect);
 
-        float innerX = Layout.PaddingLeft;
-        float innerY = Layout.PaddingTop;
-        float innerW = rect.Width - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = rect.Height - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerX = ChildrenLayout.PaddingLeft;
+        float innerY = ChildrenLayout.PaddingTop;
+        float innerW = rect.Width - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = rect.Height - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         measuredPixel.Clear();
         pixelChildren.Clear();
@@ -175,14 +175,14 @@ public class HContainer : UIElement
             float marginBottom = style.MarginBottom;
 
             float height = size.Y;
-            if (height <= 0f || Layout.AlignY == VerticalAlignment.Stretch)
+            if (height <= 0f || ChildrenLayout.AlignY == VerticalAlignment.Stretch)
                 height = innerH - marginTop - marginBottom;
 
             if (height < 0f)
                 height = 0f;
 
             float y;
-            switch (Layout.AlignY)
+            switch (ChildrenLayout.AlignY)
             {
                 case VerticalAlignment.Start:
                     y = innerY + marginTop;

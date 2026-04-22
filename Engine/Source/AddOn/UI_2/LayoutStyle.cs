@@ -46,14 +46,21 @@ public struct LayoutStyle
     public float MarginRight;
     public float MarginTop;
     public float MarginBottom;
-    public float PaddingLeft;
-    public float PaddingRight;
-    public float PaddingTop;
-    public float PaddingBottom;
     public float Grow;
     public float Shrink;
     public HorizontalAlignment AlignX;
     public VerticalAlignment AlignY;
     public LayoutSizeMode SizeMode;
     public Rect ViewportRatio;
+}
+
+public struct ChildrenLayoutStyle
+{
+    public LayoutType LayoutType;
+    public float PaddingLeft;
+    public float PaddingRight;
+    public float PaddingTop;
+    public float PaddingBottom;
+    public HorizontalAlignment AlignX;
+    public VerticalAlignment AlignY;
 }

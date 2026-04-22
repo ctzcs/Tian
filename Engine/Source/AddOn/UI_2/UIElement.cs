@@ -13,6 +13,7 @@ public class UIElement
     public List<UIElement> Children { get; } = new();
 
     public LayoutStyle Layout;
+    public ChildrenLayoutStyle ChildrenLayout;
     public Rect LayoutRect { get; private set; }
     public Rect ContentRect { get; private set; }
 
@@ -95,23 +96,23 @@ public class UIElement
 
     void ApplyContentRect(Rect rect)
     {
-        float innerX = rect.X + Layout.PaddingLeft;
-        float innerY = rect.Y + Layout.PaddingTop;
-        float innerW = rect.Width - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = rect.Height - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerX = rect.X + ChildrenLayout.PaddingLeft;
+        float innerY = rect.Y + ChildrenLayout.PaddingTop;
+        float innerW = rect.Width - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = rect.Height - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         ContentRect = new Rect(innerX, innerY, innerW, innerH);
     }
 
     void ArrangeChildrenDefault()
     {
-        if (Parent == null || Layout.LayoutType != LayoutType.None)
+        if (Parent == null || ChildrenLayout.LayoutType != LayoutType.None)
             return;
 
-        float innerX = Layout.PaddingLeft;
-        float innerY = Layout.PaddingTop;
-        float innerW = LayoutRect.Width - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = LayoutRect.Height - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerX = ChildrenLayout.PaddingLeft;
+        float innerY = ChildrenLayout.PaddingTop;
+        float innerW = LayoutRect.Width - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = LayoutRect.Height - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
         if (innerW < 0f) innerW = 0f;
         if (innerH < 0f) innerH = 0f;
 
@@ -433,12 +434,10 @@ public static class UI2FluentExtensions
     public static T WithPadding<T>(this T element, float left, float top, float right, float bottom)
         where T : UIElement
     {
-        var layout = element.Layout;
-        layout.PaddingLeft = left;
-        layout.PaddingTop = top;
-        layout.PaddingRight = right;
-        layout.PaddingBottom = bottom;
-        element.Layout = layout;
+        element.ChildrenLayout.PaddingLeft = left;
+        element.ChildrenLayout.PaddingTop = top;
+        element.ChildrenLayout.PaddingRight = right;
+        element.ChildrenLayout.PaddingBottom = bottom;
         return element;
     }
 
@@ -451,12 +450,10 @@ public static class UI2FluentExtensions
     public static T WithMargin<T>(this T element, float left, float top, float right, float bottom)
         where T : UIElement
     {
-        var layout = element.Layout;
-        layout.MarginLeft = left;
-        layout.MarginTop = top;
-        layout.MarginRight = right;
-        layout.MarginBottom = bottom;
-        element.Layout = layout;
+        element.Layout.MarginLeft = left;
+        element.Layout.MarginTop = top;
+        element.Layout.MarginRight = right;
+        element.Layout.MarginBottom = bottom;
         return element;
     }
 
@@ -469,18 +466,77 @@ public static class UI2FluentExtensions
     public static T WithGrow<T>(this T element, float grow)
         where T : UIElement
     {
-        var layout = element.Layout;
-        layout.Grow = grow;
-        element.Layout = layout;
+        element.Layout.Grow = grow;
+        return element;
+    }
+
+    public static T WithShrink<T>(this T element, float shrink)
+        where T : UIElement
+    {
+        element.Layout.Shrink = shrink;
         return element;
     }
 
     public static T WithSize<T>(this T element, float width, float height)
         where T : UIElement
     {
+        element.Layout.Width = width;
+        element.Layout.Height = height;
+        return element;
+    }
+
+    public static T WithWidth<T>(this T element, float width)
+        where T : UIElement
+    {
+        element.Layout.Width = width;
+        return element;
+    }
+
+    public static T WithHeight<T>(this T element, float height)
+        where T : UIElement
+    {
+        element.Layout.Height = height;
+        return element;
+    }
+
+    public static T WithMinSize<T>(this T element, float minWidth, float minHeight)
+        where T : UIElement
+    {
         var layout = element.Layout;
-        layout.Width = width;
-        layout.Height = height;
+        layout.MinWidth = minWidth;
+        layout.MinHeight = minHeight;
+        element.Layout = layout;
+        return element;
+    }
+
+    public static T WithMaxSize<T>(this T element, float maxWidth, float maxHeight)
+        where T : UIElement
+    {
+        var layout = element.Layout;
+        layout.MaxWidth = maxWidth;
+        layout.MaxHeight = maxHeight;
+        element.Layout = layout;
+        return element;
+    }
+
+    public static T WithLayoutType<T>(this T element, LayoutType layoutType)
+        where T : UIElement
+    {
+        var layout = element.Layout;
+        layout.LayoutType = layoutType;
+        element.Layout = layout;
+        return element;
+    }
+
+    public static T WithAbsolutePosition<T>(this T element, float x, float y)
+        where T : UIElement
+    {
+        var layout = element.Layout;
+        layout.LayoutType = LayoutType.Absolute;
+        layout.MarginLeft = x;
+        layout.MarginTop = y;
+        layout.AlignX = HorizontalAlignment.Start;
+        layout.AlignY = VerticalAlignment.Start;
         element.Layout = layout;
         return element;
     }
@@ -498,10 +554,37 @@ public static class UI2FluentExtensions
     public static T WithAlign<T>(this T element, HorizontalAlignment x, VerticalAlignment y)
         where T : UIElement
     {
-        var layout = element.Layout;
-        layout.AlignX = x;
-        layout.AlignY = y;
-        element.Layout = layout;
+        element.Layout.AlignX = x;
+        element.Layout.AlignY = y;
+        return element;
+    }
+
+    public static T WithChildrenAlign<T>(this T element, HorizontalAlignment x, VerticalAlignment y)
+        where T : UIElement
+    {
+        element.ChildrenLayout.AlignX = x;
+        element.ChildrenLayout.AlignY = y;
+        return element;
+    }
+
+    public static T WithChildrenAlignX<T>(this T element, HorizontalAlignment x)
+        where T : UIElement
+    {
+        element.ChildrenLayout.AlignX = x;
+        return element;
+    }
+
+    public static T WithChildrenAlignY<T>(this T element, VerticalAlignment y)
+        where T : UIElement
+    {
+        element.ChildrenLayout.AlignY = y;
+        return element;
+    }
+
+    public static T WithChildrenLayoutType<T>(this T element, LayoutType layoutType)
+        where T : UIElement
+    {
+        element.ChildrenLayout.LayoutType = layoutType;
         return element;
     }
 

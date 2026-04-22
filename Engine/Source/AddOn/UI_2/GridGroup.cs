@@ -15,14 +15,14 @@ public class GridGroup : UIElement
 
     public GridGroup()
     {
-        Layout.LayoutType = LayoutType.Grid;
+        ChildrenLayout.LayoutType = LayoutType.Grid;
         Columns = 1;
     }
 
     public override Vector2 Measure(Vector2 availableSize)
     {
-        float innerW = availableSize.X - Layout.PaddingLeft - Layout.PaddingRight;
-        float innerH = availableSize.Y - Layout.PaddingTop - Layout.PaddingBottom;
+        float innerW = availableSize.X - ChildrenLayout.PaddingLeft - ChildrenLayout.PaddingRight;
+        float innerH = availableSize.Y - ChildrenLayout.PaddingTop - ChildrenLayout.PaddingBottom;
 
         visibleChildren.Clear();
         foreach (var child in Children)
@@ -69,8 +69,8 @@ public class GridGroup : UIElement
         float totalW = cols * cellW + (cols - 1) * Gap;
         float totalH = rows * cellH + (rows - 1) * Gap;
 
-        float width = totalW + Layout.PaddingLeft + Layout.PaddingRight;
-        float height = totalH + Layout.PaddingTop + Layout.PaddingBottom;
+        float width = totalW + ChildrenLayout.PaddingLeft + ChildrenLayout.PaddingRight;
+        float height = totalH + ChildrenLayout.PaddingTop + ChildrenLayout.PaddingBottom;
 
         if (Layout.Width > 0f)
             width = Layout.Width;
@@ -93,7 +93,7 @@ public class GridGroup : UIElement
     {
         base.Arrange(rect);
 
-        var style = Layout;
+        var style = ChildrenLayout;
 
         float innerX = style.PaddingLeft;
         float innerY = style.PaddingTop;

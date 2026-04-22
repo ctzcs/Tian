@@ -109,9 +109,10 @@ public class UIDebugger
         var wr = displayRect;
         var info1 = $"{element.GetType().Name} [{wr.X:0},{wr.Y:0},{wr.Width:0}x{wr.Height:0}]";
         var layout = element.Layout;
+        var childrenLayout = element.ChildrenLayout;
         var info2 = $"Grow:{layout.Grow:0.##} Min({layout.MinWidth:0},{layout.MinHeight:0}) Max({layout.MaxWidth:0},{layout.MaxHeight:0})";
         var info3 = $"Hover:true Interactable:{(element.Interactable ? "true" : "false")}";
-        var info4 = $"Padding L:{layout.PaddingLeft:0} R:{layout.PaddingRight:0} T:{layout.PaddingTop:0} B:{layout.PaddingBottom:0}";
+        var info4 = $"Children:{childrenLayout.LayoutType} Pad L:{childrenLayout.PaddingLeft:0} R:{childrenLayout.PaddingRight:0} T:{childrenLayout.PaddingTop:0} B:{childrenLayout.PaddingBottom:0}";
 
         var maxText = info1.Length > info2.Length ? info1 : info2;
         if (info3.Length > maxText.Length)
