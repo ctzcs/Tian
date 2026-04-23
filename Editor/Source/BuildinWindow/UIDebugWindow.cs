@@ -248,6 +248,7 @@ public sealed class UI2DebugWindow : EditorWindow
     {
         var rect = element.GetWorldRect();
         var layout = element.Layout;
+        var childrenLayout = element.ChildrenLayout;
         ImGui.Text($"{prefix}: {element.GetType().Name}");
         ImGui.Text($"Canvas: {canvasName}");
         ImGui.Text($"Rect: {rect.X:0}, {rect.Y:0}, {rect.Width:0} x {rect.Height:0}");
@@ -256,6 +257,6 @@ public sealed class UI2DebugWindow : EditorWindow
         ImGui.Text($"UserData: {element.UserData ?? "null"}");
         ImGui.Text($"Grow: {layout.Grow:0.##}");
         ImGui.Text($"Min: {layout.MinWidth:0}, {layout.MinHeight:0}    Max: {layout.MaxWidth:0}, {layout.MaxHeight:0}");
-        ImGui.Text($"Padding: {layout.PaddingLeft:0}, {layout.PaddingTop:0}, {layout.PaddingRight:0}, {layout.PaddingBottom:0}");
+        ImGui.Text($"Padding: {childrenLayout.PaddingLeft:0}, {childrenLayout.PaddingTop:0}, {childrenLayout.PaddingRight:0}, {childrenLayout.PaddingBottom:0}");
     }
 }

@@ -289,6 +289,8 @@ public class Ui2Slider : UIElement
             Fill.Arrange(new Rect(fillArea.X, fillY, fillArea.Width, fillHeight));
             Thumb.Arrange(new Rect(handleArea.X, thumbY, handleArea.Width, thumbHeight));
         }
+
+        ArrangeOverlayChildren(3, new Rect(0f, 0f, width, height));
     }
 
     public override void Arrange(Rect rect)

@@ -60,71 +60,7 @@ public class UICanvas
 
             if (style.LayoutType == LayoutType.Absolute)
             {
-                float marginLeft = style.MarginLeft;
-                float marginRight = style.MarginRight;
-                float marginTop = style.MarginTop;
-                float marginBottom = style.MarginBottom;
-
-                float innerX = childViewport.X + marginLeft;
-                float innerY = childViewport.Y + marginTop;
-                float innerW = childViewport.Width - marginLeft - marginRight;
-                float innerH = childViewport.Height - marginTop - marginBottom;
-
-                if (innerW < 0f)
-                    innerW = 0f;
-                if (innerH < 0f)
-                    innerH = 0f;
-
-                float width = style.Width > 0f ? style.Width : innerW;
-                float height = style.Height > 0f ? style.Height : innerH;
-
-                if (style.MinWidth > 0f && width < style.MinWidth)
-                    width = style.MinWidth;
-                if (style.MaxWidth > 0f && width > style.MaxWidth)
-                    width = style.MaxWidth;
-                if (style.MinHeight > 0f && height < style.MinHeight)
-                    height = style.MinHeight;
-                if (style.MaxHeight > 0f && height > style.MaxHeight)
-                    height = style.MaxHeight;
-
-                if (width > innerW)
-                    width = innerW;
-                if (height > innerH)
-                    height = innerH;
-
-                float x;
-                switch (style.AlignX)
-                {
-                    case HorizontalAlignment.End:
-                        x = innerX + (innerW - width);
-                        break;
-                    case HorizontalAlignment.Center:
-                        x = innerX + (innerW - width) * 0.5f;
-                        break;
-                    case HorizontalAlignment.Start:
-                    case HorizontalAlignment.Stretch:
-                    default:
-                        x = innerX;
-                        break;
-                }
-
-                float y;
-                switch (style.AlignY)
-                {
-                    case VerticalAlignment.End:
-                        y = innerY + (innerH - height);
-                        break;
-                    case VerticalAlignment.Center:
-                        y = innerY + (innerH - height) * 0.5f;
-                        break;
-                    case VerticalAlignment.Start:
-                    case VerticalAlignment.Stretch:
-                    default:
-                        y = innerY;
-                        break;
-                }
-
-                child.Arrange(new Rect(x, y, width, height));
+                child.Arrange(UIElement.ResolveAbsoluteRect(childViewport, style));
             }
             else
             {

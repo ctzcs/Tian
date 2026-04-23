@@ -30,6 +30,7 @@ public class UIRoot
         get => scale;
         set => scale = MathF.Max(0.01f, value);
     }
+    public Action? OnBeforeLayout;
     public Action? OnUpdateLayout;
 
     public UIRoot(App app, Vector2Int outputResolution)
@@ -194,6 +195,8 @@ public class UIRoot
                 blocked = input.Update(canvas.Root, canvas.ClipRect, pointer, mouse.LeftPressed, mouse.LeftReleased);
             }
         }
+
+        OnBeforeLayout?.Invoke();
 
         foreach (var canvas in canvases)
             SyncCanvas(canvas, viewport, time);

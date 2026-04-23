@@ -8,18 +8,20 @@ public class EditorWindowManager(EditorData data)
 
     public void Update()
     {
-        foreach (var window in windows)
+        var snapshot = windows.ToArray();
+        foreach (var window in snapshot)
         {
-            if (window.IsOpen)
+            if (windows.Contains(window) && window.IsOpen)
                 window.Update();
         }
     }
 
     public void Render()
     {
-        foreach (var window in windows)
+        var snapshot = windows.ToArray();
+        foreach (var window in snapshot)
         {
-            if (window.IsOpen)
+            if (windows.Contains(window) && window.IsOpen)
                 window.Render();
         }
     }
@@ -34,7 +36,8 @@ public class EditorWindowManager(EditorData data)
 
     public void SwitchWindowVisual<T>()
     {
-        foreach (var window in windows)
+        var snapshot = windows.ToArray();
+        foreach (var window in snapshot)
         {
             if (window is T)
                 window.IsOpen=!window.IsOpen;

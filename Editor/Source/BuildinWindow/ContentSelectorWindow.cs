@@ -151,10 +151,10 @@ public class ContentSelectorWindow:EditorWindow
 			Data.currentContent = content;
 			TryLoadGameEditors();
 		}
-		catch
+		catch(Exception e)
 		{
 			Data.currentContent = contentManager.Current;
-			Log.Info("Loading content failed }");
+			Log.Error($"Loading content failed: {e}");
 		}
 	}
 

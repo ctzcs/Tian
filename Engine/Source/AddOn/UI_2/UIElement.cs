@@ -94,6 +94,49 @@ public class UIElement
         return new Vector2(width, height);
     }
 
+    internal static Rect ResolveAbsoluteRect(Rect parentRect, LayoutStyle style)
+    {
+        float innerX = parentRect.X + style.MarginLeft;
+        float innerY = parentRect.Y + style.MarginTop;
+        float innerW = parentRect.Width - style.MarginLeft - style.MarginRight;
+        float innerH = parentRect.Height - style.MarginTop - style.MarginBottom;
+        if (innerW < 0f) innerW = 0f;
+        if (innerH < 0f) innerH = 0f;
+
+        float width = style.Width > 0f ? style.Width : innerW;
+        float height = style.Height > 0f ? style.Height : innerH;
+        if (style.MinWidth > 0f && width < style.MinWidth) width = style.MinWidth;
+        if (style.MaxWidth > 0f && width > style.MaxWidth) width = style.MaxWidth;
+        if (style.MinHeight > 0f && height < style.MinHeight) height = style.MinHeight;
+        if (style.MaxHeight > 0f && height > style.MaxHeight) height = style.MaxHeight;
+        if (width > innerW) width = innerW;
+        if (height > innerH) height = innerH;
+
+        float x = style.AlignX == HorizontalAlignment.End ? innerX + innerW - width :
+                  style.AlignX == HorizontalAlignment.Center ? innerX + (innerW - width) * 0.5f : innerX;
+        float y = style.AlignY == VerticalAlignment.End ? innerY + innerH - height :
+                  style.AlignY == VerticalAlignment.Center ? innerY + (innerH - height) * 0.5f : innerY;
+        return new Rect(x, y, width, height);
+    }
+
+    protected void ArrangeOverlayChildren(int startIndex, Rect rect)
+    {
+        for (int i = startIndex; i < Children.Count; i++)
+        {
+            var child = Children[i];
+            if (!child.Display || !child.Visible)
+                continue;
+
+            if (child.Layout.LayoutType == LayoutType.Absolute)
+                child.Arrange(ResolveAbsoluteRect(rect, child.Layout));
+            else
+            {
+                var measured = child.Measure(new Vector2(rect.Width, rect.Height));
+                child.Arrange(new Rect(rect.X, rect.Y, measured.X, measured.Y));
+            }
+        }
+    }
+
     void ApplyContentRect(Rect rect)
     {
         float innerX = rect.X + ChildrenLayout.PaddingLeft;
@@ -355,6 +398,22 @@ public class UIElement
 
         foreach (var child in Children)
             child.UpdateWorldMatrix(WorldMatrix);
+    }
+
+    public void SetAbsolutePosition(float x, float y)
+    {
+        Layout.LayoutType = LayoutType.Absolute;
+        Layout.AlignX = HorizontalAlignment.Start;
+        Layout.AlignY = VerticalAlignment.Start;
+        Layout.MarginLeft = x;
+        Layout.MarginTop = y;
+    }
+
+    public void SetAbsoluteRect(float x, float y, float width, float height)
+    {
+        SetAbsolutePosition(x, y);
+        Layout.Width = width;
+        Layout.Height = height;
     }
 
     public virtual void CollectDrawCommands(List<Ui2DrawCommand> commands, int depth)
