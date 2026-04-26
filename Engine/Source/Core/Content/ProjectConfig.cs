@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -17,11 +18,33 @@ public class ProjectConfig
     public string GameName;
     public string EditorName;
     public string BuildOutputDir;
-    public string ContentAssetsDir;
-    public string PublishedAssetsDir;
-    public string PublishedAssetsZip;
-    public string RuntimeAssetMode;
+    public string DefaultEditorAssetProfile;
+    public string DefaultRuntimeAssetProfile;
+    public Dictionary<string, AssetProfile> AssetProfiles;
     public static string ProjectConfigFile => "ProjectConfig.json";
+}
+
+public class AssetProfile
+{
+    public AnchoredPath AssetsRoot;
+    public AnchoredPath PackagePath;
+    public string RuntimeAssetMode;
+}
+
+public class AnchoredPath
+{
+    public string Anchor;
+    public string RelativePath;
+}
+
+public sealed class PathContext
+{
+    public string ProjectConfigPath { get; init; }
+    public ProjectConfig ProjectConfig { get; init; }
+    public string GameRoot { get; init; }
+    public string AssetsRoot { get; init; }
+    public string? PackagePath { get; init; }
+    public RuntimeAssetMode RuntimeAssetMode { get; init; }
 }
 
 public enum RuntimeAssetMode
@@ -49,9 +72,9 @@ public static class ProjectConfigUtils
     public static string ResolveProjectRootPath()
     {
         var projectConfigPath = ResolveProjectConfigPath();
-        if (!string.IsNullOrWhiteSpace(projectConfigPath))
-            return GetProjectDirectory(projectConfigPath);
-        return Path.GetFullPath(Environment.CurrentDirectory);
+        if (string.IsNullOrWhiteSpace(projectConfigPath))
+            throw new FileNotFoundException("ProjectConfig.json not found.");
+        return GetProjectDirectory(projectConfigPath);
     }
 
     /// <summary>
@@ -60,53 +83,64 @@ public static class ProjectConfigUtils
     /// 这里是直接寻找文件夹的方式不打zip包，目前这里默认文件夹应该是Game文件夹，
     /// 解析资源根目录。优先获取ProjectConfig中的ContentAssetsDir，其次从运行目录向上探测 Assets 或 Content/Assets。
     /// </summary>
-    public static string ResolveEditorAssetsRootPath()
-    {
-        if (TryResolveProjectAssetsRootPath(out var path))
-            return path;
-        if (TryResolvePublishedAssetsRootPath(out path))
-            return path;
-        throw new DirectoryNotFoundException("Cannot resolve editor assets root path.");
-    }
+    public static string ResolveEditorAssetsRootPath() => ResolvePathContext(false).AssetsRoot;
 
-    public static string ResolveContentAssetsRootPath()
-    {
-        if (TryResolvePublishedAssetsRootPath(out var path))
-            return path;
-        if (TryResolveProjectAssetsRootPath(out path))
-            return path;
-        throw new DirectoryNotFoundException("Cannot resolve content assets root path.");
-    }
+    public static string ResolveContentAssetsRootPath() => ResolvePathContext(true).AssetsRoot;
 
-    public static string? ResolveContentAssetsPackagePath()
-    {
-        var config = GetResolvedProjectConfig();
-        var relativePath = string.IsNullOrWhiteSpace(config?.PublishedAssetsZip) ? "pack.zip" : config.PublishedAssetsZip;
-        return TryResolveFromSearchRoots(relativePath, File.Exists, out var path) ? path : null;
-    }
+    public static string? ResolveContentAssetsPackagePath() => ResolvePathContext(true).PackagePath;
 
-    public static RuntimeAssetMode ResolveRuntimeAssetMode()
+    public static RuntimeAssetMode ResolveRuntimeAssetMode() => ResolvePathContext(true).RuntimeAssetMode;
+
+    public static PathContext ResolvePathContext(bool runtime)
     {
-        var mode = GetResolvedProjectConfig()?.RuntimeAssetMode;
-        return Enum.TryParse<RuntimeAssetMode>(mode, true, out var resolved)
-            ? resolved
-            : RuntimeAssetMode.ZipPreferred;
+        var projectConfigPath = runtime ? ResolveRuntimeProjectConfigPath() : ResolveEditorProjectConfigPath();
+        if (string.IsNullOrWhiteSpace(projectConfigPath))
+            throw new FileNotFoundException("ProjectConfig.json not found.");
+
+        var projectConfig = LoadProjectConfig(projectConfigPath);
+        if (projectConfig == null)
+            throw new InvalidOperationException("Failed to load ProjectConfig.json.");
+
+        var gameRoot = GetProjectDirectory(projectConfigPath);
+        var appBase = Path.GetFullPath(AppContext.BaseDirectory);
+        var profileName = runtime ? projectConfig.DefaultRuntimeAssetProfile : projectConfig.DefaultEditorAssetProfile;
+        if (string.IsNullOrWhiteSpace(profileName))
+            throw new InvalidOperationException("Default asset profile is not configured.");
+        if (projectConfig.AssetProfiles == null || !projectConfig.AssetProfiles.TryGetValue(profileName, out var profile) || profile == null)
+            throw new InvalidOperationException($"Asset profile not found: {profileName}");
+
+        var assetsRoot = ResolveAnchoredPath(profile.AssetsRoot, gameRoot, appBase);
+        if (!Enum.TryParse<RuntimeAssetMode>(profile.RuntimeAssetMode, true, out var runtimeMode))
+            throw new InvalidOperationException($"Invalid runtime asset mode in profile: {profileName}");
+        var packagePath = ResolveOptionalAnchoredPath(profile.PackagePath, gameRoot, appBase);
+
+        return new PathContext
+        {
+            ProjectConfigPath = projectConfigPath,
+            ProjectConfig = projectConfig,
+            GameRoot = gameRoot,
+            AssetsRoot = assetsRoot,
+            PackagePath = packagePath,
+            RuntimeAssetMode = runtimeMode
+        };
     }
     
     
     /// <summary>
     /// Editor Only
-    /// 按缓存、本地编辑器记录、当前目录、运行目录、祖先目录等顺序解析可用的 ProjectConfig.json 路径。
+    /// 解析编辑器使用的 ProjectConfig.json。
+    /// 编辑器允许从 AppBase / CurrentDirectory 向上回溯查找 Game/ProjectConfig.json，
+    /// 这样即使从 Build 或 publish 目录启动，也仍然可以回到工程目录操作源资源。
+    /// Runtime 不走这套回溯逻辑，只使用 AppBase 下的 ProjectConfig.json，保证发布目录自洽。
     /// 找不到时返回 null。
-    ///
-    /// Environment.CurrentDirectory由当前所在的目录决定，Rider里运行通常是工作目录
-    /// 靠锚点文件ProjectConfig.json来获取根目录
     /// </summary>
-    public static string? ResolveProjectConfigPath()
+    public static string? ResolveProjectConfigPath() => ResolveEditorProjectConfigPath();
+
+    public static string? ResolveEditorProjectConfigPath()
     {
         if (TryGetValidProjectConfigPath(cachedProjectConfigPath, out var cached))
             return cached;
-        
+
         var fromBase = TryFindProjectConfigFromAncestors(AppContext.BaseDirectory);
         if (TryGetValidProjectConfigPath(fromBase, out var baseAncestor))
             return baseAncestor;
@@ -124,6 +158,17 @@ public static class ProjectConfigUtils
             return cwd;
 
         return null;
+    }
+
+    /// <summary>
+    /// Runtime Only
+    /// 运行时只认 AppBase 下的 ProjectConfig.json，不回溯工程目录。
+    /// 这样发布后的 Game.exe 只依赖发布目录本身的文件布局。
+    /// </summary>
+    public static string? ResolveRuntimeProjectConfigPath()
+    {
+        var appBaseCandidate = Path.Combine(AppContext.BaseDirectory, ProjectConfig.ProjectConfigFile);
+        return TryGetValidProjectConfigPath(appBaseCandidate, out var appBasePath) ? appBasePath : null;
     }
     
     #endregion
@@ -213,56 +258,34 @@ public static class ProjectConfigUtils
 
     #region Private
 
-    private static ProjectConfig? GetResolvedProjectConfig()
+    private static string ResolveAnchoredPath(AnchoredPath path, string gameRoot, string appBase)
     {
-        var configPath = ResolveProjectConfigPath();
-        return string.IsNullOrWhiteSpace(configPath) ? null : LoadProjectConfig(configPath);
+        if (path == null)
+            throw new InvalidOperationException("Anchored path is not configured.");
+
+        var baseRoot = ResolveAnchorRoot(path.Anchor, gameRoot, appBase);
+        if (string.IsNullOrWhiteSpace(path.RelativePath))
+            return Path.GetFullPath(baseRoot);
+
+        var relativePath = NormalizeRelativePath(path.RelativePath);
+        return Path.IsPathRooted(relativePath)
+            ? Path.GetFullPath(relativePath)
+            : Path.GetFullPath(Path.Combine(baseRoot, relativePath));
     }
 
-    private static bool TryResolveProjectAssetsRootPath(out string resolved)
-    {
-        resolved = string.Empty;
-        var configPath = ResolveProjectConfigPath();
-        if (string.IsNullOrWhiteSpace(configPath))
-            return false;
+    private static string? ResolveOptionalAnchoredPath(AnchoredPath path, string gameRoot, string appBase)
+        => path == null ? null : ResolveAnchoredPath(path, gameRoot, appBase);
 
-        var config = LoadProjectConfig(configPath);
-        var projectDir = GetProjectDirectory(configPath);
-        var relativePath = string.IsNullOrWhiteSpace(config?.ContentAssetsDir) ? Path.Combine("Content", "Assets") : config.ContentAssetsDir;
-        return TryResolveFromRoot(projectDir, relativePath, Directory.Exists, out resolved);
+    private static string ResolveAnchorRoot(string anchor, string gameRoot, string appBase)
+    {
+        if (string.Equals(anchor, "GameRoot", StringComparison.OrdinalIgnoreCase))
+            return gameRoot;
+        if (string.Equals(anchor, "AppBase", StringComparison.OrdinalIgnoreCase))
+            return appBase;
+        throw new InvalidOperationException($"Unsupported path anchor: {anchor}");
     }
 
-    private static bool TryResolvePublishedAssetsRootPath(out string resolved)
-    {
-        var config = GetResolvedProjectConfig();
-        var relativePath = string.IsNullOrWhiteSpace(config?.PublishedAssetsDir) ? "Assets" : config.PublishedAssetsDir;
-        return TryResolveFromSearchRoots(relativePath, Directory.Exists, out resolved);
-    }
-
-    private static bool TryResolveFromSearchRoots(string relativePath, Func<string, bool> exists, out string resolved)
-    {
-        if (TryResolveFromRoot(AppContext.BaseDirectory, relativePath, exists, out resolved))
-            return true;
-        if (TryResolveFromRoot(Environment.CurrentDirectory, relativePath, exists, out resolved))
-            return true;
-        resolved = string.Empty;
-        return false;
-    }
-
-    private static bool TryResolveFromRoot(string rootPath, string relativePath, Func<string, bool> exists, out string resolved)
-    {
-        resolved = string.Empty;
-        if (string.IsNullOrWhiteSpace(relativePath))
-            return false;
-
-        var normalized = relativePath.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
-        var candidate = Path.IsPathRooted(normalized) ? Path.GetFullPath(normalized) : Path.GetFullPath(Path.Combine(rootPath, normalized));
-        if (!exists(candidate))
-            return false;
-
-        resolved = candidate;
-        return true;
-    }
+    private static string NormalizeRelativePath(string path) => path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
     /// <summary>
     /// 验证候选 ProjectConfig 路径是否可用，并输出规范化后的绝对路径。

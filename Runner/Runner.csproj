@@ -25,7 +25,9 @@
     </ItemGroup>
 
     <Target Name="BuildContentProject" BeforeTargets="Build" Condition="Exists('..\..\Game\Content\Content.csproj')">
-        <MSBuild Projects="..\..\Game\Content\Content.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+        <MSBuild Projects="..\..\Game\Content\Content.csproj"
+                 Targets="Restore;Build"
+                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)" />
     </Target>
 
     <Target Name="CopyProjectConfigToBuildDir" AfterTargets="Build">
@@ -49,5 +51,28 @@
         <Copy SourceFiles="@(SpriteFiles)"
               DestinationFiles="@(SpriteFiles->'$(PublishDir)Assets\Sprites\%(RecursiveDir)%(Filename)%(Extension)')"
               SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="CopyProjectConfigAfterPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <ProjectConfigPublishFile Include="..\..\Game\ProjectConfig.json" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ProjectConfigPublishFile)"
+              DestinationFolder="$(PublishDir)"
+              SkipUnchangedFiles="true"
+              Condition="Exists('%(ProjectConfigPublishFile.FullPath)')" />
+    </Target>
+
+    <Target Name="CopyContentAssemblyAfterPublish" AfterTargets="Publish">
+        <PropertyGroup>
+            <ContentBuildDir>$(MSBuildThisFileDirectory)..\..\Build\$(Configuration)\$(TargetFramework)\</ContentBuildDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <ContentAssemblyPublishFile Include="$(ContentBuildDir)Content.dll" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ContentAssemblyPublishFile)"
+              DestinationFolder="$(PublishDir)"
+              SkipUnchangedFiles="true"
+              Condition="Exists('%(ContentAssemblyPublishFile.FullPath)')" />
     </Target>
 </Project>

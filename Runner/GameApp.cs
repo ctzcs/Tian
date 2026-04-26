@@ -19,27 +19,17 @@ public class GameApp : App
         //lifetime = new FrogSample(this);
         batcher = new Batcher(GraphicsDevice);
         contentManager = new ContentManager();
-        //加载ProjectConfig
-        var projectConfigPath = ProjectConfigUtils.ResolveProjectConfigPath();
-        Log.Info("Get Project Config Path: " + projectConfigPath);
-        if (string.IsNullOrWhiteSpace(projectConfigPath))
-        {
-            Log.Error("ProjectConfig.json not found");
-            return;
-        }
-
-        ProjectConfig? projectConfig = ProjectConfigUtils.LoadProjectConfig(projectConfigPath);
-        if (projectConfig == null)
-        {
-            Log.Error("Loading content failed in GameApp");
-            return;
-        }
+        var pathContext = ProjectConfigUtils.ResolvePathContext(true);
+        var projectConfig = pathContext.ProjectConfig;
+        Log.Info("Get Project Config Path: " + pathContext.ProjectConfigPath);
+        Log.Info("Assets Root: " + pathContext.AssetsRoot);
         Log.Info(projectConfig.GameAssembly);
-        var projectDir = ProjectConfigUtils.GetProjectDirectory(projectConfigPath);
-        var contentDll = ProjectConfigUtils.ResolveAssemblyPath(projectDir, projectConfig.GameAssembly, projectConfig.BuildOutputDir);
-        string contentDllName = Path.GetFileNameWithoutExtension(contentDll);
+        var contentDll = Path.GetFullPath(Path.Combine(pathContext.GameRoot, projectConfig.GameAssembly));
         if (!File.Exists(contentDll))
             throw new FileNotFoundException($"Assembly not found: {contentDll}");
+        var contentDllName = Path.GetFileNameWithoutExtension(contentDll);
+        if (string.IsNullOrWhiteSpace(contentDllName))
+            throw new InvalidOperationException($"Invalid assembly file name: {contentDll}");
         contentManager.LoadContentAssembly(contentDllName, contentDll);
         var types = contentManager.GetAvailableContentTypes(contentDllName).ToArray();
         if (types.Length == 0)

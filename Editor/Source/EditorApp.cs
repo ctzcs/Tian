@@ -67,9 +67,22 @@ public class EditorApp : App
 
 	protected override void Startup()
 	{
+		LogPathResolution();
 		// 构造中已启动默认内容，这里无需重复
         AssetMetaGenerate();
     }
+
+	void LogPathResolution()
+	{
+		var appBase = Path.GetFullPath(AppContext.BaseDirectory);
+		var currentDirectory = Path.GetFullPath(Environment.CurrentDirectory);
+		var projectConfigPath = ProjectConfigUtils.ResolveEditorProjectConfigPath();
+		var assetsRootPath = ProjectConfigUtils.ResolveEditorAssetsRootPath();
+		Log.Info($"[EditorPath] AppBase={appBase}");
+		Log.Info($"[EditorPath] CurrentDirectory={currentDirectory}");
+		Log.Info($"[EditorPath] ProjectConfig={projectConfigPath ?? "<null>"}");
+		Log.Info($"[EditorPath] AssetsRoot={assetsRootPath}");
+	}
 
 	protected override void Shutdown()
 	{
