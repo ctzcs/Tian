@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using Engine.Components;
-using Engine.Core.Extensions;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public class PerformanceSystem:QuerySystem
 {

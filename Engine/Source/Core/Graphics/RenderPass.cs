@@ -1,11 +1,13 @@
-﻿
-using System;
-using System.Numerics;
+﻿using System.Numerics;
 using Engine.Components;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
+/// <summary>
+/// RenderPass
+/// 要么切换成不需要Ecs， 要么将其挪到Ecs部分
+/// </summary>
 namespace Engine.Core.Graphics;
 
 public enum RenderPassSpace
@@ -72,6 +74,7 @@ public sealed class ContentViewport
 public class RenderPass
 {
     public Batcher Batcher { get; }
+    public Target? SourceTarget { get; set; }
     public Target? OutputTarget { get; set; }
     public SystemRoot RenderGroup { get; }
     public Entity CameraEntity { get; }
@@ -80,7 +83,7 @@ public class RenderPass
     public RenderPassSpace Space { get; set; }
     public bool ShouldClear { get; set; }
     public ContentViewport? Viewport { get; set; }
-    public Target? SourceTarget { get; set; }
+    
 
     public RenderPass(Batcher batcher, SystemRoot renderGroup, Entity cameraEntity, Color clearColor, Target? outputTarget = null, Action<UpdateTick>? postUpdate = null, RenderPassSpace space = RenderPassSpace.Screen, bool shouldClear = true)
     {
@@ -92,11 +95,6 @@ public class RenderPass
         PostUpdate = postUpdate;
         Space = space;
         ShouldClear = shouldClear;
-    }
-
-    public RenderPass(RenderContext context, SystemRoot renderGroup, Entity cameraEntity, Color clearColor, Action<UpdateTick>? postUpdate = null, RenderPassSpace space = RenderPassSpace.Screen, bool shouldClear = true)
-        : this(context.Batcher, renderGroup, cameraEntity, clearColor, context.Target, postUpdate, space, shouldClear)
-    {
     }
 
     public void Render(UpdateTick tick, Target? fallbackTarget)

@@ -8,7 +8,7 @@ using Friflo.Json.Fliox;
 
 namespace Engine.Components;
 
-public struct SpriteRenderer:IComponent
+public struct SpriteRenderer : IComponent
 {
     public string subTextureName;
     public Color color;

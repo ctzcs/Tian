@@ -8,7 +8,7 @@ using Friflo.Json.Fliox;
 namespace Engine.Components;
 
 
-public struct LineRenderer:IComponent
+public struct LineRenderer : IComponent
 {
     public List<Vector2> line;
     public List<Vector2> renderPoint;

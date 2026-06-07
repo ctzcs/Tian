@@ -1,4 +1,3 @@
-using System;
 using Engine.Core;
 using Engine.Editor;
 using Foster.Framework;

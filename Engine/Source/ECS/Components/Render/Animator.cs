@@ -7,7 +7,7 @@ using Friflo.Json.Fliox;
 
 namespace Engine.Components;
 
-public struct Animator:IComponent
+public struct Animator : IComponent
 {
     public string animSpriteName;
     public string animName;

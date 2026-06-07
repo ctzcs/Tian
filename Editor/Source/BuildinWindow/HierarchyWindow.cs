@@ -43,9 +43,11 @@ public class HierarchyWindow:EditorWindow
 
     public override void Update()
     {
-        var world = Data.currentContent?.World;
-        if (world == null)
+        if (Data?.currentContent is not IEcsContent ecsContent)
+        {
             return;
+        }
+        var world = ecsContent.World;
 
         if (ImGui.Begin("Hierarchy"))
         {

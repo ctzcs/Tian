@@ -4,7 +4,7 @@ using Engine.Utility;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public class HierarchyOrderSystem : QuerySystem
 {

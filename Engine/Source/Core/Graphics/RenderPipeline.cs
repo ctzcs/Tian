@@ -1,11 +1,12 @@
-using System;
-using System.Collections.Generic;
 using Foster.Framework;
 using Friflo.Engine.ECS;
-using Friflo.Engine.ECS.Systems;
 
 namespace Engine.Core.Graphics;
 
+/// <summary>
+/// RenderPipeline
+/// 要么切换成不需要ECS,要么挪到ECS part
+/// </summary>
 public class RenderPipeline : IDisposable
 {
     public GraphicsDevice GraphicsDevice { get; }

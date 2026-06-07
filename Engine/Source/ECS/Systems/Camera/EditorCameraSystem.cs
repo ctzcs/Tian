@@ -1,6 +1,6 @@
 ﻿using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public class EditorCameraSystem : QuerySystem
 {

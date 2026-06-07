@@ -1,15 +1,13 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Engine.Components;
 using Engine.Core;
-using Engine.Core.Extensions;
 using Engine.Utility;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Cursor = Engine.Core.Input.Cursor;
 
-namespace Engine.Systems.Editor;
+namespace Engine.ECS;
 
 //这里最终会转化成一个无限网格系统
 //AfterBeforeRender

@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Numerics;
-using Engine.Asset;
+﻿using System.Numerics;
 using Engine.Asset.Pipeline;
 using Engine.Asset.v1;
 using Engine.Components;
 using Engine.Core;
 using Engine.Core.Extensions;
+using Engine.ECS;
 using Engine.Editor;
 using Foster.Framework;
 using Friflo.Engine.ECS;
@@ -278,18 +276,23 @@ public class EditorApp : App
                     //TODO 这里打包的会是Editor中不改变的Assets,而真实的应该是Content里面的Assets,只有重新编译后再打包才生效，所以应该直接从Content读取
                     AssetsV1.Pack(ProjectConfigUtils.ResolveContentAssetsRootPath(), ProjectConfigUtils.ResolveContentAssetsPackagePath() ?? "pack.zip");
                 }
+                
+                if (_data?.currentContent is not IEcsContent ecsContent)
+                {
+                    return;
+                }
             
                 if (ImGui.MenuItem("Save"))
                 {
+                    
                     FileSystem.SaveFileDialog((path, result) =>
                     {
                         if (result == FileSystem.DialogResult.Success && path.Length > 0)
                         {
-                            _data.currentContent.World.SaveEntityGz<Prefab>(path);
+                            ecsContent.World.SaveEntityGz<Prefab>(path);
                         }
                     },[],ProjectConfigUtils.ResolveEditorAssetsRootPath());
                     //_data.currentContent.World.SaveEntity<EditorTag>("entity-store.json");
-                
                 }
                 
                 if (ImGui.MenuItem("Load"))
@@ -309,7 +312,7 @@ public class EditorApp : App
 
                             var entityStore = new EntityStore();
                             entityStore.LoadEntityGzCache("pack.zip", $"{directoryName}/{fileName}",false);
-                            _data.currentContent.World.InstantiateRoots(entityStore.Entities);
+                            ecsContent.World.InstantiateRoots(entityStore.Entities);
                         }
                     }, [],ProjectConfigUtils.ResolveEditorAssetsRootPath());
                

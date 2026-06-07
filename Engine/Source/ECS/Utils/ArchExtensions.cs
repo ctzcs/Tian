@@ -2,7 +2,7 @@
 using Engine.Components;
 using Friflo.Engine.ECS;
 
-namespace Engine.Core.Extensions;
+namespace Engine.ECS.Utils;
 
 public static class ArchExtensions
 {

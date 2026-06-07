@@ -2,6 +2,7 @@ using System.Numerics;
 using Engine;
 using Engine.Components;
 using Engine.Core.Extensions;
+using Engine.ECS;
 using Foster.Framework;
 using ImGuiNET;
 using Cursor = Engine.Core.Input.Cursor;
@@ -36,12 +37,11 @@ public class EditorModeWindow : EditorWindow
 					ImGui.Text("ScaleRate");
 					ImGui.EndTooltip();
 				}
-
-                var content = Data?.currentContent;
-                if (content != null)
+                
+                if (Data?.currentContent is IEcsContent ecsContent)
                 {
-                    var world = content.World;
-                    if (world != null && world.HasUniqueEntity(Id.Coordinate))
+                    var world = ecsContent.World;
+                    if (world.HasUniqueEntity(Id.Coordinate))
                     {
                         var coordinate = world.GetUniqueEntity(Id.Coordinate).GetComponent<Coordinate>();
                         ImGui.Text($"[{coordinate.MouseCoordinates.X}, {coordinate.MouseCoordinates.Y}]");

@@ -1,18 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Components;
-using Engine.Core.Extensions;
-using Engine.Core.Graphics;
-using Engine.Performance;
 using Engine.Render;
-using Engine.Utility;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 //AfterBeforeRender
 //渲染示例，这里的Render只支持sprite可能不太对。
@@ -70,11 +64,6 @@ public class RenderSystem:QuerySystem
 
     public RenderSystem(App app,Batcher batcher,Target renderTarget)
         : this(app, batcher)
-    {
-    }
-
-    public RenderSystem(App app, RenderContext renderContext)
-        : this(app, renderContext.Batcher)
     {
     }
 

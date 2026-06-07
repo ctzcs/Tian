@@ -1,12 +1,10 @@
 using System.Numerics;
 using Engine.Components;
-using Engine.Core.Extensions;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
-using Transform = Foster.Framework.Transform;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public struct InsiderView:ITag{}
 

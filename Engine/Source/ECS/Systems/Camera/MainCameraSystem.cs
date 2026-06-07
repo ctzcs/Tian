@@ -1,14 +1,12 @@
-﻿using System;
-using Engine.Components;
+﻿using Engine.Components;
 using Engine.Core;
-using Engine.Core.Extensions;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Cursor = Engine.Core.Input.Cursor;
 using Vector2 = System.Numerics.Vector2;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public partial class MainCameraSystem : QuerySystem
 {
@@ -21,13 +19,13 @@ public partial class MainCameraSystem : QuerySystem
     private int pixelsPerUnit;
     private int lastViewportWidth = -1;
     private int lastViewportHeight = -1;
-    public MainCameraSystem(App ctx,GameContent gameContent,int pixelsPerUnit = 16, Func<IDrawableTarget>? cameraViewportTargetProvider = null)
+    public MainCameraSystem(App ctx,EcsGameContent ecsGameContent,int pixelsPerUnit = 16, Func<IDrawableTarget>? cameraViewportTargetProvider = null)
     {
         this.ctx = ctx;
         speed = 10;
         zoomStep = 0.25f;
         this.pixelsPerUnit = pixelsPerUnit;
-        getCameraViewportTarget = cameraViewportTargetProvider ?? (() => gameContent.Target);
+        getCameraViewportTarget = cameraViewportTargetProvider ?? (() => ecsGameContent.Target);
     }
 
     protected override void OnAddStore(EntityStore store)

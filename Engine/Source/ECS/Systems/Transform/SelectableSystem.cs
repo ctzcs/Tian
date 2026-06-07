@@ -1,13 +1,10 @@
-using System;
-using Engine.Asset;
 using Engine.Components;
-using Engine.Core.Extensions;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Cursor = Engine.Core.Input.Cursor;
 
-namespace Engine.Systems.Editor;
+namespace Engine.ECS;
 
 
 public struct Selector : IComponent

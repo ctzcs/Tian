@@ -1,9 +1,8 @@
-﻿
-using Engine.Components;
+﻿using Engine.Components;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public partial class TransformSystem : QuerySystem
 {

@@ -1,11 +1,10 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Engine.Components;
-using Foster.Framework;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Engine.Systems;
+namespace Engine.ECS;
 
 public class AnimationSystem:QuerySystem
 {

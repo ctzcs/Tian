@@ -3,7 +3,7 @@ using Engine.Components;
 using Foster.Framework;
 using Friflo.Engine.ECS;
 
-namespace Engine.Core.Extensions;
+namespace Engine.ECS;
 
 public static class FrifloExtensions
 {

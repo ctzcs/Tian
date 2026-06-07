@@ -8,7 +8,7 @@ using Cursor = Engine.Core.Input.Cursor;
 namespace Engine.Components;
 
 
-public struct Camera2D:IComponent
+public struct Camera2D : IComponent
 {
     /// <summary>
     /// 相机对应的渲染目标像素区域，左上角为原点。
