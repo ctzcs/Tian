@@ -7,7 +7,15 @@ using Cursor = Engine.Core.Input.Cursor;
 
 namespace Engine.Components;
 
-
+/// <summary>
+/// TODO 通常我们希望这里是
+/// //View矩阵，转换到相机空间
+/// Target : 目标世界位置
+/// Rotate : 旋转
+/// Zoom : 缩放
+/// //转换到屏幕空间
+/// OffsetInScreenPixel : 目标在像素屏幕中的位置
+/// </summary>
 public struct Camera2D : IComponent
 {
     /// <summary>
